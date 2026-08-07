@@ -1,0 +1,1 @@
+"""eovpanel TUI installer."""

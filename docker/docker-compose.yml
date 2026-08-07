@@ -1,0 +1,44 @@
+version: "3.8"
+
+# eovpanel — Docker Compose
+#
+# OpenVPN itself runs on the HOST (installed by Nyr's script / the TUI installer).
+# The backend and frontend run in Docker containers.
+#
+# Host paths mounted into the backend container:
+#   - /etc/openvpn/        → OpenVPN config, certs, management socket
+#   - /etc/openvpn/easy-rsa/ → easy-rsa directory for certificate operations
+
+services:
+  backend:
+    build:
+      context: ../
+      dockerfile: docker/backend/Dockerfile
+    container_name: eovpanel-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../backend/.env
+    volumes:
+      - /etc/openvpn:/etc/openvpn:rw
+      - /run/openvpn:/run/openvpn:ro
+    networks:
+      - eovpanel
+
+  frontend:
+    build:
+      context: ../
+      dockerfile: docker/frontend/Dockerfile
+    container_name: eovpanel-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - eovpanel
+
+networks:
+  eovpanel:
+    driver: bridge
