@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vpn-core"
+version = "0.1.0"
+description = "OpenVPN management helpers — wraps easy-rsa, server.conf generation, and management interface operations"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["vpn_core*"]
