@@ -41,9 +41,8 @@ docker/data/
 # Logs
 *.log
 
-# Alembic
-backend/alembic/versions/*.py
-!backend/alembic/versions/.gitkeep
+# Alembic — track migration files, ignore pycache
+backend/alembic/versions/__pycache__/
 
 # OpenVPN generated files (runtime, not tracked)
 vpn-core/vars
