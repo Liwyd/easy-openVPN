@@ -17,8 +17,8 @@ from sqlalchemy.orm import Session
 
 from app.models.admin import Admin
 from app.models.server_config import (
-    Cipher,
     AuthDigest,
+    Cipher,
     DNSPreset,
     Protocol,
     ServerConfig,

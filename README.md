@@ -49,11 +49,23 @@ docs/           Architecture docs and ADRs
 cd backend && cp .env.example .env
 python -m venv .venv && source .venv/bin/activate
 pip install -e .
+alembic upgrade head    # run migrations
 uvicorn app.main:app --reload
 
 # Frontend
 cd frontend && npm install && npm run dev
 ```
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `DATABASE_URL` | `sqlite:///./eovpanel.db` | Database connection string |
+| `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Access token lifetime in minutes |
+| `JWT_REFRESH_TOKEN_EXPIRE_DAYS` | `7` | Refresh token lifetime in days |
+| `SUDO_USERNAME` | `admin` | Initial sudo admin username (first run only) |
+| `SUDO_PASSWORD` | `admin` | Initial sudo admin password (first run only) |
+| `CORS_ORIGINS` | `http://localhost:5173,http://localhost:3000` | Allowed CORS origins (comma-separated) |
 
 ## Credits
 

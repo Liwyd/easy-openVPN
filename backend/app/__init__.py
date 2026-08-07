@@ -5,19 +5,22 @@ The FastAPI application is created here and imported by main.py.
 """
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
 
 from app.config import (
     APP_NAME,
     APP_VERSION,
-    CORS_ORIGINS,
     CORS_ALLOW_CREDENTIALS,
-    CORS_ALLOW_METHODS,
     CORS_ALLOW_HEADERS,
+    CORS_ALLOW_METHODS,
+    CORS_ORIGINS,
 )
+from app.routers.admins import router as admins_router
+from app.routers.auth import router as auth_router
 from app.routers.health import router as health_router
+from app.routers.users import router as users_router
 
 
 def create_app() -> FastAPI:
@@ -50,6 +53,9 @@ def create_app() -> FastAPI:
 
     # --- Routers ---
     application.include_router(health_router)
+    application.include_router(auth_router)
+    application.include_router(admins_router)
+    application.include_router(users_router)
 
     return application
 

@@ -35,6 +35,12 @@ line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
+ignore = [
+    "B008",   # FastAPI Depends() in function signatures (idiomatic)
+    "F821",   # Forward references in SQLAlchemy models (from __future__ import annotations)
+    "UP042",  # str, enum.Enum vs StrEnum (style choice)
+    "SIM102", # collapsible-if — nested ifs are clearer for quota guards
+]
 
 [tool.black]
 line-length = 120
