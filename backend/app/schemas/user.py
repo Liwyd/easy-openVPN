@@ -37,8 +37,15 @@ class UserResponse(BaseModel):
     data_used: int
     data_limit_reset_strategy: DataLimitResetStrategy
     expire_at: dt.datetime | None
+    time_window_start: dt.time | None = None
+    time_window_end: dt.time | None = None
     note: str | None
     revoked: bool
     subscription_token: str
+    common_name: str | None = None
 
     model_config = {"from_attributes": True}
+
+
+class SubscriptionURLResponse(BaseModel):
+    subscription_url: str

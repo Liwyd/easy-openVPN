@@ -14,8 +14,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.bot.config import is_configured
 from app.bot.client import send_message
+from app.bot.config import is_configured
 from app.bot.formatter import EMOJI_SYSTEM
 from app.db import get_db
 from app.logging_config import enforcement_log

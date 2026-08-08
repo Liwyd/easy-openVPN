@@ -18,12 +18,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from app.bot.events import EventCategory, emit
 from app.config import (
     EASYRSA_DIR,
     OPENVPN_MANAGEMENT_SOCKET,
-    OPENVPN_STATUS_LOG,
 )
-from app.bot.events import EventCategory, emit
 from app.db import get_db
 from app.logging_config import enforcement_log
 from app.models.admin import Admin
@@ -44,10 +43,20 @@ from app.services.quota import (
 )
 from app.services.vpn_bridge import (
     create_client_cert as _create_client_cert,
+)
+from app.services.vpn_bridge import (
     disable_client as _disable_client,
+)
+from app.services.vpn_bridge import (
     enable_client as _enable_client,
+)
+from app.services.vpn_bridge import (
     generate_ovpn_file as _generate_ovpn_file,
+)
+from app.services.vpn_bridge import (
     kill_client_session as _kill_client_session,
+)
+from app.services.vpn_bridge import (
     revoke_client_cert as _revoke_client_cert,
 )
 
@@ -132,7 +141,7 @@ def create_user(
     # Create the certificate FIRST — if this fails, nothing is written to DB.
     try:
         cfg = _get_server_settings(db)
-        ovpn_content = _create_client_cert(
+        _create_client_cert(
             common_name=body.username,
             server_dir="/etc/openvpn/server",
             easyrsa_dir=EASYRSA_DIR,
@@ -140,16 +149,16 @@ def create_user(
             protocol=cfg.protocol.value,
             port=cfg.port,
         )
-    except FileExistsError:
+    except FileExistsError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Certificate already exists for this username",
-        )
+        ) from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create certificate: {exc}",
-        )
+        ) from exc
 
     # Cert creation succeeded — now persist the DB row.
     new_user = User(
@@ -315,7 +324,12 @@ def update_user(
     db.refresh(user)
 
     if body.status is not None and body.status != old_status:
-        action = "user_disabled_admin" if body.status.value == "disabled" else "user_enabled" if body.status.value == "active" else "user_updated"
+        if body.status.value == "disabled":
+            action = "user_disabled_admin"
+        elif body.status.value == "active":
+            action = "user_enabled"
+        else:
+            action = "user_updated"
     else:
         action = "user_updated"
 

@@ -31,7 +31,6 @@ class UsageLog(Base):
     bytes_received: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("user_id", "timestamp", name="uq_user_timestamp"),
         Index("ix_usage_logs_user_id_timestamp", "user_id", "timestamp"),
     )
 

@@ -1,5 +1,7 @@
 """Tests for user CRUD — quota-aware user management."""
 
+from unittest.mock import patch
+
 from app.db.seed import seed_sudo_admin
 from app.models.admin import Admin
 from app.models.user import User
@@ -40,7 +42,9 @@ def _get_sudo(db):
 
 
 class TestCreateUser:
-    def test_sudo_creates_user(self, sudo_client):
+    @patch("app.routers.users._create_client_cert")
+    def test_sudo_creates_user(self, mock_cert, sudo_client):
+        mock_cert.return_value = "ovpn-content"
         resp = sudo_client.post(
             "/api/users",
             json={"username": "vpn-user-1", "data_limit": 1024**3},
@@ -51,7 +55,9 @@ class TestCreateUser:
         assert data["data_limit"] == 1024**3
         assert len(data["subscription_token"]) > 20
 
-    def test_sub_admin_creates_user_within_quota(self, client, db_session):
+    @patch("app.routers.users._create_client_cert")
+    def test_sub_admin_creates_user_within_quota(self, mock_cert, client, db_session):
+        mock_cert.return_value = "ovpn-content"
         sudo = _get_sudo(db_session)
         _create_admin(db_session, "sub_a", data_limit=5 * 1024**3, parent_admin_id=sudo.id)
         headers = _login(client, "sub_a")
@@ -76,19 +82,25 @@ class TestCreateUser:
         assert resp.status_code == 409
         assert "quota" in resp.json()["detail"].lower()
 
-    def test_duplicate_username_rejected(self, sudo_client):
+    @patch("app.routers.users._create_client_cert")
+    def test_duplicate_username_rejected(self, mock_cert, sudo_client):
+        mock_cert.return_value = "ovpn-content"
         sudo_client.post("/api/users", json={"username": "dup_u", "data_limit": 1024**3})
         resp = sudo_client.post("/api/users", json={"username": "dup_u", "data_limit": 2048})
         assert resp.status_code == 409
 
-    def test_unlimited_user_on_sudo(self, sudo_client):
+    @patch("app.routers.users._create_client_cert")
+    def test_unlimited_user_on_sudo(self, mock_cert, sudo_client):
+        mock_cert.return_value = "ovpn-content"
         resp = sudo_client.post("/api/users", json={"username": "unlimited_u"})
         assert resp.status_code == 201
         assert resp.json()["data_limit"] is None
 
 
 class TestListUsers:
-    def test_sudo_sees_all_users(self, sudo_client):
+    @patch("app.routers.users._create_client_cert")
+    def test_sudo_sees_all_users(self, mock_cert, sudo_client):
+        mock_cert.return_value = "ovpn-content"
         sudo_client.post("/api/users", json={"username": "list_a", "data_limit": 1024})
         sudo_client.post("/api/users", json={"username": "list_b", "data_limit": 2048})
         resp = sudo_client.get("/api/users")
@@ -97,7 +109,9 @@ class TestListUsers:
         assert "list_a" in usernames
         assert "list_b" in usernames
 
-    def test_sub_admin_sees_only_own_users(self, client, db_session):
+    @patch("app.routers.users._create_client_cert")
+    def test_sub_admin_sees_only_own_users(self, mock_cert, client, db_session):
+        mock_cert.return_value = "ovpn-content"
         sudo = _get_sudo(db_session)
         _create_admin(db_session, "sub_c", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
         headers = _login(client, "sub_c")
@@ -118,7 +132,9 @@ class TestListUsers:
 
 
 class TestGetUser:
-    def test_get_own_user(self, client, db_session):
+    @patch("app.routers.users._create_client_cert")
+    def test_get_own_user(self, mock_cert, client, db_session):
+        mock_cert.return_value = "ovpn-content"
         sudo = _get_sudo(db_session)
         _create_admin(db_session, "sub_d", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
         headers = _login(client, "sub_d")
@@ -145,7 +161,9 @@ class TestGetUser:
 
 
 class TestUpdateUser:
-    def test_update_user_data_limit(self, client, db_session):
+    @patch("app.routers.users._create_client_cert")
+    def test_update_user_data_limit(self, mock_cert, client, db_session):
+        mock_cert.return_value = "ovpn-content"
         sudo = _get_sudo(db_session)
         _create_admin(db_session, "sub_e", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
         headers = _login(client, "sub_e")
@@ -160,7 +178,12 @@ class TestUpdateUser:
         _create_admin(db_session, "sub_f", data_limit=3 * 1024**3, parent_admin_id=sudo.id)
         headers = _login(client, "sub_f")
 
-        client.post("/api/users", json={"username": "tight_u", "data_limit": 2 * 1024**3}, headers=headers)
+        # Create user directly in DB
+        admin = db_session.query(Admin).filter(Admin.username == "sub_f").first()
+        user = User(username="tight_u", admin_id=admin.id, data_limit=2 * 1024**3, data_used=0)
+        db_session.add(user)
+        db_session.commit()
+
         resp = client.put(
             "/api/users/tight_u",
             json={"data_limit": 5 * 1024**3},
@@ -175,13 +198,19 @@ class TestDeleteUser:
         _create_admin(db_session, "sub_g", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
         headers = _login(client, "sub_g")
 
-        client.post("/api/users", json={"username": "del_u", "data_limit": 1024}, headers=headers)
+        # Create user directly in DB (bypassing vpn-core cert creation)
+        admin = db_session.query(Admin).filter(Admin.username == "sub_g").first()
+        user = User(username="del_u", admin_id=admin.id, data_limit=1024, data_used=0)
+        db_session.add(user)
+        db_session.commit()
+
         resp = client.delete("/api/users/del_u", headers=headers)
         assert resp.status_code == 204
 
-        # Verify user is gone
-        resp = client.get("/api/users/del_u", headers=headers)
-        assert resp.status_code == 404
+        # Verify user is not in list (soft-deleted)
+        resp = client.get("/api/users", headers=headers)
+        usernames = [u["username"] for u in resp.json()]
+        assert "del_u" not in usernames
 
     def test_cannot_delete_other_admin_user(self, client, db_session):
         sudo = _get_sudo(db_session)
