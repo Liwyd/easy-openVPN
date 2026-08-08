@@ -1,10 +1,23 @@
-"""eovpanel installer — main entrypoint."""
+"""eovpanel installer — Textual-based TUI setup wizard."""
+
+from __future__ import annotations
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Center, Vertical
 from textual.widgets import Footer, Header, Label, OptionList, Static
 from textual.widgets._option_list import Option
+
+from installer.screens.configure import ConfigureScreen
+from installer.screens.install_complete import InstallComplete
+from installer.screens.install_domain import InstallDomain
+from installer.screens.install_run import InstallRun
+from installer.screens.install_telegram import InstallTelegram
+from installer.screens.install_vpn import InstallVpn
+from installer.screens.install_welcome import InstallWelcome
+from installer.screens.install_admin import InstallAdmin
+from installer.screens.uninstall import UninstallScreen
+from installer.screens.welcome import WelcomeScreen
 
 BANNER = r"""
   ______              ______          _ _
@@ -23,19 +36,6 @@ MENU_OPTIONS = [
     "Uninstall",
     "Exit",
 ]
-
-
-class WelcomeScreen(Static):
-    """Welcome banner and menu."""
-
-    def compose(self) -> ComposeResult:
-        yield Static(BANNER, id="banner")
-        yield Label("eovpanel Installer", id="title")
-        yield Label("OpenVPN Management Panel", id="subtitle")
-        yield OptionList(
-            *[Option(opt) for opt in MENU_OPTIONS],
-            id="menu",
-        )
 
 
 class InstallerApp(App):
@@ -65,27 +65,30 @@ class InstallerApp(App):
     }
     """
 
+    TITLE = "eovpanel Installer"
+
     BINDINGS = [
         Binding("q", "quit", "Quit"),
     ]
 
-    def compose(self) -> ComposeResult:
-        yield Header()
-        yield Center(WelcomeScreen())
-        yield Footer()
+    def on_mount(self) -> None:
+        """Register all screens."""
+        self.install_screen = InstallWelcome()
+        self.register_screen("welcome", WelcomeScreen())
+        self.register_screen("install-welcome", InstallWelcome())
+        self.register_screen("install-vpn", InstallVpn())
+        self.register_screen("install-admin", InstallAdmin())
+        self.register_screen("install-telegram", InstallTelegram())
+        self.register_screen("install-domain", InstallDomain())
+        self.register_screen("install-run", InstallRun())
+        self.register_screen("install-complete", InstallComplete())
+        self.register_screen("configure", ConfigureScreen())
+        self.register_screen("uninstall", UninstallScreen())
 
-    def on_option_list_selected(self, event: OptionList.Selected) -> None:
-        option = event.option
-        if option is None:
-            return
-        selected = option.prompt
-        if selected == "Exit":
-            self.exit()
-        else:
-            self.notify(f"'{selected}' — not implemented yet", severity="warning")
+        self.push_screen("welcome")
 
 
-def main():
+def main() -> None:
     app = InstallerApp()
     app.run()
 
