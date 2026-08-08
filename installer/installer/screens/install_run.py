@@ -119,8 +119,21 @@ class InstallRun(InstallBase):
         self.log_pane.write("Installing required packages...")
         pkgs = [
             "openvpn", "openssl", "ca-certificates", "iptables",
-            "curl", "wget", "git", "docker.io", "docker-compose-v2",
+            "curl", "wget", "git",
         ]
+
+        # Check if Docker is already installed (e.g. via Docker's official repo)
+        docker_check = await asyncio.create_subprocess_exec(
+            "docker", "--version",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        await docker_check.wait()
+        if docker_check.returncode == 0:
+            self.log_pane.write("Docker already installed, skipping Docker packages.")
+        else:
+            pkgs.extend(["docker.io", "docker-compose-v2"])
+
         rc, out = await self._run(["apt-get", "install", "-y", "--no-install-recommends"] + pkgs)
         self.log_pane.write(out)
         if rc != 0:
