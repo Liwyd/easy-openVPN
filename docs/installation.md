@@ -1,6 +1,6 @@
 # Installation Guide
 
-This guide walks you through installing eovpanel on a fresh Ubuntu/Debian VPS using the TUI installer.
+This guide walks you through installing eovpanel on a fresh Ubuntu/Debian VPS using the CLI installer.
 
 ## Quick Start (One-Line Install)
 
@@ -14,7 +14,7 @@ This will:
 1. Install Python 3.12+ if not present
 2. Clone the repository to `/opt/eovpanel`
 3. Set up a Python virtual environment
-4. Launch the TUI installer
+4. Launch the CLI installer
 
 ## Requirements
 
@@ -24,223 +24,199 @@ This will:
 - **Access:** Root privileges (sudo)
 - **Network:** Public IP with port 1194 (UDP) available
 
+## CLI Usage
+
+```
+eovpanel <command> [options]
+
+Commands:
+  install       Install eovpanel on this server
+  configure     Modify an existing installation
+  uninstall     Remove eovpanel and optionally all data
+  status        Show current installation status
+```
+
+### Install
+
+**Interactive mode** (prompts for each setting):
+```bash
+sudo eovpanel install
+```
+
+**Non-interactive mode** (uses defaults, no prompts):
+```bash
+sudo eovpanel install -y
+```
+
+**Custom settings:**
+```bash
+sudo eovpanel install --port 1194 --protocol udp --admin-user admin --admin-pass mypassword
+```
+
+**With Telegram:**
+```bash
+sudo eovpanel install --telegram-token "123456:ABC-DEF" --telegram-chat "123456789"
+```
+
+**With TLS (domain):**
+```bash
+sudo eovpanel install --domain panel.example.com --email admin@example.com
+```
+
+### Configure
+
+```bash
+# Rotate JWT secret
+eovpanel configure --rotate-jwt
+
+# Set up TLS
+eovpanel configure --domain panel.example.com --email admin@example.com
+
+# Enable Telegram
+eovpanel configure --enable-telegram --telegram-token "123456:ABC-DEF" --telegram-chat "123456789"
+
+# Disable Telegram
+eovpanel configure --disable-telegram
+```
+
+### Uninstall
+
+```bash
+# Stop containers only (safest)
+sudo eovpanel uninstall --stop
+
+# Remove containers (keep OpenVPN data)
+sudo eovpanel uninstall --remove
+
+# Full purge (wipe everything — irreversible!)
+sudo eovpanel uninstall --purge
+```
+
+### Status
+
+```bash
+eovpanel status
+```
+
 ## Installer Walkthrough
 
-### Screen 1: Welcome Menu
+### Step 1: System Check
 
 ```
-  ______              ______          _ _
- |  ____|            |  ____|        | (_)
- | |___   _ __  ___  | |__   _ __ ___| |_ ___  _ __ _   _
- |  __| | '__/ _ \ |  __| | '__/ _ \ __/ _ \| '__| | | |
- | |    | | |  __/ | |    | | |  __/ || (_) | |  | |_| |
- |_|    |_|  \___| |_|    |_|  \___|\__\___/|_|   \__, |
-                                                     __/ |
-                                                    |___/
-
-eovpanel Installer
-OpenVPN Management Panel
-
-  Install
-  Configure
-  Uninstall
-  Exit
+[1/5] System check
+  [*] OS: ubuntu 22.04
+  [*] Root: yes
+  [+] No existing OpenVPN found. Will install from scratch.
 ```
 
-Use **arrow keys** to navigate and **Enter** to select. Choose:
-- **Install** — Fresh installation on a new server
-- **Configure** — Modify settings of an existing installation
-- **Uninstall** — Remove eovpanel from this server
-- **Exit** — Quit the installer
+The installer automatically detects your OS and checks for root privileges. If an existing OpenVPN installation is found, you'll be asked whether to reuse it.
 
 ---
 
-### Screen 2: System Check (Install Flow)
-
-The installer automatically detects your OS and checks for root privileges:
+### Step 2: VPN Settings
 
 ```
-=== System Check ===
-OS: ubuntu 22.04
-Root: yes
-Debian-like: yes
-No existing OpenVPN installation found.
-Will install OpenVPN from scratch.
+[2/5] VPN settings
+  [*] Port: 1194
+  [*] Protocol: udp
+  [*] Public IP: 203.0.113.42
+  [*] Interface: eth0
 ```
 
-If an existing OpenVPN installation is detected, you'll be asked whether to reuse it or abort.
+Default settings work for most setups. The public IP is auto-detected.
 
 ---
 
-### Screen 3: VPN Settings
+### Step 3: Admin Account
 
 ```
-=== VPN Settings ===
-Detected public IP: 203.0.113.42
-Detected interface: eth0
-
-Default settings:
-  Port:     1194
-  Protocol: UDP
-  Public IP: 203.0.113.42
-  Interface: eth0
-
-Press [Continue] to accept defaults, or go back to modify.
+[3/5] Admin account
+  Admin username [admin]: 
+  Admin password: ********
+  [+] Admin credentials ready.
 ```
 
-Default settings work for most setups. Press **Continue** to proceed.
+Create the first sudo administrator for the web panel. Change the password after first login!
 
 ---
 
-### Screen 4: Admin Account
+### Step 4: Telegram (Optional)
 
 ```
-=== Admin Account ===
-
-Create the first sudo administrator for the web panel.
-Default credentials (press [Continue] to accept):
-  Username: admin
-  Password: admin
-
-⚠ Change the password after first login!
+[4/5] Telegram (optional)
+  Enable Telegram bot notifications now? [y/N]: n
+  [*] Telegram skipped. You can enable it later from the panel Settings.
 ```
 
-Press **Continue** to create the admin with default credentials, then change it after login.
+Press N to skip. You can enable Telegram later from the web panel.
 
 ---
 
-### Screen 5: Telegram Bot (Optional)
+### Step 5: Domain & TLS (Optional)
 
 ```
-=== Telegram Bot (Optional) ===
-
-Telegram bot integration sends notifications when:
-  - A new client connects/disconnects
-  - A user's quota is used up
-  - A user's subscription expires
-
-You can configure this later from the panel's Settings page.
-
-Press [Continue] to skip Telegram setup.
+[5/5] Domain & TLS
+  Set up a domain with free TLS certificate (via ESSL)? [y/N]: n
+  [*] TLS skipped. Panel will run over plain HTTP.
 ```
 
-Press **Skip** to continue without Telegram. You can enable it later from the web panel.
+Press N to skip. The panel works perfectly over plain HTTP.
 
 ---
 
-### Screen 6: Domain & TLS (Optional)
+### Installation Progress
 
 ```
-=== Domain & TLS (Optional) ===
-
-You can optionally set up a domain name with a free TLS
-certificate so the panel is accessible over HTTPS.
-
-Requirements:
-  - A domain name pointed at this server's IP
-  - Port 80 open (for ACME HTTP-01 challenge)
-
-The panel works fine over plain HTTP without TLS.
-You can add TLS later from the Configure menu.
-
-Press [Skip] to continue without TLS.
+Running installation
+─────────────────────
+  [*] Installing system packages...
+  [+] System packages installed.
+  [*] Setting up OpenVPN server...
+  [+] OpenVPN server configured.
+  [*] Configuring backend environment...
+  [+] Backend .env written to /opt/eovpanel/backend/.env
+  [*] Seeding admin account (admin)...
+  [+] Admin account seeded.
+  [*] Building and starting containers...
+  [+] Containers started successfully.
 ```
 
-Press **Skip** to continue over plain HTTP. The panel works perfectly without TLS.
+Each step streams live output from the underlying commands.
 
 ---
 
-### Screen 7: Installation Progress
+### Installation Complete
 
 ```
-=== Running Installation ===
-
---- Step 1/5: Install system packages ---
-Updating package lists...
-Installing required packages...
-System packages installed.
-
---- Step 2/5: Set up OpenVPN server ---
-Running setup_server.sh eth0 1194 udp
-[*] Installing packages...
-[*] Downloading easy-rsa 3.2.6...
-[*] Initialising PKI...
-OpenVPN server configured.
-
---- Step 3/5: Configure backend .env ---
-Configuring backend environment...
-Backend .env written to /opt/eovpanel/backend/.env
-
---- Step 4/5: Seed admin account ---
-Seeding initial admin account (admin/admin)...
-Admin account seeded.
-
---- Step 5/5: Build and start containers ---
-Building and starting containers...
-Containers started successfully.
-```
-
-Each step streams live output from the underlying commands. If a step fails, you'll see the error and can choose to retry or abort.
-
----
-
-### Screen 8: Installation Complete
-
-```
-╔══════════════════════════════════════════╗
-║       Installation Complete!             ║
-╚══════════════════════════════════════════╝
+Installation complete!
+──────────────────────
 
   Panel URL:     http://203.0.113.42
-  Login:         admin / admin
+  Login:         admin / <password>
   OpenVPN CA:    /opt/eovpanel/vpn-core/
   Backend .env:  /opt/eovpanel/backend/.env
-  Docker Compose:/opt/eovpanel/docker/docker-compose.yml
+  Docker Compose: /opt/eovpanel/docker/docker-compose.yml
 
-Next steps:
-  1. Open the panel URL in your browser
-  2. Log in with admin / admin
-  3. Change the default admin password immediately!
-  4. Create your first VPN user from the Users page
-  5. Download the .ovpn config and test connectivity
+  Next steps:
+    1. Open the panel URL in your browser
+    2. Log in with your admin credentials
+    3. Change the default admin password immediately!
+    4. Create your first VPN user from the Users page
+    5. Download the .ovpn config and test connectivity
 
-To reconfigure the panel, run the installer again and
-select 'Configure' from the main menu.
+  To reconfigure, run: eovpanel configure
+  To uninstall, run:   eovpanel uninstall
 ```
 
 ---
-
-## Configure Flow
-
-Run the installer again and select **Configure** to:
-
-- **Change panel domain / TLS** — Add or update TLS certificates via ESSL
-- **Rotate JWT secret** — Generate a new JWT signing key
-- **Edit OpenVPN settings** — Guide to editing via the web panel (same settings page as the TUI would use)
-
-## Uninstall Flow
-
-Select **Uninstall** from the main menu to choose what to remove:
-
-| Option | What it does |
-|--------|-------------|
-| **Stop containers only** | Stops backend/frontend containers. All data preserved. |
-| **Remove containers** | Stops + removes containers, networks, images. OpenVPN data preserved. |
-| **Full purge** | Removes everything: containers, OpenVPN certs/keys, database. **Irreversible.** |
-
-The default (safest) option is **Stop containers only**.
 
 ## Idempotency
 
-Running **Install** on an already-installed system will detect the existing installation and offer to jump into **Configure** instead of duplicating work.
+Running `eovpanel install` on an already-installed system will detect the existing installation and ask whether to overwrite the config.
 
 ## Rollback on Failure
 
-If an installation step fails midway, the installer shows the error and offers:
-- **Retry** — Attempt the failed step again
-- **Abort** — Stop installation, leaving partial state in place for manual inspection
-
-Partial state is preserved by default since it's more useful for debugging than a clean slate.
+If an installation step fails, the installer shows the error and exits. Partial state is preserved for manual inspection.
 
 ## File Locations
 

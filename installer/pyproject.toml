@@ -1,15 +1,13 @@
 [project]
 name = "eovpanel-installer"
-version = "0.1.0"
-description = "eovpanel TUI installer — Textual-based setup wizard"
+version = "0.2.0"
+description = "eovpanel CLI — clean command-line installer and configurator"
 requires-python = ">=3.12"
 license = {text = "MIT"}
-dependencies = [
-    "textual>=0.70.0",
-]
+dependencies = []
 
 [project.scripts]
-eovpanel-installer = "installer.main:main"
+eovpanel = "installer.cli:main"
 
 [tool.ruff]
 target-version = "py312"

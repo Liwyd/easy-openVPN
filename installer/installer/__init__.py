@@ -1,1 +1,1 @@
-"""eovpanel TUI installer."""
+"""eovpanel CLI installer."""

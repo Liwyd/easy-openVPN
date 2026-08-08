@@ -9,8 +9,8 @@
 #   1. Checks for root privileges
 #   2. Installs Python 3.12+ if not present
 #   3. Clones (or updates) the repo to /opt/eovpanel
-#   4. Installs the TUI installer package
-#   5. Launches the Textual-based installer
+#   4. Installs the CLI installer package
+#   5. Launches the CLI
 
 set -euo pipefail
 
@@ -70,16 +70,12 @@ install_python() {
     info "Python 3.12 installed."
 }
 
-# --- Install dependencies for Textual ----------------------------------------
+# --- Install system dependencies -----------------------------------------------
 install_system_deps() {
     info "Installing system dependencies..."
     apt-get install -y --no-install-recommends \
         git curl wget ca-certificates \
         libffi-dev libssl-dev
-
-    # Textual needs these for the TUI
-    apt-get install -y --no-install-recommends \
-        python3-dev build-essential || true
 }
 
 # --- Clone or update repo -----------------------------------------------------
@@ -94,7 +90,7 @@ clone_repo() {
     fi
 }
 
-# --- Set up Python venv and install installer ----------------------------------
+# --- Set up Python venv and install CLI ----------------------------------------
 setup_venv() {
     info "Setting up Python virtual environment..."
 
@@ -112,19 +108,14 @@ setup_venv() {
     info "Installer package installed."
 }
 
-# --- Launch the TUI -----------------------------------------------------------
+# --- Launch the CLI -----------------------------------------------------------
 launch_installer() {
-    info "Launching eovpanel installer..."
-    echo ""
-    echo "  ┌─────────────────────────────────────────────┐"
-    echo "  │  Use arrow keys to navigate, Enter to      │"
-    echo "  │  select, 'q' to quit at any time.          │"
-    echo "  └─────────────────────────────────────────────┘"
+    info "Launching eovpanel CLI..."
     echo ""
 
     # shellcheck disable=SC1091
     source "${VENV_DIR}/bin/activate"
-    eovpanel-installer
+    eovpanel install
 }
 
 # --- Main ---------------------------------------------------------------------
