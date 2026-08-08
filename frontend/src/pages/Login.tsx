@@ -51,6 +51,7 @@ export default function Login() {
         mx={4}
       >
         <VStack gap={2}>
+          <img src="/favicon.svg" alt="" width={32} height={32} />
           <Heading size="lg" color="accent">
             eovpanel
           </Heading>

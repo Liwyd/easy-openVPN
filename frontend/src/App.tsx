@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster, Toast } from "@chakra-ui/react";
 import { AuthProvider } from "./context/AuthContext";
+import { toaster } from "./lib/toaster";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
@@ -12,6 +14,18 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <Toaster toaster={toaster}>
+          {(toast) => (
+            <Toast.Root>
+              <Toast.Indicator />
+              <Toast.Title>{toast.title}</Toast.Title>
+              {toast.description && (
+                <Toast.Description>{toast.description}</Toast.Description>
+              )}
+              <Toast.CloseTrigger />
+            </Toast.Root>
+          )}
+        </Toaster>
         <Routes>
           <Route path="/login" element={<Login />} />
 

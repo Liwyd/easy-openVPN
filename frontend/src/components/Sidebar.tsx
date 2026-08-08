@@ -62,16 +62,12 @@ function SidebarContent({ onNavClick }: { onNavClick?: () => void }) {
 
   return (
     <VStack align="stretch" gap={1} p={4} h="full">
-      <Text
-        fontSize="lg"
-        fontWeight="bold"
-        color="accent"
-        px={3}
-        mb={4}
-        letterSpacing="tight"
-      >
-        eovpanel
-      </Text>
+      <HStack gap={2.5} px={3} mb={4}>
+        <img src="/favicon.svg" alt="" width={24} height={24} />
+        <Text fontSize="lg" fontWeight="bold" color="accent" letterSpacing="tight">
+          eovpanel
+        </Text>
+      </HStack>
       {filtered.map((item) => (
         <NavItem key={item.path} {...item} onClick={onNavClick} />
       ))}

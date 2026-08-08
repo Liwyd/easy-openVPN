@@ -22,6 +22,7 @@ from app.routers.admins import router as admins_router
 from app.routers.auth import router as auth_router
 from app.routers.health import router as health_router
 from app.routers.settings import router as settings_router
+from app.routers.stats import router as stats_router
 from app.routers.subscription import router as subscription_router
 from app.routers.users import router as users_router
 
@@ -63,6 +64,7 @@ def create_app() -> FastAPI:
     application.include_router(admins_router)
     application.include_router(users_router)
     application.include_router(settings_router)
+    application.include_router(stats_router)
     # Public subscription endpoint — mounted OUTSIDE /api prefix
     application.include_router(subscription_router)
 

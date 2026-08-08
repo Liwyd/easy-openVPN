@@ -1,8 +1,11 @@
-"""Auth router — login (OAuth2 password flow) + refresh token."""
+"""Auth router — login (OAuth2 password flow) + refresh token + change password."""
 
 from __future__ import annotations
 
+import datetime as dt
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -10,7 +13,7 @@ from app.models.admin import Admin
 from app.schemas.auth import AdminProfile, RefreshRequest, TokenRequest, TokenResponse
 from app.services.auth import get_current_admin
 from app.services.jwt import create_access_token, create_refresh_token, decode_token
-from app.utils.password import verify_password
+from app.utils.password import hash_password, verify_password
 
 router = APIRouter(prefix="/api/admin", tags=["auth"])
 
@@ -93,3 +96,28 @@ def get_me(
         data_used=current_admin.data_used,
         parent_admin_id=current_admin.parent_admin_id,
     )
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+@router.put("/me/password")
+def change_my_password(
+    body: ChangePasswordRequest,
+    current_admin: Admin = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    """Allow any authenticated admin to change their own password."""
+    if not verify_password(body.current_password, current_admin.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Current password is incorrect",
+        )
+
+    current_admin.hashed_password = hash_password(body.new_password)
+    current_admin.password_reset_at = dt.datetime.now(dt.UTC)
+    db.commit()
+
+    return {"detail": "Password updated successfully"}

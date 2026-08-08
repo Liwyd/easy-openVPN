@@ -13,8 +13,10 @@ export default function Users() {
         bg="bg"
         textAlign="center"
       >
-        <FiUsers size={40} style={{ margin: "0 auto 16px", opacity: 0.3 }} />
-        <Text color="fg.muted">User management coming in the next stage.</Text>
+        <Box color="accent" opacity={0.3} display="flex" justifyContent="center" mb={4}>
+          <FiUsers size={40} />
+        </Box>
+        <Text color="fg.muted" fontSize="sm">User management coming in the next stage.</Text>
       </Box>
     </VStack>
   );
