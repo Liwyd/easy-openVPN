@@ -61,28 +61,30 @@ class StepIndicator(Static):
         self._current = -1
         self._completed: set[int] = set()
         self._failed: set[int] = set()
-        self._render()
+
+    def on_mount(self) -> None:
+        self._refresh_display()
 
     def set_current(self, index: int) -> None:
         """Mark a step as currently running."""
         self._current = index
-        self._render()
+        self._refresh_display()
 
     def set_completed(self, index: int) -> None:
         """Mark a step as completed."""
         self._completed.add(index)
         if index == self._current:
             self._current = -1
-        self._render()
+        self._refresh_display()
 
     def set_failed(self, index: int) -> None:
         """Mark a step as failed."""
         self._failed.add(index)
         if index == self._current:
             self._current = -1
-        self._render()
+        self._refresh_display()
 
-    def _render(self) -> None:
+    def _build_content(self) -> str:
         lines: list[str] = []
         for i, step in enumerate(self._steps):
             if i in self._completed:
@@ -94,4 +96,7 @@ class StepIndicator(Static):
             else:
                 icon = "[dim]○[/dim]"
             lines.append(f"  {icon} {step}")
-        self.update("\n".join(lines))
+        return "\n".join(lines)
+
+    def _refresh_display(self) -> None:
+        self.update(self._build_content())
