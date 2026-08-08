@@ -123,12 +123,15 @@ class InstallRun(InstallBase):
         ]
 
         # Check if Docker is already installed (e.g. via Docker's official repo)
-        docker_check = await asyncio.create_subprocess_exec(
-            "docker", "--version",
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        await docker_check.wait()
+        try:
+            docker_check = await asyncio.create_subprocess_exec(
+                "docker", "--version",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await asyncio.wait_for(docker_check.wait(), timeout=10)
+        except (asyncio.TimeoutError, ProcessLookupError):
+            docker_check.returncode = 1
         if docker_check.returncode == 0:
             self.log_pane.write("Docker already installed, skipping Docker packages.")
         else:
@@ -142,9 +145,16 @@ class InstallRun(InstallBase):
 
         # Ensure Docker is running
         self.log_pane.write("Ensuring Docker daemon is running...")
-        rc, _ = await self._run(["systemctl", "is-active", "docker"])
-        # rc == 0 means Docker is active, no action needed
-        if rc != 0:
+        try:
+            docker_active = await asyncio.create_subprocess_exec(
+                "docker", "info",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            await asyncio.wait_for(docker_active.wait(), timeout=10)
+        except (asyncio.TimeoutError, ProcessLookupError):
+            docker_active.returncode = 1
+        if docker_active.returncode != 0:
             rc, _ = await self._run(["systemctl", "enable", "--now", "docker"])
             if rc != 0:
                 self.log_pane.write("[red]Failed to start Docker daemon.[/red]")
