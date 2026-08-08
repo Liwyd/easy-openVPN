@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-from textual.app import App, ComposeResult
+from textual.app import App
 from textual.binding import Binding
-from textual.containers import Center, Vertical
-from textual.widgets import Footer, Header, Label, OptionList, Static
-from textual.widgets._option_list import Option
 
 from installer.screens.configure import ConfigureScreen
 from installer.screens.install_complete import InstallComplete
@@ -71,20 +68,21 @@ class InstallerApp(App):
         Binding("q", "quit", "Quit"),
     ]
 
-    def on_mount(self) -> None:
-        """Register all screens."""
-        self.install_screen = InstallWelcome()
-        self.register_screen("welcome", WelcomeScreen())
-        self.register_screen("install-welcome", InstallWelcome())
-        self.register_screen("install-vpn", InstallVpn())
-        self.register_screen("install-admin", InstallAdmin())
-        self.register_screen("install-telegram", InstallTelegram())
-        self.register_screen("install-domain", InstallDomain())
-        self.register_screen("install-run", InstallRun())
-        self.register_screen("install-complete", InstallComplete())
-        self.register_screen("configure", ConfigureScreen())
-        self.register_screen("uninstall", UninstallScreen())
+    SCREENS = {
+        "welcome": WelcomeScreen,
+        "install-welcome": InstallWelcome,
+        "install-vpn": InstallVpn,
+        "install-admin": InstallAdmin,
+        "install-telegram": InstallTelegram,
+        "install-domain": InstallDomain,
+        "install-run": InstallRun,
+        "install-complete": InstallComplete,
+        "configure": ConfigureScreen,
+        "uninstall": UninstallScreen,
+    }
 
+    def on_mount(self) -> None:
+        """Show the welcome screen."""
         self.push_screen("welcome")
 
 
