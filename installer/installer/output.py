@@ -11,6 +11,11 @@ def _supports_color() -> bool:
     return sys.stdout.isatty()
 
 
+def _is_interactive() -> bool:
+    """Check if stdin is a real TTY (not piped/redirected)."""
+    return hasattr(sys.stdin, "isatty") and sys.stdin.isatty()
+
+
 _COLOR = _supports_color()
 
 # ANSI codes
@@ -85,10 +90,16 @@ def heading(text: str) -> None:
 
 
 def confirm(prompt: str, default: bool = False) -> bool:
+    """Ask a yes/no question. Returns default if piped. Exits on Ctrl+C."""
+    if not _is_interactive():
+        return default
     suffix = " [Y/n]" if default else " [y/N]"
     try:
         answer = input(f"  {prompt}{suffix}: ").strip().lower()
-    except (EOFError, KeyboardInterrupt):
+    except KeyboardInterrupt:
+        print()
+        raise SystemExit(130)
+    except (EOFError, UnicodeDecodeError):
         print()
         return default
     if not answer:
@@ -97,19 +108,31 @@ def confirm(prompt: str, default: bool = False) -> bool:
 
 
 def prompt_str(label: str, default: str = "") -> str:
+    """Ask for a string. Returns default if piped. Exits on Ctrl+C."""
+    if not _is_interactive():
+        return default
     suffix = f" [{default}]" if default else ""
     try:
         answer = input(f"  {label}{suffix}: ").strip()
-    except (EOFError, KeyboardInterrupt):
+    except KeyboardInterrupt:
+        print()
+        raise SystemExit(130)
+    except (EOFError, UnicodeDecodeError):
         print()
         return default
     return answer or default
 
 
 def prompt_secret(label: str) -> str:
+    """Ask for a password (hidden input). Returns empty on piped. Exits on Ctrl+C."""
+    if not _is_interactive():
+        return ""
     import getpass
     try:
         return getpass.getpass(f"  {label}: ")
-    except (EOFError, KeyboardInterrupt):
+    except KeyboardInterrupt:
+        print()
+        raise SystemExit(130)
+    except (EOFError, UnicodeDecodeError):
         print()
         return ""

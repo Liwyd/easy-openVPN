@@ -49,20 +49,20 @@ def _interactive_menu() -> None:
   {bold('5')}  Edit OpenVPN server settings
   {bold('0')}  Back
 """)
-    choice = input("  Select option: ").strip()
+    choice = prompt_str("Select option", "0")
 
     if choice == "1":
         _rotate_jwt()
     elif choice == "2":
-        domain = input("  Domain name: ").strip()
-        email = input("  Email: ").strip()
+        domain = prompt_str("Domain name")
+        email = prompt_str("Email")
         if domain and email:
             _configure_tls(domain, email)
         else:
             warn("Domain and email required.")
     elif choice == "3":
-        token = input("  Bot token: ").strip()
-        chat = input("  Chat ID: ").strip()
+        token = prompt_str("Bot token")
+        chat = prompt_str("Chat ID")
         if token:
             _configure_telegram(True, token, chat)
         else:

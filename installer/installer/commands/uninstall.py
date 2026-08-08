@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 from installer.output import (
-    banner, bold, confirm, dim, fail, green, heading, info, ok, step, warn,
+    banner, bold, confirm, fail, heading, info, ok, prompt_str, step, warn,
     yellow,
 )
 from installer.utils import (
@@ -47,7 +47,7 @@ def _interactive_uninstall() -> None:
 
   {bold('0')}  Back to menu
 """)
-    choice = input("  Select option: ").strip()
+    choice = prompt_str("Select option", "0")
 
     if choice == "1":
         _stop_containers()
