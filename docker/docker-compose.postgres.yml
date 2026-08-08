@@ -1,0 +1,60 @@
+# =============================================================================
+# eovpanel — PostgreSQL Override
+# =============================================================================
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d
+#
+# This adds a PostgreSQL 16 service and overrides the backend's DATABASE_URL
+# to use Postgres instead of SQLite.
+#
+# The SQLite data volume is still mounted (harmlessly) but ignored by the app.
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 16
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: eovpanel-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: eovpanel
+      POSTGRES_USER: eovpanel
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-eovpanel}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - eovpanel
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eovpanel -d eovpanel"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # Backend — override DATABASE_URL to use Postgres
+  # ---------------------------------------------------------------------------
+  backend:
+    environment:
+      DATABASE_URL: postgresql://eovpanel:${POSTGRES_PASSWORD:-eovpanel}@postgres:5432/eovpanel
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+# ---------------------------------------------------------------------------
+# Volumes
+# ---------------------------------------------------------------------------
+volumes:
+  postgres_data:
+    # Persists PostgreSQL data across container restarts.
+
+  # Keep the SQLite volume from base compose (ignored when using Postgres)
+  eovpanel_data:
+
+# ---------------------------------------------------------------------------
+# Networks
+# ---------------------------------------------------------------------------
+networks:
+  eovpanel:
+    driver: bridge

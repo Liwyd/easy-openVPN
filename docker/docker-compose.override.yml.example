@@ -1,0 +1,58 @@
+# =============================================================================
+# eovpanel — Local Development Override
+# =============================================================================
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.override.yml.example up -d --build
+#
+# This override enables:
+#   - Hot reload for both backend (uvicorn --reload) and frontend (vite dev)
+#   - Exposed debug ports
+#   - DEBUG=true logging
+#   - CORS origins for local dev servers
+#
+# Copy this file to docker-compose.override.yml and adjust as needed.
+# docker compose automatically loads docker-compose.override.yml if it exists.
+# =============================================================================
+
+services:
+  backend:
+    build:
+      context: ../
+      dockerfile: docker/backend/Dockerfile
+      target: builder  # Keep build tools for hot reload
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    volumes:
+      # Mount source code for hot reload (overrides production volume)
+      - ../backend:/app
+      # Keep the data volume for persistence
+      - eovpanel_data:/app/data
+      # OpenVPN paths (same as production)
+      - /etc/openvpn:/etc/openvpn:rw
+      - /run/openvpn:/run/openvpn:rw
+    environment:
+      - DEBUG=true
+      - CORS_ORIGINS=http://localhost:5173,http://localhost:3000,http://localhost
+    ports:
+      - "8000:8000"  # Expose directly for Vite proxy
+    healthcheck:
+      disable: true  # Disable during dev for faster restarts
+
+  frontend:
+    # For local dev, use Vite dev server instead of nginx.
+    # Run manually: cd frontend && npm run dev
+    # The vite.config.ts already proxies /api -> localhost:8000
+    #
+    # If you still want nginx in dev, uncomment below:
+    # build:
+    #   context: ../
+    #   dockerfile: docker/frontend/Dockerfile
+    # ports:
+    #   - "80:80"
+    healthcheck:
+      disable: true
+
+# Keep the named volume from the base compose file
+volumes:
+  eovpanel_data:

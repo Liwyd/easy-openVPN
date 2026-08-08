@@ -1,31 +1,67 @@
-version: "3.8"
-
-# eovpanel — Docker Compose
+# =============================================================================
+# eovpanel — Production Docker Compose
+# =============================================================================
 #
-# OpenVPN itself runs on the HOST (installed by Nyr's script / the TUI installer).
-# The backend and frontend run in Docker containers.
+# Quick start:
+#   1. cp ../.env.example ../.env   (edit with your settings)
+#   2. docker compose up -d --build
+#   3. Open http://localhost (or https://localhost if TLS is configured)
 #
-# Host paths mounted into the backend container:
-#   - /etc/openvpn/        → OpenVPN config, certs, management socket
-#   - /etc/openvpn/easy-rsa/ → easy-rsa directory for certificate operations
+# Services:
+#   - backend:  FastAPI API + Alembic migrations + APScheduler
+#   - frontend: React SPA served by nginx (reverse proxy to backend)
+#
+# OpenVPN runs on the HOST (not in Docker). The backend needs access to:
+#   - /etc/openvpn/          — server config, certs, easy-rsa, CCD directory
+#   - /run/openvpn/          — management socket for live status + client control
+#
+# These host paths are created by vpn-core's setup_server.sh on the host.
+#
+# TLS modes:
+#   (a) No TLS (default) — HTTP only on port 80. Fine for local/behind-VPN.
+#   (b) Certs from erfjab/ESSL — mount to /etc/nginx/ssl/ in frontend service.
+#   (c) External reverse proxy (Caddy/Traefik) — this compose works behind it.
+#
+# Postgres alternative:
+#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d
+# =============================================================================
 
 services:
+  # ---------------------------------------------------------------------------
+  # Backend — FastAPI + Alembic + APScheduler
+  # ---------------------------------------------------------------------------
   backend:
     build:
       context: ../
       dockerfile: docker/backend/Dockerfile
     container_name: eovpanel-backend
     restart: unless-stopped
-    ports:
-      - "8000:8000"
     env_file:
-      - ../backend/.env
+      - ../.env
+    ports:
+      # Exposed for direct API access during debugging / external proxy setups.
+      # In production behind the frontend nginx, you can remove this mapping.
+      - "127.0.0.1:8000:8000"
     volumes:
+      # OpenVPN server config, certs, easy-rsa, CCD directory (read/write)
       - /etc/openvpn:/etc/openvpn:rw
-      - /run/openvpn:/run/openvpn:ro
+      # Management socket for live client status and control commands.
+      # Must be :rw because the backend sends management commands (kill, status).
+      - /run/openvpn:/run/openvpn:rw
+      # SQLite data persistence (named volume, ignored when using Postgres)
+      - eovpanel_data:/app/data
     networks:
       - eovpanel
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
 
+  # ---------------------------------------------------------------------------
+  # Frontend — React SPA + nginx reverse proxy
+  # ---------------------------------------------------------------------------
   frontend:
     build:
       context: ../
@@ -34,11 +70,34 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - eovpanel
+    # --- TLS (optional) ---
+    # To enable TLS with certs from erfjab/ESSL, uncomment and adjust:
+    # volumes:
+    #   - /etc/letsencrypt/live/yourdomain.com:/etc/nginx/ssl:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3
 
+# ---------------------------------------------------------------------------
+# Named volumes
+# ---------------------------------------------------------------------------
+volumes:
+  eovpanel_data:
+    # Persists the SQLite database across container restarts.
+    # Ignored when using PostgreSQL (docker-compose.postgres.yml).
+
+# ---------------------------------------------------------------------------
+# Networks
+# ---------------------------------------------------------------------------
 networks:
   eovpanel:
     driver: bridge

@@ -1,0 +1,72 @@
+# Git
+.git/
+.gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+# Environment / Secrets
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker/data/
+
+# Database (dev artifacts)
+*.db
+*.sqlite3
+
+# Logs
+*.log
+
+# Documentation (not needed in images)
+docs/
+README.md
+LICENSE
+Makefile
+.editorconfig
+
+# Tests
+backend/tests/
+frontend/src/**/*.test.*
+
+# Alembic pycache
+backend/alembic/versions/__pycache__/
+
+# OpenVPN generated files
+vpn-core/vars
+vpn-core/*.ovpn
+vpn-core/crl.pem
+vpn-core/dh.pem
+vpn-core/ca.crt
+vpn-core/server.crt
+vpn-core/server.key
