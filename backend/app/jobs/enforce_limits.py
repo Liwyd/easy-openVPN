@@ -9,12 +9,15 @@ Runs every ~60s.  For every active user:
 User limit vs admin allocation limit are kept clearly separate:
 disabling a user for going over their personal quota does NOT
 silently mark the whole admin as over quota.
+
+Thread safety: a module-level Lock prevents concurrent overlapping runs.
 """
 
 from __future__ import annotations
 
 import datetime as dt
 import logging
+import threading
 
 from app.config import OPENVPN_MANAGEMENT_SOCKET
 from app.logging_config import enforcement_log
@@ -23,6 +26,9 @@ from app.models.user import User, UserStatus
 from app.services.vpn_bridge import disable_client, kill_client_session
 
 logger = logging.getLogger(__name__)
+
+# Defense-in-depth mutex
+_job_lock = threading.Lock()
 
 
 def _is_in_time_window(user: User) -> bool:
@@ -48,6 +54,17 @@ def enforce_limits_job() -> None:
     Designed to be called by APScheduler's BackgroundScheduler.
     Each invocation creates its own DB session.
     """
+    if not _job_lock.acquire(blocking=False):
+        logger.debug("enforce_limits_job: previous run still in progress, skipping")
+        return
+
+    try:
+        _enforce_limits_job_inner()
+    finally:
+        _job_lock.release()
+
+
+def _enforce_limits_job_inner() -> None:
     import app.db as _db
 
     db = _db.SessionLocal()

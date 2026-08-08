@@ -8,11 +8,17 @@ user to keep the hierarchy consistent).
 Handles counter resets (OpenVPN resets counters on reconnect) by
 detecting a decrease and treating it as a new session baseline instead
 of a negative delta.
+
+Thread safety: a module-level Lock prevents concurrent overlapping runs.
+If the previous invocation is still running, the new invocation is
+skipped entirely (APScheduler's max_instances=1 also helps, but the
+lock is a defense-in-depth measure).
 """
 
 from __future__ import annotations
 
 import logging
+import threading
 
 from app.config import OPENVPN_MANAGEMENT_SOCKET
 from app.models.admin import Admin
@@ -22,6 +28,10 @@ from app.services.quota import recalculate_admin_data_used
 from app.services.vpn_bridge import get_live_status
 
 logger = logging.getLogger(__name__)
+
+# Defense-in-depth mutex — prevents concurrent overlapping runs even if
+# APScheduler's max_instances setting is bypassed or misconfigured.
+_job_lock = threading.Lock()
 
 # In-memory snapshot of last known byte counters per CN.
 # Key: common_name, Value: (bytes_received, bytes_sent)
@@ -34,6 +44,17 @@ def sync_usage_job() -> None:
     Designed to be called by APScheduler's BackgroundScheduler.
     Each invocation creates its own DB session and commits per-user.
     """
+    if not _job_lock.acquire(blocking=False):
+        logger.debug("sync_usage_job: previous run still in progress, skipping")
+        return
+
+    try:
+        _sync_usage_job_inner()
+    finally:
+        _job_lock.release()
+
+
+def _sync_usage_job_inner() -> None:
     import app.db as _db
 
     try:
@@ -74,7 +95,7 @@ def sync_usage_job() -> None:
 
         db = _db.SessionLocal()
         try:
-            # Find the user by common_name with row-level locking
+            # Find the user by common_name
             user = db.query(User).filter(User.common_name == cn).first()
             if user is None:
                 continue

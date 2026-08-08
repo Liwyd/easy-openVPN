@@ -7,12 +7,15 @@ re-enables if they were only 'limited' (not 'expired' or manually
 
 Tracks a `last_reset_at` field to determine when the last reset
 happened and whether a reset is due today.
+
+Thread safety: a module-level Lock prevents concurrent overlapping runs.
 """
 
 from __future__ import annotations
 
 import datetime as dt
 import logging
+import threading
 
 from app.logging_config import enforcement_log
 from app.models.admin import Admin
@@ -20,6 +23,9 @@ from app.models.user import DataLimitResetStrategy, User, UserStatus
 from app.services.quota import recalculate_admin_data_used
 
 logger = logging.getLogger(__name__)
+
+# Defense-in-depth mutex
+_job_lock = threading.Lock()
 
 
 def _is_due(last_reset_at: dt.datetime | None, strategy: DataLimitResetStrategy, now: dt.datetime) -> bool:
@@ -49,6 +55,17 @@ def reset_periodic_limits_job() -> None:
     Only resets users who were 'limited' due to data cap, NOT users
     who are 'expired' (hard expiry) or 'disabled' (manual admin action).
     """
+    if not _job_lock.acquire(blocking=False):
+        logger.debug("reset_periodic_limits_job: previous run still in progress, skipping")
+        return
+
+    try:
+        _reset_periodic_limits_job_inner()
+    finally:
+        _job_lock.release()
+
+
+def _reset_periodic_limits_job_inner() -> None:
     import app.db as _db
 
     db = _db.SessionLocal()

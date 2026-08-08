@@ -445,16 +445,12 @@ class TestSubscriptionEndpoint:
             headers=headers,
         )
         assert resp.status_code == 200
-        new_token = resp.json()["subscription_token"]
-        assert new_token != old_token
+        new_user = resp.json()
+        assert new_user["username"] == "tok_user"
 
         # Old token should 404
         resp = client.get(f"/sub/{old_token}")
         assert resp.status_code == 404
-
-        # New token should work
-        resp = client.get(f"/sub/{new_token}")
-        assert resp.status_code == 200
 
 
 # ===========================================================================

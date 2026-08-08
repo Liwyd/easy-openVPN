@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import datetime as dt
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.models.user import DataLimitResetStrategy, UserStatus
+from app.utils.validation import validate_username
 
 
 class UserCreate(BaseModel):
@@ -16,6 +17,12 @@ class UserCreate(BaseModel):
     time_window_start: dt.time | None = None
     time_window_end: dt.time | None = None
     note: str | None = None
+
+    @field_validator("username")
+    @classmethod
+    def check_username(cls, v: str) -> str:
+        validate_username(v)
+        return v
 
 
 class UserUpdate(BaseModel):
@@ -28,6 +35,8 @@ class UserUpdate(BaseModel):
 
 
 class UserResponse(BaseModel):
+    """Admin-facing user response — does NOT expose subscription_token."""
+
     id: int
     username: str
     admin_id: int
@@ -41,7 +50,6 @@ class UserResponse(BaseModel):
     time_window_end: dt.time | None = None
     note: str | None
     revoked: bool
-    subscription_token: str
     common_name: str | None = None
 
     model_config = {"from_attributes": True}

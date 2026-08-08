@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -13,16 +13,38 @@ from app.models.admin import Admin
 from app.schemas.auth import AdminProfile, RefreshRequest, TokenRequest, TokenResponse
 from app.services.auth import get_current_admin
 from app.services.jwt import create_access_token, create_refresh_token, decode_token
+from app.services.rate_limiter import SlidingWindowRateLimiter
 from app.utils.password import hash_password, verify_password
 
 router = APIRouter(prefix="/api/admin", tags=["auth"])
 
+# Login-specific rate limiter: 5 failed attempts per minute per IP.
+_login_rate_limiter = SlidingWindowRateLimiter(max_requests=5, window_seconds=60)
+
 
 @router.post("/token", response_model=TokenResponse)
-def login(body: TokenRequest, db: Session = Depends(get_db)):
-    """Authenticate an admin and return access + refresh tokens."""
+def login(body: TokenRequest, request: Request, db: Session = Depends(get_db)):
+    """Authenticate an admin and return access + refresh tokens.
+
+    Rate-limited to 5 failed attempts per minute per IP address.
+    Returns 429 with Retry-After header when exceeded.
+    Only failed login attempts count toward the limit.
+    """
+    client_ip = request.client.host if request.client else "unknown"
+
+    # Check rate limit BEFORE processing (without auto-recording).
+    if _login_rate_limiter.check_only(client_ip):
+        retry_after = _login_rate_limiter.retry_after(client_ip)
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many failed login attempts. Try again later.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
     admin = db.query(Admin).filter(Admin.username == body.username).first()
     if admin is None or not verify_password(body.password, admin.hashed_password):
+        # Record the FAILED attempt toward the rate limit.
+        _login_rate_limiter._record_failure(client_ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid username or password",

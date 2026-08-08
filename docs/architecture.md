@@ -113,3 +113,16 @@ OpenVPN itself runs directly on the HOST (not in a container), while the backend
 - Sync SQLAlchemy means all DB operations block the request thread, but VPN I/O is the real bottleneck.
 - APScheduler jobs run in the same process — a crash restarts the scheduler but jobs may miss a beat (acceptable for traffic accounting granularity).
 - OpenVPN on host means the installer must handle host-level package installation (iptables, openvpn, easy-rsa) outside of Docker.
+
+### Known Limitations
+
+These are deliberate scope boundaries, not bugs.  Contributors should understand them before proposing changes:
+
+- **Single-node only.**  There is no clustering, replication, or distributed locking.  The backend, scheduler, and OpenVPN server all run on one machine.  Horizontal scaling would require a shared database, distributed job queue, and management-interface proxy — none of which are implemented.
+- **In-memory rate limiters.**  Login and subscription rate limiters use in-memory sliding windows.  They reset on process restart and are not shared across multiple backend instances (relevant only if someone deploys multiple backend replicas behind a load balancer, which is not a supported topology).
+- **SQLite as default database.**  The default `DATABASE_URL` uses SQLite, which is suitable for single-node with low concurrency.  For production with >50 concurrent admin operations, switch to PostgreSQL via `docker-compose.postgres.yml`.
+- **No WebSocket / real-time updates.**  Dashboard stats are fetched via polling (React Query).  There are no Server-Sent Events or WebSocket pushes for live user status changes.
+- **OpenVPN management socket is single-instance.**  Only one OpenVPN process's management interface is monitored.  If you run multiple OpenVPN server instances, only the one at `OPENVPN_MANAGEMENT_SOCKET` is managed by the panel.
+- **Subscription token is not revocable via blacklist.**  Old tokens are invalidated by replacing the token value in the DB.  If a client caches an old `.ovpn` file, they can still connect until the cert is revoked or expires — the subscription URL is just a delivery mechanism, not an access control layer.
+- **No automated cert renewal.**  Client certificates do not auto-renew.  Operators must manually revoke and recreate certs before they expire.
+- **Telegram bot is notification-only.**  It does not support interactive commands (e.g., `/status user1`).  It only sends outbound notifications for enforcement events and admin actions.

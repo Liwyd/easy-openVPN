@@ -53,7 +53,7 @@ class TestCreateUser:
         data = resp.json()
         assert data["username"] == "vpn-user-1"
         assert data["data_limit"] == 1024**3
-        assert len(data["subscription_token"]) > 20
+        assert "subscription_token" not in data  # must not leak to admin response
 
     @patch("app.routers.users._create_client_cert")
     def test_sub_admin_creates_user_within_quota(self, mock_cert, client, db_session):

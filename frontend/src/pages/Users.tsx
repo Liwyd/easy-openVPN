@@ -65,7 +65,6 @@ interface User {
   time_window_end: string | null;
   note: string | null;
   revoked: boolean;
-  subscription_token: string;
   common_name: string | null;
 }
 

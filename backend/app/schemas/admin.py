@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import datetime as dt
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+from app.utils.validation import validate_username
 
 
 class AdminCreate(BaseModel):
@@ -12,6 +14,12 @@ class AdminCreate(BaseModel):
     password: str
     data_limit: int  # required for non-sudo admins
     is_sudo: bool = False
+
+    @field_validator("username")
+    @classmethod
+    def check_username(cls, v: str) -> str:
+        validate_username(v)
+        return v
 
 
 class AdminUpdate(BaseModel):
