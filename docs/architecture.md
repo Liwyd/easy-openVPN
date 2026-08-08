@@ -61,7 +61,7 @@ Traffic accounting works by polling the OpenVPN management interface:
 Each user has two time-related fields:
 
 - **`expire_at`** (datetime, nullable): Absolute expiry date/time. After this timestamp, the user's certificate is revoked or their connection is killed via the management interface.
-- **`allowed_hours`** (JSON, nullable): A list of hour-ranges during which the user is allowed to connect, e.g., `[["08:00", "12:00"], ["18:00", "22:00"]]`. This is enforced by OpenVPN's `client-connect` / `client-disconnect` scripts, which check the current time against the allowed hours and disconnect/reconnect as needed.
+- **`time_window_start`** / **`time_window_end`** (Time, nullable): A time-of-day window during which the user is allowed to connect (e.g., 08:00–12:00).  If both are set, the enforcement job checks the current time and kills sessions outside the window.  This is enforced by the `enforce_limits` background job, which disconnects users whose current time falls outside their allowed window.
 
 Why this design: OpenVPN's script-based hooks (`client-connect`, `client-disconnect`) make runtime enforcement feasible. Unlike Xray's routing-based approach, OpenVPN can actively kill or reject connections based on custom logic in these scripts.
 
@@ -73,7 +73,7 @@ Each user gets a long, random, unguessable subscription token:
 - Stored as `subscription_token` in the `User` table.
 - A public (no-auth) endpoint `GET /sub/{token}` returns the user's current `.ovpn` profile file.
 - Users can bookmark this URL to always get their latest config (re-generated after password changes, server config changes, etc.).
-- Token regeneration: the owning admin can regenerate the token, which invalidates the old link via `subscription_updated_at` timestamp comparison — no token blacklist needed, since the endpoint checks `subscription_updated_at` against the token's generation time.
+- Token regeneration: the owning admin can regenerate the token, which invalidates the old link.  The subscription endpoint queries by token value, so a regenerated token means the old one simply doesn't match any user — no blacklist needed.
 - This is similar to Marzban's subscription URL but returns a single OpenVPN profile instead of a multi-protocol config list.
 
 #### Server Configuration Storage

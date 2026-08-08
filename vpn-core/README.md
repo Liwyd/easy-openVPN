@@ -137,29 +137,19 @@ enable_client("alice")
 
 Called on each client connection. Checks:
 1. Is the client disabled via CCD?
-2. Is the client expired?
-3. Is the client within their allowed hours?
 
 Exits non-zero to refuse the connection.
 
+Time-based access control (expiry, time windows) is enforced by the
+backend's `enforce_limits` background job, not by the hook scripts.
+
 ### `hooks/client-disconnect.sh`
 
-Called on each client disconnect. Logs the event and updates the
-state file with byte counters and last-seen timestamp.
+Called on each client disconnect. Logs the event.
 
 ## State Files
 
-Runtime per-client state is stored in `/etc/openvpn/server/state/`:
-
-```json
-{
-  "expire_at": "2025-12-31T23:59:59",
-  "allowed_hours": [["08:00", "12:00"], ["18:00", "22:00"]],
-  "last_disconnect": "2025-01-15T14:30:00",
-  "last_bytes_received": 1234567,
-  "last_bytes_sent": 9876543
-}
-```
-
-The backend writes these files when creating/updating users. The connect
-hook reads them for access control decisions.
+Runtime per-client state may be stored in `/etc/openvpn/server/state/`
+by hook scripts. The backend does not write to these files directly —
+all enforcement (expiry, time windows, traffic limits) is handled by
+the backend's background jobs via the database.
