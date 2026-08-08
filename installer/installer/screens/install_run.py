@@ -26,6 +26,8 @@ from installer.utils import (
     write_env,
 )
 
+REPO_ENV = REPO_ROOT / ".env"
+
 
 class InstallRun(InstallBase):
     """Step 6: Run the full installation pipeline with live log output."""
@@ -219,6 +221,10 @@ class InstallRun(InstallBase):
 
         write_env(env, ENV_FILE)
         self.log_pane.write(f"[green]Backend .env written to {ENV_FILE}[/green]")
+
+        # Also write to repo root for docker-compose
+        write_env(env, REPO_ENV)
+        self.log_pane.write(f"[green]Repo .env written to {REPO_ENV}[/green]")
         return True
 
     async def _step_seed_admin(self) -> bool:
