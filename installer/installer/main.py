@@ -42,24 +42,6 @@ class InstallerApp(App):
     Screen {
         align: center middle;
     }
-    #banner {
-        color: $accent;
-        text-align: center;
-    }
-    #title {
-        text-align: center;
-        text-style: bold;
-        color: $accent;
-        margin-top: 1;
-    }
-    #subtitle {
-        text-align: center;
-        color: $text-muted;
-        margin-bottom: 2;
-    }
-    #menu {
-        width: 30;
-    }
     """
 
     TITLE = "eovpanel Installer"

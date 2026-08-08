@@ -35,6 +35,11 @@ class WelcomeScreen(Screen):
     WelcomeScreen {
         align: center middle;
     }
+    #content {
+        width: auto;
+        height: auto;
+        align: center middle;
+    }
     #banner {
         color: $accent;
         text-align: center;
@@ -48,10 +53,11 @@ class WelcomeScreen(Screen):
     #subtitle {
         text-align: center;
         color: $text-muted;
-        margin-bottom: 2;
+        margin-bottom: 1;
     }
     #menu {
-        width: 30;
+        width: 40;
+        margin-top: 1;
     }
     """
 
@@ -70,11 +76,16 @@ class WelcomeScreen(Screen):
                     *[Option(opt) for opt in MENU_OPTIONS],
                     id="menu",
                 ),
+                id="content",
             )
         )
         yield Footer()
 
-    def on_option_list_selected(self, event: OptionList.Selected) -> None:
+    def on_mount(self) -> None:
+        """Focus the menu on mount."""
+        self.query_one("#menu", OptionList).focus()
+
+    def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         option = event.option
         if option is None:
             return
