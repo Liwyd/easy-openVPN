@@ -5,14 +5,12 @@ from __future__ import annotations
 import sys
 
 from installer.output import (
-    banner, bold, confirm, dim, fail, green, heading, info, ok, prompt_str,
-    step, warn, yellow,
+    banner, bold, confirm, dim, fail, heading, info, ok, prompt_str, warn,
 )
 from installer.utils import (
-    DOCKER_DIR, ESSL_CERT_DIR, ENV_FILE, NGINX_CONF, REPO_ROOT, VPN_CORE,
-    docker_compose_restart, detect_default_interface, detect_public_ip,
-    ensure_essl_installed, generate_jwt_secret, read_env, run_essl, run_cmd,
-    update_env, write_env,
+    DOCKER_DIR, ESSL_CERT_DIR, ENV_FILE, VPN_CORE,
+    docker_compose_restart, generate_jwt_secret, read_env, run_cmd, run_essl,
+    update_env,
 )
 
 
@@ -36,20 +34,20 @@ def cmd_configure(args) -> None:
     elif args.disable_telegram:
         _configure_telegram(False)
     elif args.vpn_port or args.vpn_protocol:
-        _configure_vpn(args)
+        _configure_vpn_cli(args)
     else:
-        _interactive_menu(args)
+        _interactive_menu()
 
 
-def _interactive_menu(args) -> None:
+def _interactive_menu() -> None:
     """Interactive configuration menu."""
     print(f"""
   {bold('1')}  Rotate JWT secret
   {bold('2')}  Configure domain / TLS
   {bold('3')}  Enable Telegram bot
   {bold('4')}  Disable Telegram bot
-  {bold('5')}  Edit OpenVPN settings
-  {bold('0')}  Back to menu
+  {bold('5')}  Edit OpenVPN server settings
+  {bold('0')}  Back
 """)
     choice = input("  Select option: ").strip()
 
@@ -109,20 +107,6 @@ def _configure_tls(domain: str, email: str) -> None:
         if success:
             ok("TLS certificates generated.")
 
-            # Update docker-compose to mount certs
-            compose_file = DOCKER_DIR / "docker-compose.yml"
-            if compose_file.exists():
-                content = compose_file.read_text()
-                # Check if TLS volumes are already configured
-                if "/etc/nginx/ssl" not in content:
-                    # Add TLS volume mount to frontend service
-                    old = '    frontend:\n    build:'
-                    new = f"""    frontend:
-    build:"""
-                    # This is a simplified approach — in production you'd want proper YAML editing
-                    info("Update docker-compose.yml to mount TLS certs:")
-                    info(f"  volumes: [{ESSL_CERT_DIR}:/etc/nginx/ssl:ro]")
-
             info("Restarting containers...")
             rc, _ = docker_compose_restart()
             if rc == 0:
@@ -139,7 +123,7 @@ def _configure_tls(domain: str, email: str) -> None:
 def _configure_telegram(enable: bool, token: str = "", chat: str = "") -> None:
     """Enable or disable Telegram bot."""
     heading("Telegram configuration")
-    updates = {}
+    updates: dict[str, str] = {}
     if enable:
         if not token:
             warn("Bot token is required.")
@@ -163,26 +147,174 @@ def _configure_telegram(enable: bool, token: str = "", chat: str = "") -> None:
         fail("Failed to restart containers.")
 
 
+_VPN_READ_SCRIPT = """\
+import sys; sys.path.insert(0, '/opt/eovpanel/backend')
+from app.db import SessionLocal
+from app.models.server_config import ServerConfig
+db = SessionLocal()
+cfg = db.query(ServerConfig).first()
+if cfg:
+    print(f'protocol={cfg.protocol.value}')
+    print(f'port={cfg.port}')
+    print(f'cipher={cfg.cipher.value}')
+    print(f'auth_digest={cfg.auth_digest.value}')
+    print(f'dns_preset={cfg.dns_preset.value}')
+    print(f'mtu={cfg.mtu}')
+    print(f'keepalive_interval={cfg.keepalive_interval}')
+    print(f'keepalive_timeout={cfg.keepalive_timeout}')
+    print(f'client_to_client={cfg.client_to_client}')
+    print(f'redirect_gateway={cfg.redirect_gateway}')
+else:
+    print('NO_CONFIG')
+db.close()
+"""
+
+
+def _apply_vpn_settings(updates: dict[str, str]) -> bool:
+    """Update DB + re-render server.conf + restart OpenVPN."""
+    set_clause = ", ".join(f"{k} = :{k}" for k in updates)
+    update_script = f"""\
+import sys; sys.path.insert(0, '/opt/eovpanel/backend')
+from sqlalchemy import text
+from app.db import SessionLocal
+from app.models.server_config import ServerConfig
+db = SessionLocal()
+cfg = db.query(ServerConfig).first()
+if cfg:
+    db.execute(text("UPDATE server_config SET {set_clause}"), {updates})
+    db.commit()
+    print('DB_OK')
+db.close()
+"""
+    rc, out = run_cmd(["python3", "-c", update_script], timeout=10)
+    if rc != 0 or "DB_OK" not in out:
+        fail(f"Failed to update database: {out}")
+        return False
+    ok("Database updated.")
+
+    info("Re-rendering server.conf and restarting OpenVPN...")
+    apply_script = """\
+import sys; sys.path.insert(0, '/opt/eovpanel/backend')
+from app.db import SessionLocal
+from app.models.server_config import ServerConfig, Protocol, Cipher, AuthDigest, TLSSettings, DNSPreset
+from vpn_core.config_writer import ServerConfigRow, apply_server_config
+db = SessionLocal()
+cfg = db.query(ServerConfig).first()
+if cfg:
+    row = ServerConfigRow(
+        protocol=cfg.protocol.value,
+        port=cfg.port,
+        interface=cfg.interface or 'tun0',
+        cipher=cfg.cipher.value,
+        auth=cfg.auth_digest.value,
+        dns_servers=None,
+        mtu=cfg.mtu,
+        client_to_client=cfg.client_to_client,
+        redirect_gateway=cfg.redirect_gateway,
+        keepalive_interval=cfg.keepalive_interval,
+        keepalive_timeout=cfg.keepalive_timeout,
+        tls_crypt=(cfg.tls_mode == TLSSettings.TLS_CRYPT),
+        tls_auth=(cfg.tls_mode == TLSSettings.TLS_AUTH),
+    )
+    ok = apply_server_config(row, backup=True)
+    print('APPLY_OK' if ok else 'APPLY_FAIL')
+else:
+    print('NO_CONFIG')
+db.close()
+"""
+    rc2, out2 = run_cmd(["python3", "-c", apply_script], stream=True, timeout=30)
+    if rc2 == 0 and "APPLY_OK" in out2:
+        ok("OpenVPN config applied and service restarted.")
+        return True
+    else:
+        warn(f"OpenVPN apply had issues: {out2}")
+        return False
+
+
 def _interactive_vpn_config() -> None:
-    """Interactive VPN settings edit."""
-    heading("OpenVPN settings")
-    env = read_env()
+    """Interactive VPN settings edit — same fields as panel Settings page."""
+    heading("OpenVPN server settings")
+
+    info("Reading current settings from database...")
+    rc, out = run_cmd(["python3", "-c", _VPN_READ_SCRIPT], timeout=10)
+
+    current: dict[str, str] = {}
+    if rc == 0:
+        for line in out.strip().splitlines():
+            if "=" in line:
+                k, v = line.split("=", 1)
+                current[k.strip()] = v.strip()
+
+    if not current or current.get("NO_CONFIG"):
+        warn("No ServerConfig found in database. Use the web panel to configure VPN settings.")
+        return
 
     print(f"""
-  Current settings are managed through the web panel's Settings page.
-  Changes from the panel call the same vpn-core functions as this CLI,
-  so they always stay in sync.
-
-  Server config: /etc/openvpn/server/server.conf
-
-  To edit manually, modify the DB row via the panel, or edit
-  the config directly and restart OpenVPN:
-    systemctl restart openvpn-server@server
+  {bold('Current OpenVPN settings:')}
+    Protocol:         {current.get('protocol', '?')}
+    Port:             {current.get('port', '?')}
+    Cipher:           {current.get('cipher', '?')}
+    Auth digest:      {current.get('auth_digest', '?')}
+    DNS preset:       {current.get('dns_preset', '?')}
+    MTU:              {current.get('mtu', '?')}
+    Keepalive:        {current.get('keepalive_interval', '?')}/{current.get('keepalive_timeout', '?')}s
+    Client-to-client: {current.get('client_to_client', '?')}
+    Redirect gateway: {current.get('redirect_gateway', '?')}
 """)
 
+    print(f"  {bold('Fields to edit (press Enter to keep current value):')}")
 
-def _configure_vpn(args) -> None:
+    updates: dict[str, str] = {}
+    fields = [
+        ("protocol", "Protocol (UDP/TCP)", current.get("protocol", "UDP")),
+        ("port", "Port", current.get("port", "1194")),
+        ("cipher", "Cipher", current.get("cipher", "AES-256-GCM")),
+        ("dns_preset", "DNS preset", current.get("dns_preset", "CLOUDFLARE")),
+        ("mtu", "MTU", current.get("mtu", "1500")),
+        ("keepalive_interval", "Keepalive interval (s)", current.get("keepalive_interval", "10")),
+        ("keepalive_timeout", "Keepalive timeout (s)", current.get("keepalive_timeout", "120")),
+    ]
+
+    for field, label, default in fields:
+        val = prompt_str(f"  {label}", default)
+        if val and val != default:
+            updates[field] = val
+
+    if not updates:
+        info("No changes made.")
+        return
+
+    info("Applying changes...")
+    _apply_vpn_settings(updates)
+
+    info("Restarting containers...")
+    rc3, _ = docker_compose_restart()
+    if rc3 == 0:
+        ok("Containers restarted.")
+    else:
+        warn("Container restart had issues.")
+
+
+def _configure_vpn_cli(args) -> None:
     """VPN settings via CLI flags."""
     heading("OpenVPN settings")
-    info("VPN settings are managed through the web panel's Settings page.")
-    info("Use the panel to change port, protocol, cipher, DNS, MTU, etc.")
+
+    updates: dict[str, str] = {}
+    if args.vpn_port:
+        updates["port"] = args.vpn_port
+    if args.vpn_protocol:
+        updates["protocol"] = args.vpn_protocol.upper()
+
+    if not updates:
+        info("No changes specified. Use --vpn-port or --vpn-protocol.")
+        return
+
+    info("Applying changes...")
+    _apply_vpn_settings(updates)
+
+    info("Restarting containers...")
+    rc, _ = docker_compose_restart()
+    if rc == 0:
+        ok("Containers restarted.")
+    else:
+        warn("Container restart had issues.")

@@ -3,24 +3,19 @@
 from __future__ import annotations
 
 import sys
-import time
 
 from installer.output import (
     banner, bold, confirm, dim, fail, green, heading, info, ok, prompt_secret,
     prompt_str, step, warn, yellow,
 )
 from installer.utils import (
-    DOCKER_DIR, ESSL_CERT_DIR, ENV_FILE, REPO_ENV, REPO_ROOT, VPN_CORE,
+    COMPOSE_FILE, ESSL_CERT_DIR, ENV_FILE, REPO_ENV, REPO_ROOT, VPN_CORE,
     detect_default_interface, detect_os, detect_public_ip, docker_compose_up,
-    docker_running, openvpn_installed, read_env, run_cmd, seed_backend_admin,
-    write_env,
+    docker_running, generate_jwt_secret, openvpn_installed, read_env, run_cmd,
+    seed_backend_admin, write_env,
 )
 
 TOTAL_STEPS = 5
-
-
-class InstallError(Exception):
-    pass
 
 
 def cmd_install(args) -> None:

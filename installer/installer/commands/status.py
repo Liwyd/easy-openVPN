@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from installer.output import bold, dim, fail, green, heading, info, ok, warn, yellow
+from installer.output import heading, info, ok, warn
 from installer.utils import (
     DOCKER_DIR, ENV_FILE, OPENVPN_SERVER_DIR, REPO_ROOT, VPN_CORE,
     containers_running, docker_running, openvpn_installed, read_env,
@@ -17,7 +17,7 @@ def cmd_status(_args=None) -> None:
     if docker_running():
         ok("Docker daemon: running")
     else:
-        fail("Docker daemon: not running")
+        warn("Docker daemon: not running")
 
     running = containers_running()
     if running:

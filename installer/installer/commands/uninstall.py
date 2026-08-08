@@ -96,7 +96,7 @@ def _remove_containers() -> None:
     rc, _ = docker_compose_down(remove_volumes=True)
     if rc == 0:
         ok("Containers and volumes removed.")
-        dim("OpenVPN data preserved at /etc/openvpn/")
+        info("OpenVPN data preserved at /etc/openvpn/")
     else:
         fail("Failed to remove containers.")
 
