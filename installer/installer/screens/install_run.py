@@ -124,7 +124,8 @@ class InstallRun(InstallBase):
         rc, out = await self._run(["apt-get", "install", "-y", "--no-install-recommends"] + pkgs)
         self.log_pane.write(out)
         if rc != 0:
-            self.log_pane.write("[yellow]Warning: some packages may have failed to install.[/yellow]")
+            self.log_pane.write("[red]Package installation failed.[/red]")
+            return False
 
         # Ensure Docker is running
         self.log_pane.write("Ensuring Docker daemon is running...")
@@ -219,7 +220,7 @@ class InstallRun(InstallBase):
     # Helper
     # ------------------------------------------------------------------
 
-    async def _run(self, cmd: list[str]) -> tuple[int, str]:
+    async def _run(self, cmd: list[str], timeout: float = 300) -> tuple[int, str]:
         """Run a subprocess and stream output to the log pane."""
         proc = await asyncio.create_subprocess_exec(
             *cmd,
@@ -228,9 +229,17 @@ class InstallRun(InstallBase):
         )
         output_lines: list[str] = []
         assert proc.stdout is not None
-        async for raw_line in proc.stdout:
-            line = raw_line.decode("utf-8", errors="replace").rstrip("\n\r")
-            output_lines.append(line)
-            self.log_pane.write(line)
+        try:
+            async with asyncio.timeout(timeout):
+                async for raw_line in proc.stdout:
+                    line = raw_line.decode("utf-8", errors="replace").rstrip("\n\r")
+                    output_lines.append(line)
+                    self.log_pane.write(line)
+        except TimeoutError:
+            proc.kill()
+            await proc.wait()
+            output_lines.append(f"[red]Command timed out after {timeout}s: {' '.join(cmd)}[/red]")
+            self.log_pane.write(output_lines[-1])
+            return 1, "\n".join(output_lines)
         rc = await proc.wait()
         return rc, "\n".join(output_lines)
