@@ -1,30 +1,62 @@
-"""User CRUD router — quota-aware user management.
+"""User CRUD router — quota-aware user management wired to vpn-core.
 
 Every operation is ownership-aware: sub-admins can only manage their own
 users; sudo admins can manage anyone's users.  Quota validation is
 enforced at creation time using the allocation-based guard from
 ``app.services.quota``.
+
+Soft-delete policy: DELETE sets status='disabled' and revoked=True but
+keeps the DB row for history (mirrors Marzban's approach).  Revoked
+users are excluded from list queries by default.
 """
 
 from __future__ import annotations
 
+import secrets
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from app.config import (
+    EASYRSA_DIR,
+    OPENVPN_MANAGEMENT_SOCKET,
+    OPENVPN_STATUS_LOG,
+)
+from app.bot.events import EventCategory, emit
 from app.db import get_db
+from app.logging_config import enforcement_log
 from app.models.admin import Admin
 from app.models.admin_log import AdminAction, TargetType
-from app.models.user import User
-from app.schemas.user import UserCreate, UserResponse, UserUpdate
+from app.models.server_config import ServerConfig
+from app.models.user import User, UserStatus
+from app.schemas.user import (
+    SubscriptionURLResponse,
+    UserCreate,
+    UserResponse,
+    UserUpdate,
+)
 from app.services.auth import get_current_admin
 from app.services.quota import (
     can_admin_allocate,
     recalculate_admin_data_used,
     write_admin_log,
 )
+from app.services.vpn_bridge import (
+    create_client_cert as _create_client_cert,
+    disable_client as _disable_client,
+    enable_client as _enable_client,
+    generate_ovpn_file as _generate_ovpn_file,
+    kill_client_session as _kill_client_session,
+    revoke_client_cert as _revoke_client_cert,
+)
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 def _get_validated_user(
     username: str,
@@ -45,6 +77,33 @@ def _get_validated_user(
     return user
 
 
+def _get_server_settings(db: Session) -> ServerConfig:
+    """Get the server config row (creates default if missing)."""
+    cfg = db.query(ServerConfig).first()
+    if cfg is None:
+        from app.db.seed import seed_default_server_config
+        seed_default_server_config(db)
+        db.flush()
+        cfg = db.query(ServerConfig).first()
+    return cfg
+
+
+def _render_ovpn_for_user(user: User, db: Session) -> str:
+    """Render the .ovpn file content for a user."""
+    cfg = _get_server_settings(db)
+    return _generate_ovpn_file(
+        common_name=user.common_name or user.username,
+        server_dir="/etc/openvpn/server",
+        public_ip=cfg.public_host,
+        protocol=cfg.protocol.value,
+        port=cfg.port,
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/users — create user
+# ---------------------------------------------------------------------------
+
 @router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def create_user(
     body: UserCreate,
@@ -53,6 +112,10 @@ def create_user(
 ):
     """Create a VPN user.  Quota-aware: validates admin has enough
     remaining allocatable quota to cover the user's data_limit.
+
+    Certificate creation happens first; the DB row is only persisted
+    if cert generation succeeds.  On cert failure the error is returned
+    cleanly — no orphaned certs without DB rows.
     """
     if db.query(User).filter(User.username == body.username).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already taken")
@@ -66,6 +129,29 @@ def create_user(
                 detail="Creating this user would exceed your quota",
             )
 
+    # Create the certificate FIRST — if this fails, nothing is written to DB.
+    try:
+        cfg = _get_server_settings(db)
+        ovpn_content = _create_client_cert(
+            common_name=body.username,
+            server_dir="/etc/openvpn/server",
+            easyrsa_dir=EASYRSA_DIR,
+            public_ip=cfg.public_host,
+            protocol=cfg.protocol.value,
+            port=cfg.port,
+        )
+    except FileExistsError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Certificate already exists for this username",
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create certificate: {exc}",
+        )
+
+    # Cert creation succeeded — now persist the DB row.
     new_user = User(
         username=body.username,
         admin_id=current_admin.id,
@@ -75,15 +161,9 @@ def create_user(
         time_window_start=body.time_window_start,
         time_window_end=body.time_window_end,
         note=body.note,
+        common_name=body.username,
+        revoked=False,
     )
-
-    # TODO: call vpn_core.create_client_cert(username) here to generate
-    # the actual OpenVPN client certificate via easy-rsa.  For now the
-    # cert fields remain None — the cert step is stubbed.
-    # from vpn_core import create_client_cert
-    # cert_serial, common_name = create_client_cert(body.username)
-    # new_user.cert_serial = cert_serial
-    # new_user.common_name = common_name
 
     db.add(new_user)
     db.flush()
@@ -101,8 +181,25 @@ def create_user(
     )
     db.commit()
     db.refresh(new_user)
+
+    from app.bot.formatter import _fmt_bytes
+
+    emit(
+        category=EventCategory.ADMIN_ACTION,
+        action="user_created",
+        username=body.username,
+        admin_username=current_admin.username,
+        data_limit=body.data_limit,
+        data_limit_str=_fmt_bytes(body.data_limit) if body.data_limit else None,
+        expires=body.expire_at.isoformat() if body.expire_at else None,
+    )
+
     return new_user
 
+
+# ---------------------------------------------------------------------------
+# GET /api/users — list users
+# ---------------------------------------------------------------------------
 
 @router.get("", response_model=list[UserResponse])
 def list_users(
@@ -112,14 +209,20 @@ def list_users(
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
-    """List users.  Sub-admins see only their own; sudo sees all."""
-    q = db.query(User)
+    """List users.  Sub-admins see only their own; sudo sees all.
+    Excludes soft-deleted users (revoked=True) by default.
+    """
+    q = db.query(User).filter(User.revoked.is_(False))
     if username:
         q = q.filter(User.username.ilike(f"%{username}%"))
     if not current_admin.is_sudo:
         q = q.filter(User.admin_id == current_admin.id)
     return q.order_by(User.id).offset(offset).limit(limit).all()
 
+
+# ---------------------------------------------------------------------------
+# GET /api/users/{username} — get user
+# ---------------------------------------------------------------------------
 
 @router.get("/{username}", response_model=UserResponse)
 def get_user(
@@ -131,6 +234,35 @@ def get_user(
     return _get_validated_user(username, current_admin, db)
 
 
+# ---------------------------------------------------------------------------
+# GET /api/users/{username}/config — download .ovpn file
+# ---------------------------------------------------------------------------
+
+@router.get("/{username}/config")
+def get_user_config(
+    username: str,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin),
+):
+    """Return the .ovpn file for download.  Auth + ownership required."""
+    user = _get_validated_user(username, current_admin, db)
+    if user.revoked:
+        raise HTTPException(status_code=status.HTTP_410_GONE, detail="User certificate has been revoked")
+
+    ovpn_content = _render_ovpn_for_user(user, db)
+    return Response(
+        content=ovpn_content,
+        media_type="application/x-openvpn-profile",
+        headers={
+            "Content-Disposition": f'attachment; filename="{user.username}.ovpn"',
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# PUT /api/users/{username} — update user
+# ---------------------------------------------------------------------------
+
 @router.put("/{username}", response_model=UserResponse)
 def update_user(
     username: str,
@@ -138,8 +270,11 @@ def update_user(
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
-    """Update a user's settings.  Ownership enforced."""
+    """Update a user's settings.  Ownership enforced.
+    If changing data_limit, validates the new limit against admin's remaining quota.
+    """
     user = _get_validated_user(username, current_admin, db)
+    old_status = user.status
 
     if body.data_limit is not None:
         # If increasing the user's data_limit, validate admin quota.
@@ -178,8 +313,130 @@ def update_user(
 
     db.commit()
     db.refresh(user)
+
+    if body.status is not None and body.status != old_status:
+        action = "user_disabled_admin" if body.status.value == "disabled" else "user_enabled" if body.status.value == "active" else "user_updated"
+    else:
+        action = "user_updated"
+
+    from app.bot.formatter import _fmt_bytes
+
+    emit(
+        category=EventCategory.ADMIN_ACTION,
+        action=action,
+        username=username,
+        admin_username=current_admin.username,
+        data_limit=user.data_limit,
+        data_limit_str=_fmt_bytes(user.data_limit) if user.data_limit else None,
+    )
+
     return user
 
+
+# ---------------------------------------------------------------------------
+# POST /api/users/{username}/disable — disable user
+# ---------------------------------------------------------------------------
+
+@router.post("/{username}/disable", response_model=UserResponse)
+def disable_user(
+    username: str,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin),
+):
+    """Disable a user — kills active session and prevents reconnection."""
+    user = _get_validated_user(username, current_admin, db)
+
+    if user.status == UserStatus.DISABLED:
+        return user
+
+    if user.common_name:
+        _kill_client_session(user.common_name, OPENVPN_MANAGEMENT_SOCKET)
+        _disable_client(user.common_name, management_socket=OPENVPN_MANAGEMENT_SOCKET)
+
+    user.status = UserStatus.DISABLED
+
+    write_admin_log(
+        db,
+        admin_id=current_admin.id,
+        action=AdminAction.DISABLE_USER,
+        target_type=TargetType.USER,
+        target_id=user.id,
+        detail=f"Disabled user '{username}'",
+    )
+
+    enforcement_log(
+        event="user_disabled",
+        username=username,
+        admin_username=current_admin.username,
+        reason="manual",
+    )
+
+    db.commit()
+    db.refresh(user)
+
+    emit(
+        category=EventCategory.ENFORCEMENT if user.common_name else EventCategory.ADMIN_ACTION,
+        action="user_disabled_admin",
+        username=username,
+        admin_username=current_admin.username,
+    )
+
+    return user
+
+
+# ---------------------------------------------------------------------------
+# POST /api/users/{username}/enable — enable user
+# ---------------------------------------------------------------------------
+
+@router.post("/{username}/enable", response_model=UserResponse)
+def enable_user(
+    username: str,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin),
+):
+    """Re-enable a disabled user."""
+    user = _get_validated_user(username, current_admin, db)
+
+    if user.status == UserStatus.ACTIVE:
+        return user
+
+    if user.common_name:
+        _enable_client(user.common_name)
+
+    user.status = UserStatus.ACTIVE
+
+    write_admin_log(
+        db,
+        admin_id=current_admin.id,
+        action=AdminAction.ENABLE_USER,
+        target_type=TargetType.USER,
+        target_id=user.id,
+        detail=f"Enabled user '{username}'",
+    )
+
+    enforcement_log(
+        event="user_enabled",
+        username=username,
+        admin_username=current_admin.username,
+        reason="manual",
+    )
+
+    db.commit()
+    db.refresh(user)
+
+    emit(
+        category=EventCategory.ADMIN_ACTION,
+        action="user_enabled",
+        username=username,
+        admin_username=current_admin.username,
+    )
+
+    return user
+
+
+# ---------------------------------------------------------------------------
+# DELETE /api/users/{username} — soft-delete (revoke + disable)
+# ---------------------------------------------------------------------------
 
 @router.delete("/{username}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(
@@ -187,10 +444,30 @@ def delete_user(
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
-    """Delete a user.  Ownership enforced.  Removes user and recalculates
-    admin's data_used, all in one transaction.
+    """Soft-delete a user: revoke cert, disable, keep DB row for history.
+
+    The row stays in DB with status='disabled' and revoked=True, but is
+    excluded from list queries by default (see list_users).
+    Recalculates admin's data_used in the same transaction.
     """
     user = _get_validated_user(username, current_admin, db)
+
+    # Revoke the certificate via vpn-core
+    if user.common_name and not user.revoked:
+        try:
+            _kill_client_session(user.common_name, OPENVPN_MANAGEMENT_SOCKET)
+            _revoke_client_cert(user.common_name)
+        except Exception:
+            # Best-effort revocation — log but don't block DB cleanup
+            enforcement_log(
+                event="cert_revoke_failed",
+                username=username,
+                admin_username=current_admin.username,
+                reason="vpn-core error",
+            )
+
+    user.status = UserStatus.DISABLED
+    user.revoked = True
 
     write_admin_log(
         db,
@@ -201,17 +478,127 @@ def delete_user(
         detail=f"Deleted user '{username}'",
     )
 
-    # TODO: call vpn_core.revoke_client_cert(user.common_name) here
-    # to revoke the OpenVPN certificate before deleting the DB row.
-    # from vpn_core import revoke_client_cert
-    # if user.common_name:
-    #     revoke_client_cert(user.common_name)
-
-    admin = db.query(Admin).filter(Admin.id == user.admin_id).first()
-    db.delete(user)
-
     # Recalculate admin data_used after deletion.
+    admin = db.query(Admin).filter(Admin.id == user.admin_id).first()
     if admin is not None:
         recalculate_admin_data_used(admin, db)
 
+    enforcement_log(
+        event="user_deleted",
+        username=username,
+        admin_username=current_admin.username,
+        reason="admin_action",
+    )
+
     db.commit()
+
+    emit(
+        category=EventCategory.ADMIN_ACTION,
+        action="user_deleted",
+        username=username,
+        admin_username=current_admin.username,
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /api/users/{username}/reset-usage — zero out data_used
+# ---------------------------------------------------------------------------
+
+@router.post("/{username}/reset-usage", response_model=UserResponse)
+def reset_usage(
+    username: str,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin),
+):
+    """Reset a user's data_used to zero and recalculate admin data_used."""
+    user = _get_validated_user(username, current_admin, db)
+
+    user.data_used = 0
+
+    recalculate_admin_data_used(current_admin, db)
+
+    write_admin_log(
+        db,
+        admin_id=current_admin.id,
+        action=AdminAction.RESET_USAGE,
+        target_type=TargetType.USER,
+        target_id=user.id,
+        detail=f"Reset usage for user '{username}'",
+    )
+
+    enforcement_log(
+        event="usage_reset",
+        username=username,
+        admin_username=current_admin.username,
+    )
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+# ---------------------------------------------------------------------------
+# POST /api/users/{username}/subscription/revoke — regenerate token
+# ---------------------------------------------------------------------------
+
+@router.post("/{username}/subscription/revoke", response_model=UserResponse)
+def revoke_subscription(
+    username: str,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin),
+):
+    """Regenerate subscription_token — invalidates the old public link
+    immediately by updating subscription_updated_at.
+    """
+    import datetime as _dt
+
+    user = _get_validated_user(username, current_admin, db)
+
+    user.subscription_token = secrets.token_urlsafe(32)
+    user.subscription_updated_at = _dt.datetime.now(_dt.UTC)
+
+    write_admin_log(
+        db,
+        admin_id=current_admin.id,
+        action=AdminAction.REGENERATE_SUBSCRIPTION,
+        target_type=TargetType.USER,
+        target_id=user.id,
+        detail=f"Revoked subscription for user '{username}'",
+    )
+
+    enforcement_log(
+        event="subscription_revoked",
+        username=username,
+        admin_username=current_admin.username,
+    )
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+# ---------------------------------------------------------------------------
+# GET /api/users/{username}/subscription-url — get the full URL
+# ---------------------------------------------------------------------------
+
+@router.get("/{username}/subscription-url", response_model=SubscriptionURLResponse)
+def get_subscription_url(
+    username: str,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin),
+):
+    """Return the full absolute subscription URL for a user.
+    Sudo/owning-admin-only.  Uses ServerConfig's subscription_url_prefix.
+    """
+    user = _get_validated_user(username, current_admin, db)
+    cfg = _get_server_settings(db)
+
+    if not cfg.subscription_url_prefix:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="subscription_url_prefix is not configured in server settings",
+        )
+
+    prefix = cfg.subscription_url_prefix.rstrip("/")
+    url = f"{prefix}/sub/{user.subscription_token}"
+    return SubscriptionURLResponse(subscription_url=url)

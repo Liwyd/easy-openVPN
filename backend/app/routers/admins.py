@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.bot.events import EventCategory, emit
 from app.db import get_db
 from app.models.admin import Admin
 from app.models.admin_log import AdminAction, TargetType
@@ -74,6 +75,18 @@ def create_admin(
     )
     db.commit()
     db.refresh(new_admin)
+
+    from app.bot.formatter import _fmt_bytes
+
+    emit(
+        category=EventCategory.ADMIN_ACTION,
+        action="admin_created",
+        username=body.username,
+        admin_username=current_admin.username,
+        data_limit=data_limit,
+        data_limit_str=_fmt_bytes(data_limit) if data_limit else None,
+    )
+
     return new_admin
 
 
@@ -184,6 +197,26 @@ def update_admin(
 
     db.commit()
     db.refresh(admin)
+
+    # Emit appropriate notification based on what changed.
+    if body.disabled is not None:
+        action = "admin_disabled" if body.disabled else "admin_enabled"
+    elif body.password is not None:
+        action = "admin_updated"
+    else:
+        action = "admin_updated"
+
+    from app.bot.formatter import _fmt_bytes
+
+    emit(
+        category=EventCategory.ADMIN_ACTION,
+        action=action,
+        username=admin.username,
+        admin_username=current_admin.username,
+        data_limit=admin.data_limit,
+        data_limit_str=_fmt_bytes(admin.data_limit) if admin.data_limit else None,
+    )
+
     return admin
 
 
@@ -236,6 +269,13 @@ def delete_admin(
     )
     db.delete(admin)
     db.commit()
+
+    emit(
+        category=EventCategory.ADMIN_ACTION,
+        action="admin_deleted",
+        username=admin.username,
+        admin_username=current_admin.username,
+    )
 
 
 @router.get("/{admin_id}/usage", response_model=AdminUsageResponse)

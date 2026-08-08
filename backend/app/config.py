@@ -63,6 +63,11 @@ EASYRSA_DIR: str = config(
     default="/etc/openvpn/easy-rsa",
 )
 
-# --- Telegram Bot (stub, not wired yet) ---
+# --- Telegram Bot ---
+TELEGRAM_ENABLED: bool = config("TELEGRAM_ENABLED", default=False, cast=bool)
 TELEGRAM_BOT_TOKEN: str = config("TELEGRAM_BOT_TOKEN", default="")
-TELEGRAM_LOG_CHAT_ID: str = config("TELEGRAM_LOG_CHAT_ID", default="")
+TELEGRAM_ADMIN_CHAT_IDS: list[str] = config(
+    "TELEGRAM_ADMIN_CHAT_IDS",
+    default="",
+    cast=lambda v: [s.strip() for s in v.split(",") if s.strip()],
+)
