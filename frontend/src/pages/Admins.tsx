@@ -1,0 +1,21 @@
+import { Box, Heading, Text, VStack } from "@chakra-ui/react";
+import { FiShield } from "react-icons/fi";
+
+export default function Admins() {
+  return (
+    <VStack align="stretch" gap={6}>
+      <Heading size="lg">Admins</Heading>
+      <Box
+        border="1px solid"
+        borderColor="border.strong"
+        borderRadius="lg"
+        p={12}
+        bg="bg"
+        textAlign="center"
+      >
+        <FiShield size={40} style={{ margin: "0 auto 16px", opacity: 0.3 }} />
+        <Text color="fg.muted">Admin management coming in the next stage.</Text>
+      </Box>
+    </VStack>
+  );
+}

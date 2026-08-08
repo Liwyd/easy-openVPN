@@ -1,64 +1,43 @@
-import {
-  Box,
-  Container,
-  Heading,
-  Text,
-  VStack,
-  Button,
-  Icon,
-} from "@chakra-ui/react";
-import { FiSun, FiMoon } from "react-icons/fi";
-import { useColorMode } from "./components/ui/color-mode";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import Layout from "./components/Layout";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Users from "./pages/Users";
+import Admins from "./pages/Admins";
+import Settings from "./pages/Settings";
 
-function ColorModeToggle() {
-  const { colorMode, toggleColorMode } = useColorMode();
+export default function App() {
   return (
-    <Button
-      onClick={toggleColorMode}
-      variant="outline"
-      size="sm"
-    >
-      <Icon as={colorMode === "light" ? FiMoon : FiSun} />
-      {" "}
-      {colorMode === "light" ? "Dark" : "Light"}
-    </Button>
-  );
-}
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          <Route path="/login" element={<Login />} />
 
-function App() {
-  return (
-    <Box minH="100vh" bg="bg">
-      <Container maxW="container.md" py={10}>
-        <VStack gap={8} align="center">
-          <Heading size="xl" color="brand.600">
-            eovpanel
-          </Heading>
-          <Text color="fg.muted" fontSize="lg">
-            OpenVPN Management Panel
-          </Text>
-
-          <Box
-            bg="bg.subtle"
-            border="1px solid"
-            borderColor="border"
-            borderRadius="lg"
-            p={8}
-            w="100%"
-            textAlign="center"
+          <Route
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
           >
-            <Heading size="md" mb={4}>
-              Welcome
-            </Heading>
-            <Text color="fg.muted" mb={6}>
-              This is a placeholder page. The full dashboard is coming in
-              future stages.
-            </Text>
-            <ColorModeToggle />
-          </Box>
-        </VStack>
-      </Container>
-    </Box>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/users" element={<Users />} />
+            <Route
+              path="/admins"
+              element={
+                <ProtectedRoute requireSudo>
+                  <Admins />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/settings" element={<Settings />} />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
-
-export default App;
