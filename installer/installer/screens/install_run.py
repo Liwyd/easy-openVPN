@@ -142,10 +142,13 @@ class InstallRun(InstallBase):
 
         # Ensure Docker is running
         self.log_pane.write("Ensuring Docker daemon is running...")
-        rc, _ = await self._run(["systemctl", "enable", "--now", "docker"])
+        rc, _ = await self._run(["systemctl", "is-active", "docker"])
+        # rc == 0 means Docker is active, no action needed
         if rc != 0:
-            self.log_pane.write("[red]Failed to start Docker daemon.[/red]")
-            return False
+            rc, _ = await self._run(["systemctl", "enable", "--now", "docker"])
+            if rc != 0:
+                self.log_pane.write("[red]Failed to start Docker daemon.[/red]")
+                return False
 
         self.log_pane.write("[green]System packages installed.[/green]")
         return True
