@@ -3,7 +3,7 @@ name = "eovpanel-installer"
 version = "0.2.0"
 description = "eovpanel CLI — clean command-line installer and configurator"
 requires-python = ">=3.12"
-license = {text = "MIT"}
+license = "MIT"
 dependencies = []
 
 [project.scripts]
