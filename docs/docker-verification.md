@@ -16,9 +16,10 @@ This document provides a step-by-step guide to verify that the eovpanel Docker s
 cp .env.example .env
 # Edit .env — at minimum, set JWT_SECRET_KEY to a random string
 
-# 2. Build and start
+# 2. Pull and start
 cd docker
-docker compose up -d --build
+docker compose pull
+docker compose up -d
 
 # 3. Check logs
 docker compose logs -f backend
@@ -40,9 +41,10 @@ curl http://localhost:8000/health
 cp .env.example .env
 # Edit .env — set POSTGRES_PASSWORD to a strong value
 
-# 2. Build and start with Postgres
+# 2. Pull and start with Postgres
 cd docker
-docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml pull
+docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d
 
 # 3. Verify
 docker compose -f docker-compose.yml -f docker-compose.postgres.yml ps

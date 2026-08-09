@@ -73,7 +73,7 @@ The TUI installer will walk you through:
 3. Admin account (default: `admin` / `admin` — change after first login)
 4. Telegram bot (optional, skippable)
 5. Domain & TLS (optional, skippable via [ESSL](https://github.com/erfjab/ESSL))
-6. Docker build & launch
+6. Docker pull & launch
 
 After install, open `http://YOUR_SERVER_IP` in your browser.
 
@@ -84,10 +84,32 @@ If you prefer to skip the TUI installer:
 ```bash
 git clone https://github.com/Liwyd/easy-openVPN.git && cd easy-openVPN
 cp .env.example .env    # edit with your settings — set JWT_SECRET_KEY!
-cd docker && docker compose up -d --build
+cd docker && docker compose pull && docker compose up -d
 ```
 
 The panel, API, and subscription page are all served on a single configurable port (`PANEL_PORT`, default 8000 — Marzban-style).  The backend is proxied internally by nginx.  OpenVPN must be installed on the host separately.
+
+### Pinning a version
+
+To deploy a specific release instead of `latest`:
+
+```bash
+IMAGE_TAG=<git-sha> docker compose pull
+IMAGE_TAG=<git-sha> docker compose up -d
+```
+
+### Updating
+
+```bash
+cd docker && docker compose pull && docker compose up -d
+```
+
+### Rollback
+
+```bash
+IMAGE_TAG=<previous-git-sha> docker compose pull
+IMAGE_TAG=<previous-git-sha> docker compose up -d
+```
 
 See [docs/docker-verification.md](docs/docker-verification.md) for the full verification checklist.
 

@@ -9,8 +9,8 @@ from installer.output import (
 )
 from installer.utils import (
     DOCKER_DIR, ESSL_CERT_DIR, ENV_FILE, REPO_ENV, VPN_CORE,
-    docker_compose_restart, docker_compose_up, generate_jwt_secret, read_env,
-    run_cmd, run_essl, update_env,
+    docker_compose_pull, docker_compose_restart, docker_compose_up,
+    generate_jwt_secret, read_env, run_cmd, run_essl, update_env,
 )
 
 
@@ -324,7 +324,11 @@ def _configure_panel_port(port: str) -> None:
     update_env({"PANEL_PORT": port}, REPO_ENV)
     ok("Panel port updated.")
 
-    info("Recreating containers to apply...")
+    info("Pulling and recreating containers...")
+    rc, _ = docker_compose_pull()
+    if rc != 0:
+        fail("Failed to pull images.")
+        return
     rc, _ = docker_compose_up()
     if rc == 0:
         ok("Containers recreated.")

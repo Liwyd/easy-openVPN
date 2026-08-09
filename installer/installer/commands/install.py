@@ -10,9 +10,9 @@ from installer.output import (
 )
 from installer.utils import (
     COMPOSE_FILE, ESSL_CERT_DIR, ENV_FILE, REPO_ENV, REPO_ROOT, VPN_CORE,
-    detect_default_interface, detect_os, detect_public_ip, docker_compose_up,
-    docker_running, generate_jwt_secret, openvpn_installed, read_env, run_cmd,
-    seed_backend_admin, write_env,
+    detect_default_interface, detect_os, detect_public_ip, docker_compose_pull,
+    docker_compose_up, docker_running, generate_jwt_secret, openvpn_installed,
+    read_env, run_cmd, seed_backend_admin, write_env,
 )
 
 TOTAL_STEPS = 5
@@ -252,8 +252,12 @@ def cmd_install(args) -> None:
         except Exception as e:
             warn(f"TLS setup failed: {e}. Continuing without TLS.")
 
-    # 6. Build and start containers
-    info("Building and starting containers...")
+    # 6. Pull and start containers
+    info("Pulling and starting containers...")
+    rc, out = docker_compose_pull(stream_output=True)
+    if rc != 0:
+        fail("docker compose pull failed")
+        sys.exit(1)
     rc, out = docker_compose_up(stream_output=True)
     if rc != 0:
         fail("docker compose up failed")

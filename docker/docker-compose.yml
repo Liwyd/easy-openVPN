@@ -4,8 +4,9 @@
 #
 # Quick start:
 #   1. cp ../.env.example ../.env   (edit with your settings)
-#   2. docker compose up -d --build
-#   3. Open http://localhost (or https://localhost if TLS is configured)
+#   2. docker compose pull
+#   3. docker compose up -d
+#   4. Open http://localhost (or https://localhost if TLS is configured)
 #
 # Services:
 #   - backend:  FastAPI API + Alembic migrations + APScheduler
@@ -26,6 +27,10 @@
 #
 # Postgres alternative:
 #   docker compose -f docker-compose.yml -f docker-compose.postgres.yml up -d
+#
+# Image version:
+#   Set IMAGE_TAG in your .env to pin a specific version (default: latest).
+#   IMAGE_TAG=latest docker compose pull && docker compose up -d
 # =============================================================================
 
 services:
@@ -33,9 +38,7 @@ services:
   # Backend — FastAPI + Alembic + APScheduler
   # ---------------------------------------------------------------------------
   backend:
-    build:
-      context: ../
-      dockerfile: docker/backend/Dockerfile
+    image: ${DOCKERHUB_USERNAME:-liwyd}/easy-openvpn-backend:${IMAGE_TAG:-latest}
     container_name: eovpanel-backend
     restart: unless-stopped
     env_file:
@@ -63,9 +66,7 @@ services:
   # Frontend — React SPA + nginx reverse proxy
   # ---------------------------------------------------------------------------
   frontend:
-    build:
-      context: ../
-      dockerfile: docker/frontend/Dockerfile
+    image: ${DOCKERHUB_USERNAME:-liwyd}/easy-openvpn-frontend:${IMAGE_TAG:-latest}
     container_name: eovpanel-frontend
     restart: unless-stopped
     ports:
