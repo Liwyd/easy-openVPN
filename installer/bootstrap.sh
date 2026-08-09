@@ -75,7 +75,7 @@ install_system_deps() {
     info "Installing system dependencies..."
     apt-get install -y --no-install-recommends \
         git curl wget ca-certificates \
-        libffi-dev libssl-dev
+        libffi-dev libssl-dev python3-venv
 }
 
 # --- Clone or update repo -----------------------------------------------------
