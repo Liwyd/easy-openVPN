@@ -79,4 +79,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
 # Run migrations before starting the app (matches Marzban's pattern).
 # alembic runs as root; chown the whole /app so the SQLite DB is writable by
 # appuser whether DATABASE_URL points to /app/data/ (volume) or /app/*.db.
-CMD ["sh", "-c", "alembic upgrade head && chown -R appuser:appuser /app /etc/openvpn/server/easy-rsa /run/openvpn && exec su -s /bin/bash appuser -c 'uvicorn app.main:app --host 0.0.0.0 --port 8000'"]
+CMD ["sh", "-c", "alembic upgrade head && chown -R appuser:appuser /app /etc/openvpn/server /run/openvpn && exec su -s /bin/bash appuser -c 'uvicorn app.main:app --host 0.0.0.0 --port 8000'"]

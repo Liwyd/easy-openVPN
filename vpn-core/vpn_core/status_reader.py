@@ -89,7 +89,7 @@ def _recv_until(sock: socket.socket, delimiter: bytes, max_bytes: int = 1048576)
         buf += chunk
         if delimiter in buf:
             # Return everything up to and including the delimiter
-            idx = buf.index(delender) + len(delimiter)
+            idx = buf.index(delimiter) + len(delimiter)
             return buf[:idx]
     return buf
 
