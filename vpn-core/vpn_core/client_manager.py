@@ -91,6 +91,28 @@ auth SHA256
 ignore-unknown-option block-outside-dns
 verb 3"""
 
+    # Always replace or inject the remote line with the correct IP and port.
+    # client-common.txt may have a wrong/missing remote line (e.g. only port
+    # without IP), so we enforce the correct one here.
+    import re as _re
+
+    remote_line = f"remote {public_ip} {port}"
+    remote_pattern = _re.compile(r"^remote\s+.*$", _re.MULTILINE)
+    if remote_pattern.search(base):
+        base = remote_pattern.sub(remote_line, base)
+    else:
+        # No remote line found — inject after "proto" or after "dev tun"
+        lines = base.split("\n")
+        insert_idx = 0
+        for i, line in enumerate(lines):
+            if line.strip().startswith("proto"):
+                insert_idx = i + 1
+                break
+            if line.strip().startswith("dev tun"):
+                insert_idx = i + 1
+        lines.insert(insert_idx, remote_line)
+        base = "\n".join(lines)
+
     # Read CA certificate
     ca_cert = (server_dir / "ca.crt").read_text(encoding="utf-8").strip()
 

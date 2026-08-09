@@ -69,7 +69,7 @@ def get_subscription_config(
     ovpn_content = _render_ovpn_for_user(user, db)
     return Response(
         content=ovpn_content,
-        media_type="application/octet-stream",
+        media_type="application/x-openvpn-profile",
         headers={
             "Content-Disposition": f'attachment; filename="{user.username}.ovpn"',
         },

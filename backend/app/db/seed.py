@@ -81,6 +81,9 @@ def seed_default_server_config(db: Session) -> None:
 
     logger.info("No ServerConfig found — seeding default OpenVPN settings.")
 
+    # Auto-detect public IP from server.conf or network interface
+    public_host = _detect_public_ip()
+
     config = ServerConfig(
         protocol=Protocol.UDP,
         port=1194,
@@ -95,10 +98,53 @@ def seed_default_server_config(db: Session) -> None:
         keepalive_timeout=120,
         client_to_client=False,
         redirect_gateway=True,
-        public_host="",
+        public_host=public_host,
         subscription_url_prefix="",
     )
     db.add(config)
+
+
+def _detect_public_ip() -> str:
+    """Detect public IP from server.conf or network interface.
+
+    Returns the IP string, or empty string if detection fails.
+    """
+    import re
+    import subprocess
+
+    # Try reading from existing server.conf (setup_server.sh writes it there)
+    server_conf = "/etc/openvpn/server/server.conf"
+    try:
+        with open(server_conf, encoding="utf-8") as f:
+            for line in f:
+                match = re.match(r"^\s*local\s+(\S+)", line)
+                if match:
+                    return match.group(1)
+    except FileNotFoundError:
+        pass
+
+    # Fallback: detect from network
+    try:
+        result = subprocess.run(
+            ["wget", "-T", "5", "-t", "1", "-4qO-", "http://ip1.dynupdate.no-ip.com/"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
+    try:
+        result = subprocess.run(
+            ["curl", "-m", "5", "-4Ls", "http://ip1.dynupdate.no-ip.com/"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
+    return ""
 
 
 def seed_all(db: Session) -> None:

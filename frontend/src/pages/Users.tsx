@@ -431,7 +431,8 @@ export default function Users() {
       const { data } = await api.get(`/users/${username}/config`, {
         responseType: "blob",
       });
-      const url = window.URL.createObjectURL(new Blob([data]));
+      const blob = new Blob([data], { type: "application/x-openvpn-profile" });
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = `${username}.ovpn`;
