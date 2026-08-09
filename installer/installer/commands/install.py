@@ -155,6 +155,16 @@ def cmd_install(args) -> None:
         fail("Package installation failed")
         sys.exit(1)
 
+    # Ensure Docker compose V2 plugin is available
+    rc, _ = run_cmd(["docker", "compose", "version"], timeout=10)
+    if rc != 0:
+        info("Docker Compose V2 plugin not found, installing...")
+        rc, out = run_cmd(["apt-get", "install", "-y", "--no-install-recommends", "docker-compose-v2"], stream=True)
+        if rc != 0:
+            fail("Failed to install docker-compose-v2")
+            sys.exit(1)
+        ok("Docker Compose V2 installed.")
+
     # Ensure Docker daemon is running
     if not docker_running():
         info("Starting Docker daemon...")
