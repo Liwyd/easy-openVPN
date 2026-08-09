@@ -76,5 +76,7 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# Run migrations before starting the app (matches Marzban's pattern)
-CMD ["sh", "-c", "alembic upgrade head && chown -R appuser:appuser /app/data && exec su -s /bin/bash appuser -c 'uvicorn app.main:app --host 0.0.0.0 --port 8000'"]
+# Run migrations before starting the app (matches Marzban's pattern).
+# alembic runs as root; chown the whole /app so the SQLite DB is writable by
+# appuser whether DATABASE_URL points to /app/data/ (volume) or /app/*.db.
+CMD ["sh", "-c", "alembic upgrade head && chown -R appuser:appuser /app && exec su -s /bin/bash appuser -c 'uvicorn app.main:app --host 0.0.0.0 --port 8000'"]

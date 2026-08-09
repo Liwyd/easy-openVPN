@@ -187,7 +187,11 @@ def cmd_install(args) -> None:
     env.setdefault("HOST", "0.0.0.0")
     env.setdefault("PORT", "8000")
     env["BACKEND_PORT"] = backend_port
-    env.setdefault("DATABASE_URL", "sqlite:///./eovpanel.db")
+    # Docker compose mounts the named volume at /app/data; a bare ./eovpanel.db
+    # would land in the container's writable layer (root-owned, lost on recreate).
+    if env.get("DATABASE_URL", "") == "sqlite:///./eovpanel.db":
+        env["DATABASE_URL"] = "sqlite:///./data/eovpanel.db"
+    env.setdefault("DATABASE_URL", "sqlite:///./data/eovpanel.db")
     env.setdefault("JWT_ALGORITHM", "HS256")
     env.setdefault("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "30")
     env.setdefault("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "7")
