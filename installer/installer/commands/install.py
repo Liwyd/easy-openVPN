@@ -9,10 +9,10 @@ from installer.output import (
     prompt_str, step, warn, yellow,
 )
 from installer.utils import (
-    COMPOSE_FILE, ESSL_CERT_DIR, ENV_FILE, REPO_ENV, REPO_ROOT, VPN_CORE,
-    detect_default_interface, detect_os, detect_public_ip, docker_compose_pull,
-    docker_compose_up, docker_running, generate_jwt_secret, openvpn_installed,
-    read_env, run_cmd, seed_backend_admin, write_env,
+    COMPOSE_FILE, DOCKER_ENV, ESSL_CERT_DIR, ENV_FILE, REPO_ENV, REPO_ROOT,
+    VPN_CORE, detect_default_interface, detect_os, detect_public_ip,
+    docker_compose_pull, docker_compose_up, docker_running, generate_jwt_secret,
+    openvpn_installed, read_env, run_cmd, seed_backend_admin, write_env,
 )
 
 TOTAL_STEPS = 5
@@ -215,6 +215,7 @@ def cmd_install(args) -> None:
 
     write_env(env, ENV_FILE)
     write_env(env, REPO_ENV)
+    write_env(env, DOCKER_ENV)
     ok(f"Backend .env written to {ENV_FILE}")
 
     # 4. Seed admin

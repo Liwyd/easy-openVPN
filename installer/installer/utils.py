@@ -23,6 +23,7 @@ COMPOSE_FILE = DOCKER_DIR / "docker-compose.yml"
 ENV_EXAMPLE = BACKEND_DIR / ".env.example"
 ENV_FILE = BACKEND_DIR / ".env"
 REPO_ENV = REPO_ROOT / ".env"
+DOCKER_ENV = DOCKER_DIR / ".env"
 NGINX_CONF = FRONTEND_DIR / "nginx.conf"
 OPENVPN_SERVER_DIR = Path("/etc/openvpn/server")
 ESSL_DIR = Path("/opt/essl")
@@ -253,23 +254,23 @@ def seed_backend_admin(username: str, password: str) -> None:
 # ---------------------------------------------------------------------------
 def docker_compose_pull(stream_output: bool = True) -> tuple[int, str]:
     """Pull prebuilt images from Docker Hub."""
-    cmd = ["docker", "compose", "--env-file", str(REPO_ENV), "-f", str(COMPOSE_FILE), "pull"]
+    cmd = ["docker", "compose", "-f", str(COMPOSE_FILE), "pull"]
     return run_cmd(cmd, cwd=str(DOCKER_DIR), stream=stream_output)
 
 
 def docker_compose_up(stream_output: bool = True) -> tuple[int, str]:
     """Start containers using pre-pulled images (no local build)."""
-    cmd = ["docker", "compose", "--env-file", str(REPO_ENV), "-f", str(COMPOSE_FILE), "up", "-d"]
+    cmd = ["docker", "compose", "-f", str(COMPOSE_FILE), "up", "-d"]
     return run_cmd(cmd, cwd=str(DOCKER_DIR), stream=stream_output)
 
 
 def docker_compose_down(remove_volumes: bool = False, stream_output: bool = True) -> tuple[int, str]:
-    cmd = ["docker", "compose", "--env-file", str(REPO_ENV), "-f", str(COMPOSE_FILE), "down"]
+    cmd = ["docker", "compose", "-f", str(COMPOSE_FILE), "down"]
     if remove_volumes:
         cmd.append("-v")
     return run_cmd(cmd, cwd=str(DOCKER_DIR), stream=stream_output)
 
 
 def docker_compose_restart(stream_output: bool = True) -> tuple[int, str]:
-    cmd = ["docker", "compose", "--env-file", str(REPO_ENV), "-f", str(COMPOSE_FILE), "restart"]
+    cmd = ["docker", "compose", "-f", str(COMPOSE_FILE), "restart"]
     return run_cmd(cmd, cwd=str(DOCKER_DIR), stream=stream_output)
