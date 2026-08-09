@@ -242,11 +242,11 @@ def generate_jwt_secret() -> str:
 
 
 def seed_backend_admin(username: str, password: str) -> None:
-    env = read_env()
+    env = read_env(REPO_ENV)
     env["SUDO_USERNAME"] = username
     env["SUDO_PASSWORD"] = password
     env["JWT_SECRET_KEY"] = env.get("JWT_SECRET_KEY") or generate_jwt_secret()
-    write_env(env)
+    write_env(env, REPO_ENV)
 
 
 # ---------------------------------------------------------------------------
