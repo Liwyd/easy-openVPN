@@ -28,10 +28,13 @@ def get_jwt_secret(db: Session) -> str:
     DB so that test isolation works and secret rotation takes effect
     immediately after a restart (the row is updated, then the process
     restarts).
+
+    Uses commit() instead of flush() so the secret persists across
+    sessions (get_db does not commit).
     """
     row = db.query(JWTSecret).first()
     if row is None:
         row = JWTSecret(secret_key=secrets.token_hex(32))
         db.add(row)
-        db.flush()
+        db.commit()
     return row.secret_key

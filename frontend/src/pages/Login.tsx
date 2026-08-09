@@ -4,17 +4,21 @@ import {
   Button,
   Field,
   Heading,
+  IconButton,
   Input,
+  InputGroup,
   Stack,
   Text,
   VStack,
 } from "@chakra-ui/react";
+import { HiOutlineEye, HiOutlineEyeOff } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
@@ -74,13 +78,24 @@ export default function Login() {
 
             <Field.Root required>
               <Field.Label>Password</Field.Label>
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                autoComplete="current-password"
-              />
+              <InputGroup endElement={
+                <IconButton
+                  variant="ghost"
+                  size="xs"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <HiOutlineEyeOff /> : <HiOutlineEye />}
+                </IconButton>
+              }>
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Password"
+                  autoComplete="current-password"
+                />
+              </InputGroup>
             </Field.Root>
 
             {error && (
