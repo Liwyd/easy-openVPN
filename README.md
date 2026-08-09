@@ -135,16 +135,6 @@ docs/           Architecture docs, ADRs, and verification guides
 
 See [`.env.example`](.env.example) for the full annotated list.
 
-## Why not just use Marzban?
-
-[Marzban](https://github.com/gozargah/marzban) is excellent and was the direct inspiration for eovpanel's UX.  The differences are deliberate:
-
-- **OpenVPN-focused.**  Marzban is built on Xray-core and supports VLESS/Trojan/Shadowsocks.  eovpanel is built on OpenVPN — if you need OpenVPN specifically (for client compatibility, corporate firewall traversal, or because you already run it), this is purpose-built for that.
-- **Lighter.**  No Xray, no Redis, no Celery.  SQLite by default, APScheduler in-process, sync SQLAlchemy.  Fewer moving parts to break on a $5 VPS.
-- **Single-node.**  Marzban supports multi-node clustering and distributed user management.  eovpanel is designed for a single server with one OpenVPN instance.  This is a constraint, not a roadmap item.
-- **Hierarchical admins.**  eovpanel's admin quota model (super admin → sub-admin → users) is designed for reseller workflows where you need per-reseller bandwidth tracking.
-- **TUI installer.**  One command from SSH to a running panel.  Marzban has Docker Compose instructions; eovpanel has a guided terminal wizard.
-
 ## Documentation
 
 - **[Architecture](docs/architecture.md)** — ADRs explaining every major design decision
