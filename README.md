@@ -120,6 +120,7 @@ docs/           Architecture docs, ADRs, and verification guides
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DATABASE_URL` | `sqlite:///./data/eovpanel.db` | Database connection string |
+| `BACKEND_PORT` | `8000` | Host port for direct backend API access (change if 8000 is taken) |
 | `JWT_SECRET_KEY` | `changeme-in-production` | JWT signing key — **change this!** |
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Access token lifetime |
 | `JWT_REFRESH_TOKEN_EXPIRE_DAYS` | `7` | Refresh token lifetime |

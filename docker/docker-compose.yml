@@ -41,7 +41,8 @@ services:
     ports:
       # Exposed for direct API access during debugging / external proxy setups.
       # In production behind the frontend nginx, you can remove this mapping.
-      - "127.0.0.1:8000:8000"
+      # Host port is configurable via BACKEND_PORT in .env.
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
     volumes:
       # OpenVPN server config, certs, easy-rsa, CCD directory (read/write)
       - /etc/openvpn:/etc/openvpn:rw

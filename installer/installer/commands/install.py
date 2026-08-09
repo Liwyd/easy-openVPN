@@ -179,6 +179,7 @@ def cmd_install(args) -> None:
     env.setdefault("DEBUG", "false")
     env.setdefault("HOST", "0.0.0.0")
     env.setdefault("PORT", "8000")
+    env.setdefault("BACKEND_PORT", "8000")
     env.setdefault("DATABASE_URL", "sqlite:///./eovpanel.db")
     env.setdefault("JWT_ALGORITHM", "HS256")
     env.setdefault("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "30")
