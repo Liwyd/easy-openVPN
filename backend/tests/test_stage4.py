@@ -14,7 +14,7 @@ Covers:
 from __future__ import annotations
 
 import datetime as dt
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy import create_engine, event
@@ -30,7 +30,6 @@ from app.models.user import (
     UserStatus,
 )
 from app.utils.password import hash_password
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -52,10 +51,10 @@ def db_session():
         cursor.close()
 
     Base.metadata.create_all(bind=engine)
-    SessionFactory = sessionmaker(bind=engine)
-    session = SessionFactory()
+    session_factory = sessionmaker(bind=engine)
+    session = session_factory()
     # Attach factory to session so scheduler tests can monkey-patch with it
-    session.info["test_session_factory"] = SessionFactory
+    session.info["test_session_factory"] = session_factory
     try:
         yield session
     finally:
@@ -205,7 +204,7 @@ class TestAdminQuotaBlocksCreation:
         db_session.commit()
 
         sudo = db_session.query(Admin).filter(Admin.is_sudo.is_(True)).first()
-        sub = _make_admin(db_session, "quota_admin", data_limit=5 * 1024**3, parent_admin_id=sudo.id)
+        _ = _make_admin(db_session, "quota_admin", data_limit=5 * 1024**3, parent_admin_id=sudo.id)
         headers = _login(client, "quota_admin")
 
         resp = client.post(

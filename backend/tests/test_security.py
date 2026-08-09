@@ -12,7 +12,6 @@ import time
 from unittest.mock import patch
 
 import pytest
-from sqlalchemy.exc import IntegrityError
 
 from app.db.seed import seed_sudo_admin
 from app.models.admin import Admin
@@ -25,7 +24,6 @@ from app.utils.validation import (
     validate_time_window,
     validate_username,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -217,7 +215,7 @@ class TestAdminIsolation:
     def test_sub_admin_cannot_list_other_admin_users(self, client, db_session):
         sudo = _get_sudo(db_session)
         admin1 = _create_admin(db_session, "iso1", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
-        admin2 = _create_admin(db_session, "iso2", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
+        _ = _create_admin(db_session, "iso2", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
 
         # Create user under admin1 via sudo
         user = User(username="secret_u", admin_id=admin1.id, data_used=0)
@@ -234,7 +232,7 @@ class TestAdminIsolation:
     def test_sub_admin_cannot_get_other_admin_user(self, client, db_session):
         sudo = _get_sudo(db_session)
         admin1 = _create_admin(db_session, "iso_a", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
-        admin2 = _create_admin(db_session, "iso_b", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
+        _ = _create_admin(db_session, "iso_b", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
 
         user = User(username="target_u", admin_id=admin1.id, data_used=0)
         db_session.add(user)
@@ -247,7 +245,7 @@ class TestAdminIsolation:
     def test_sub_admin_cannot_update_other_admin_user(self, client, db_session):
         sudo = _get_sudo(db_session)
         admin1 = _create_admin(db_session, "iso_c", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
-        admin2 = _create_admin(db_session, "iso_d", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
+        _ = _create_admin(db_session, "iso_d", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
 
         user = User(username="protected_u", admin_id=admin1.id, data_used=0)
         db_session.add(user)
@@ -264,7 +262,7 @@ class TestAdminIsolation:
     def test_sub_admin_cannot_delete_other_admin_user(self, client, db_session):
         sudo = _get_sudo(db_session)
         admin1 = _create_admin(db_session, "iso_e", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
-        admin2 = _create_admin(db_session, "iso_f", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
+        _ = _create_admin(db_session, "iso_f", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
 
         user = User(username="safe_u", admin_id=admin1.id, data_used=0)
         db_session.add(user)
@@ -277,7 +275,7 @@ class TestAdminIsolation:
     def test_sub_admin_cannot_download_other_admin_config(self, client, db_session):
         sudo = _get_sudo(db_session)
         admin1 = _create_admin(db_session, "iso_g", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
-        admin2 = _create_admin(db_session, "iso_h", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
+        _ = _create_admin(db_session, "iso_h", data_limit=10 * 1024**3, parent_admin_id=sudo.id)
 
         user = User(username="locked_u", admin_id=admin1.id, data_used=0)
         db_session.add(user)
@@ -289,7 +287,7 @@ class TestAdminIsolation:
 
     def test_non_sudo_cannot_create_admin(self, client, db_session):
         sudo = _get_sudo(db_session)
-        sub = _create_admin(db_session, "sub_nocreate", data_limit=5 * 1024**3, parent_admin_id=sudo.id)
+        _ = _create_admin(db_session, "sub_nocreate", data_limit=5 * 1024**3, parent_admin_id=sudo.id)
         headers = _login(client, "sub_nocreate")
 
         resp = client.post(
@@ -301,7 +299,7 @@ class TestAdminIsolation:
 
     def test_non_sudo_cannot_access_settings(self, client, db_session):
         sudo = _get_sudo(db_session)
-        sub = _create_admin(db_session, "sub_nosettings", data_limit=5 * 1024**3, parent_admin_id=sudo.id)
+        _ = _create_admin(db_session, "sub_nosettings", data_limit=5 * 1024**3, parent_admin_id=sudo.id)
         headers = _login(client, "sub_nosettings")
 
         resp = client.get("/api/settings/server-config", headers=headers)

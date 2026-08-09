@@ -10,6 +10,6 @@ Configuration (env vars):
     TELEGRAM_ADMIN_CHAT_IDS   — comma-separated chat IDs
 """
 
-from app.bot.events import EventCategory, emit  # noqa: F401
 from app.bot.client import send_message  # noqa: F401
+from app.bot.events import EventCategory, emit  # noqa: F401
 from app.bot.formatter import format_event  # noqa: F401

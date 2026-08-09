@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import re
 import datetime as dt
+import re
 
 # Username must be safe as an OpenVPN common name AND safe as a filesystem
 # path component.  Only alphanumeric, hyphens, and underscores allowed.

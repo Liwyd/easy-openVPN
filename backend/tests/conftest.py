@@ -1,6 +1,6 @@
 """Test fixtures — provides an in-memory SQLite database and a FastAPI test client."""
 
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient

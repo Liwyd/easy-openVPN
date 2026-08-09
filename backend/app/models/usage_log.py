@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, UniqueConstraint, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Index, Integer, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base

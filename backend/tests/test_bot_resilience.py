@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from app.bot.events import EventCategory, emit
 from app.bot.config import is_configured
+from app.bot.events import EventCategory, emit
 
 
 class TestBotDisabled:

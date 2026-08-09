@@ -5,17 +5,17 @@ Revises: a1b2c3d4e5f6
 Create Date: 2026-08-08 00:00:01.000000
 
 """
-from typing import Sequence, Union
+from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = 'b2c3d4e5f6a7'
-down_revision: Union[str, Sequence[str], None] = 'a1b2c3d4e5f6'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = 'a1b2c3d4e5f6'
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -25,11 +25,14 @@ def upgrade() -> None:
         sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
         sa.Column('username', sa.String(length=64), nullable=False),
         sa.Column('admin_id', sa.Integer(), nullable=False),
-        sa.Column('status', sa.Enum('ACTIVE', 'DISABLED', 'EXPIRED', 'LIMITED', name='userstatus', native_enum=False), nullable=False),
+        sa.Column('status', sa.Enum('ACTIVE', 'DISABLED', 'EXPIRED', 'LIMITED',
+                                    name='userstatus', native_enum=False), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column('data_limit', sa.Integer(), nullable=True),
         sa.Column('data_used', sa.Integer(), nullable=False),
-        sa.Column('data_limit_reset_strategy', sa.Enum('NO_RESET', 'DAILY', 'WEEKLY', 'MONTHLY', name='datalimitresetstrategy', native_enum=False), nullable=False),
+        sa.Column('data_limit_reset_strategy', sa.Enum('NO_RESET', 'DAILY', 'WEEKLY', 'MONTHLY',
+                                                       name='datalimitresetstrategy',
+                                                       native_enum=False), nullable=False),
         sa.Column('expire_at', sa.DateTime(timezone=True), nullable=True),
         sa.Column('time_window_start', sa.Time(), nullable=True),
         sa.Column('time_window_end', sa.Time(), nullable=True),

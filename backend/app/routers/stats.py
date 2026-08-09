@@ -16,8 +16,8 @@ from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models.admin import Admin
-from app.models.user import User, UserStatus
 from app.models.usage_log import UsageLog
+from app.models.user import User, UserStatus
 from app.services.auth import get_current_admin
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])

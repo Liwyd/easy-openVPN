@@ -15,9 +15,9 @@ from __future__ import annotations
 import enum
 import logging
 
+from app.bot.client import send_message
 from app.bot.config import is_configured
 from app.bot.formatter import format_event
-from app.bot.client import send_message
 
 logger = logging.getLogger(__name__)
 
