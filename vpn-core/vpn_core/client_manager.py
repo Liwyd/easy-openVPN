@@ -28,6 +28,41 @@ DEFAULT_CLIENT_COMMON = DEFAULT_SERVER_DIR / "client-common.txt"
 DEFAULT_CERT_DAYS = 3650
 
 
+def _detect_public_ip(server_dir: Path) -> str:
+    """Detect public IP from server.conf or external service."""
+    server_conf = server_dir / "server.conf"
+    try:
+        with open(server_conf, encoding="utf-8") as f:
+            for line in f:
+                match = re.match(r"^\s*local\s+(\S+)", line)
+                if match:
+                    return match.group(1)
+    except FileNotFoundError:
+        pass
+
+    try:
+        result = subprocess.run(
+            ["wget", "-T", "5", "-t", "1", "-4qO-", "http://ip1.dynupdate.no-ip.com/"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
+    try:
+        result = subprocess.run(
+            ["curl", "-m", "5", "-4Ls", "http://ip1.dynupdate.no-ip.com/"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+
+    return ""
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -73,6 +108,10 @@ def _generate_ovpn(
     port: int,
 ) -> str:
     """Build a complete .ovpn profile file with inline certificates."""
+    # If public_ip is empty, try to detect it from server.conf or network
+    if not public_ip:
+        public_ip = _detect_public_ip(server_dir)
+
     # Read client-common.txt as base
     client_common = server_dir / "client-common.txt"
     if client_common.exists():

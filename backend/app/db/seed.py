@@ -76,6 +76,10 @@ def seed_default_server_config(db: Session) -> None:
     """
     existing = db.query(ServerConfig).first()
     if existing is not None:
+        # Backfill public_host if it was seeded empty before auto-detection was added
+        if not existing.public_host:
+            existing.public_host = _detect_public_ip()
+            logger.info("Backfilled empty public_host with detected IP.")
         logger.debug("ServerConfig table is not empty, skipping seed.")
         return
 
