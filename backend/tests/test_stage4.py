@@ -396,7 +396,7 @@ class TestSubscriptionEndpoint:
 
         resp = client.get(f"/sub/{user.subscription_token}")
         assert resp.status_code == 200
-        assert resp.headers["content-type"] == "application/octet-stream"
+        assert resp.headers["content-type"] == "application/x-openvpn-profile"
         assert "sub_user" in resp.headers.get("content-disposition", "")
 
     def test_invalid_token_returns_404(self, client, db_session):
@@ -761,7 +761,7 @@ class TestConfigDownload:
 
         resp = sudo_client.get(f"/api/users/{user.username}/config")
         assert resp.status_code == 200
-        assert resp.headers["content-type"] == "application/octet-stream"
+        assert resp.headers["content-type"] == "application/x-openvpn-profile"
 
     def test_revoked_user_config_returns_410(self, sudo_client, db_session):
         admin = db_session.query(Admin).filter(Admin.is_sudo.is_(True)).first()
