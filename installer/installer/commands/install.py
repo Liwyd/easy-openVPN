@@ -74,6 +74,13 @@ def cmd_install(args) -> None:
     info(f"Public IP: {public_ip or '(will auto-detect)'}")
     info(f"Interface: {iface}")
 
+    # Backend host port — the panel is served on 80/443, this is only the direct
+    # API port. Ask only if the default is taken (e.g. another service on 8000).
+    backend_port = args.backend_port
+    if not args.non_interactive:
+        backend_port = prompt_str("Backend API host port", backend_port)
+    info(f"Backend host port: {backend_port}")
+
     # ── Step 2: Admin account ──────────────────────────────────────────
     step(3, TOTAL_STEPS, "Admin account")
     if args.non_interactive:
@@ -179,7 +186,7 @@ def cmd_install(args) -> None:
     env.setdefault("DEBUG", "false")
     env.setdefault("HOST", "0.0.0.0")
     env.setdefault("PORT", "8000")
-    env.setdefault("BACKEND_PORT", "8000")
+    env["BACKEND_PORT"] = backend_port
     env.setdefault("DATABASE_URL", "sqlite:///./eovpanel.db")
     env.setdefault("JWT_ALGORITHM", "HS256")
     env.setdefault("JWT_ACCESS_TOKEN_EXPIRE_MINUTES", "30")

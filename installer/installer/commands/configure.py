@@ -8,9 +8,9 @@ from installer.output import (
     banner, bold, confirm, dim, fail, heading, info, ok, prompt_str, warn,
 )
 from installer.utils import (
-    DOCKER_DIR, ESSL_CERT_DIR, ENV_FILE, VPN_CORE,
-    docker_compose_restart, generate_jwt_secret, read_env, run_cmd, run_essl,
-    update_env,
+    DOCKER_DIR, ESSL_CERT_DIR, ENV_FILE, REPO_ENV, VPN_CORE,
+    docker_compose_restart, docker_compose_up, generate_jwt_secret, read_env,
+    run_cmd, run_essl, update_env,
 )
 
 
@@ -35,6 +35,8 @@ def cmd_configure(args) -> None:
         _configure_telegram(False)
     elif args.vpn_port or args.vpn_protocol:
         _configure_vpn_cli(args)
+    elif args.backend_port:
+        _configure_backend_port(args.backend_port)
     else:
         _interactive_menu()
 
@@ -47,6 +49,7 @@ def _interactive_menu() -> None:
   {bold('3')}  Enable Telegram bot
   {bold('4')}  Disable Telegram bot
   {bold('5')}  Edit OpenVPN server settings
+  {bold('6')}  Change backend API port
   {bold('0')}  Back
 """)
     choice = prompt_str("Select option", "0")
@@ -71,6 +74,8 @@ def _interactive_menu() -> None:
         _configure_telegram(False)
     elif choice == "5":
         _interactive_vpn_config()
+    elif choice == "6":
+        _interactive_backend_port()
     else:
         info("Returning to menu.")
 
@@ -293,6 +298,52 @@ def _interactive_vpn_config() -> None:
         ok("Containers restarted.")
     else:
         warn("Container restart had issues.")
+
+
+def _configure_backend_port(port: str) -> None:
+    """Change the host port for direct backend API access."""
+    heading("Backend API port")
+
+    env = read_env()
+    current = env.get("BACKEND_PORT", "8000")
+
+    if not port or not port.isdigit():
+        fail("Port must be a number.")
+        return
+
+    if port == current:
+        info(f"Backend port is already {port}. No change.")
+        return
+
+    info(f"Backend port: {current} -> {port}")
+    if not confirm("Apply this change?", default=True):
+        info("Aborted.")
+        return
+
+    update_env({"BACKEND_PORT": port})
+    update_env({"BACKEND_PORT": port}, REPO_ENV)
+    ok("Backend port updated.")
+
+    info("Recreating containers to apply...")
+    rc, _ = docker_compose_up()
+    if rc == 0:
+        ok("Containers recreated.")
+    else:
+        fail("Failed to recreate containers.")
+
+
+def _interactive_backend_port() -> None:
+    """Prompt for a new backend port."""
+    env = read_env()
+    current = env.get("BACKEND_PORT", "8000")
+    info(f"Current backend port: {current}")
+    port = prompt_str("New backend port", current)
+    if port and port.isdigit():
+        _configure_backend_port(port)
+    elif not port:
+        info("No change made.")
+    else:
+        warn("Invalid port. No change made.")
 
 
 def _configure_vpn_cli(args) -> None:
