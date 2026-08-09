@@ -153,5 +153,12 @@ def _purge_all() -> None:
         (Path("/opt/eovpanel") / ".env").unlink(missing_ok=True)
         info("Removed /opt/eovpanel/.env")
 
+    # Step 4: CLI symlink
+    import os
+    symlink = Path("/usr/local/bin/eovpanel")
+    if symlink.exists() or symlink.is_symlink():
+        symlink.unlink(missing_ok=True)
+        info("Removed /usr/local/bin/eovpanel")
+
     print()
     ok("Full purge complete. The system is back to its pre-install state.")

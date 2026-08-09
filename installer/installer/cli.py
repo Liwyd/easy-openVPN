@@ -53,14 +53,22 @@ def main() -> None:
     p_status = sub.add_parser("status", help="Show installation status")
     p_status.set_defaults(func=_cmd_status)
 
+    # ── update ─────────────────────────────────────────────────────────
+    p_update = sub.add_parser("update", help="Pull latest code and restart containers")
+    p_update.set_defaults(func=_cmd_update)
+
+    # ── restart ────────────────────────────────────────────────────────
+    p_restart = sub.add_parser("restart", help="Restart Docker containers")
+    p_restart.set_defaults(func=_cmd_restart)
+
     args = parser.parse_args()
 
     if not args.command:
         _print_usage()
         sys.exit(0)
 
-    # Check root for install/uninstall
-    if args.command in ("install", "uninstall") and not args.command == "status":
+    # Check root for install/uninstall/restart
+    if args.command in ("install", "uninstall", "restart") and not args.command == "status":
         import os
         if os.geteuid() != 0 and not getattr(args, "non_interactive", False):
             from installer.output import fail
@@ -91,6 +99,16 @@ def _cmd_status(args) -> None:
     cmd_status(args)
 
 
+def _cmd_update(args) -> None:
+    from installer.commands.update import cmd_update
+    cmd_update(args)
+
+
+def _cmd_restart(args) -> None:
+    from installer.commands.restart import cmd_restart
+    cmd_restart(args)
+
+
 def _print_usage() -> None:
     from installer.output import banner, bold
     banner()
@@ -99,6 +117,8 @@ def _print_usage() -> None:
   {bold('Commands:')}
     install       Install eovpanel on this server
     configure     Modify an existing installation
+    update        Pull latest code and restart containers
+    restart       Restart Docker containers
     uninstall     Remove eovpanel and optionally all data
     status        Show current installation status
 
@@ -108,6 +128,8 @@ def _print_usage() -> None:
     sudo eovpanel install -y
     eovpanel configure --rotate-jwt
     eovpanel configure --domain panel.example.com --email admin@example.com
+    eovpanel update
+    sudo eovpanel restart
     sudo eovpanel uninstall --purge
     eovpanel status
 
