@@ -79,8 +79,6 @@ def render_server_conf(cfg: ServerConfigRow) -> str:
         lines.append(line)
 
     # --- Listen ---
-    if cfg.public_ip:
-        _w(f"local {cfg.public_ip}")
     _w(f"port {cfg.port}")
     _w(f"proto {cfg.protocol}")
     _w("dev tun")
@@ -90,6 +88,7 @@ def render_server_conf(cfg: ServerConfigRow) -> str:
     _w("cert server.crt")
     _w("key server.key")
     _w("dh dh.pem")
+    _w(f"cipher {cfg.cipher}")
     _w(f"auth {cfg.auth}")
 
     if cfg.tls_crypt:

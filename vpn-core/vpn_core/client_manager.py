@@ -126,6 +126,7 @@ nobind
 persist-key
 persist-tun
 remote-cert-tls server
+cipher AES-256-GCM
 auth SHA256
 ignore-unknown-option block-outside-dns
 verb 3"""
