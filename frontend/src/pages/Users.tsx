@@ -403,7 +403,23 @@ export default function Users() {
   async function handleCopyLink(username: string) {
     try {
       const { data } = await api.get(`/users/${username}/subscription-url`);
-      await navigator.clipboard.writeText(data.subscription_url);
+      const text = data.subscription_url;
+
+      // navigator.clipboard requires HTTPS or localhost — fall back to
+      // the older execCommand approach for plain-HTTP environments.
+      if (window.isSecureContext && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+      }
+
       toaster.create({ title: "Subscription link copied", type: "success" });
     } catch {
       toaster.create({ title: "Failed to copy link", type: "error" });
