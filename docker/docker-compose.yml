@@ -18,8 +18,10 @@
 # These host paths are created by vpn-core's setup_server.sh on the host.
 #
 # TLS modes:
-#   (a) No TLS (default) — HTTP only on port 80. Fine for local/behind-VPN.
-#   (b) Certs from erfjab/ESSL — mount to /etc/nginx/ssl/ in frontend service.
+#   (a) No TLS (default) — HTTP only on PANEL_PORT (default 8000).
+#       Fine for local/behind-VPN. Marzban-style single panel port.
+#   (b) Certs from erfjab/ESSL — mount to /etc/nginx/ssl/ in frontend service;
+#       HTTPS on PANEL_SSL_PORT (default 443), HTTP redirects to HTTPS.
 #   (c) External reverse proxy (Caddy/Traefik) — this compose works behind it.
 #
 # Postgres alternative:
@@ -38,11 +40,8 @@ services:
     restart: unless-stopped
     env_file:
       - ../.env
-    ports:
-      # Exposed for direct API access during debugging / external proxy setups.
-      # In production behind the frontend nginx, you can remove this mapping.
-      # Host port is configurable via BACKEND_PORT in .env.
-      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+    # No host port mapping — the backend is handled internally by the frontend
+    # nginx (Marzban-style). Re-add e.g. "127.0.0.1:8000:8000" for debugging.
     volumes:
       # OpenVPN server config, certs, easy-rsa, CCD directory (read/write)
       - /etc/openvpn:/etc/openvpn:rw
@@ -70,8 +69,10 @@ services:
     container_name: eovpanel-frontend
     restart: unless-stopped
     ports:
-      - "80:80"
-      - "443:443"
+      # Marzban-style: a single configurable port serves the panel + API +
+      # subscriptions; the backend is proxied internally (no host mapping).
+      - "${PANEL_PORT:-8000}:80"
+      - "${PANEL_SSL_PORT:-443}:443"
     depends_on:
       backend:
         condition: service_healthy

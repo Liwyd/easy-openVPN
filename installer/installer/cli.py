@@ -17,7 +17,7 @@ def main() -> None:
     p_install = sub.add_parser("install", help="Install eovpanel on this server")
     p_install.add_argument("--port", default="1194", help="VPN port (default: 1194)")
     p_install.add_argument("--protocol", default="udp", choices=["udp", "tcp"], help="VPN protocol (default: udp)")
-    p_install.add_argument("--backend-port", default="8000", help="Panel backend host port (default: 8000)")
+    p_install.add_argument("--panel-port", default="8000", help="Panel host port (default: 8000, Marzban-style single port)")
     p_install.add_argument("--admin-user", default="admin", help="Admin username (default: admin)")
     p_install.add_argument("--admin-pass", default="admin", help="Admin password (default: admin)")
     p_install.add_argument("--telegram-token", default="", help="Telegram bot token")
@@ -39,7 +39,7 @@ def main() -> None:
     p_config.add_argument("--telegram-chat", default="", help="Telegram chat ID")
     p_config.add_argument("--vpn-port", default="", help="New VPN port")
     p_config.add_argument("--vpn-protocol", default="", choices=["", "udp", "tcp"], help="New VPN protocol")
-    p_config.add_argument("--backend-port", default="", help="New backend host port")
+    p_config.add_argument("--panel-port", default="", help="New panel host port")
     p_config.set_defaults(func=_cmd_configure)
 
     # ── uninstall ──────────────────────────────────────────────────────

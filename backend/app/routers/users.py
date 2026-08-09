@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import secrets
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -598,21 +598,30 @@ def revoke_subscription(
 @router.get("/{username}/subscription-url", response_model=SubscriptionURLResponse)
 def get_subscription_url(
     username: str,
+    request: Request,
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
     """Return the full absolute subscription URL for a user.
-    Sudo/owning-admin-only.  Uses ServerConfig's subscription_url_prefix.
+    Sudo/owning-admin-only.  Uses ServerConfig's subscription_url_prefix when
+    configured; otherwise derives it from the incoming request so the link
+    matches whatever host:port the panel is served on (Marzban-style).
     """
     user = _get_validated_user(username, current_admin, db)
     cfg = _get_server_settings(db)
 
-    if not cfg.subscription_url_prefix:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="subscription_url_prefix is not configured in server settings",
-        )
+    if cfg.subscription_url_prefix:
+        prefix = cfg.subscription_url_prefix.rstrip("/")
+    else:
+        # No explicit prefix — build from the request so the subscription
+        # page lives on the same host:port as the panel (nginx forwards the
+        # real Host + X-Forwarded-Port).
+        forwarded_port = request.headers.get("x-forwarded-port")
+        if forwarded_port and forwarded_port not in ("80", "443"):
+            base = f"{request.url.scheme}://{request.url.hostname}:{forwarded_port}"
+        else:
+            base = f"{request.url.scheme}://{request.url.hostname}"
+        prefix = base
 
-    prefix = cfg.subscription_url_prefix.rstrip("/")
     url = f"{prefix}/sub/{user.subscription_token}"
     return SubscriptionURLResponse(subscription_url=url)

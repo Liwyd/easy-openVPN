@@ -728,7 +728,7 @@ class TestSubscriptionURL:
         assert resp.status_code == 200
         assert "https://panel.example.com/sub/" in resp.json()["subscription_url"]
 
-    def test_no_prefix_returns_409(self, sudo_client, db_session):
+    def test_no_prefix_derives_from_request(self, sudo_client, db_session):
         from app.db.seed import seed_default_server_config
         seed_default_server_config(db_session)
         db_session.commit()
@@ -738,7 +738,10 @@ class TestSubscriptionURL:
         db_session.commit()
 
         resp = sudo_client.get(f"/api/users/{user.username}/subscription-url")
-        assert resp.status_code == 409
+        assert resp.status_code == 200
+        url = resp.json()["subscription_url"]
+        assert url.startswith("http://")
+        assert f"/sub/{user.subscription_token}" in url
 
 
 # ===========================================================================

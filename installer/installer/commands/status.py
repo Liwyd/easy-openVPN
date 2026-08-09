@@ -59,4 +59,11 @@ def cmd_status(_args=None) -> None:
         warn("Backend .env: not found")
 
     # Ports
-    info(f"Panel: http://<your-server-ip>")
+    panel_port = ""
+    if ENV_FILE.exists():
+        env = read_env()
+        panel_port = env.get("PANEL_PORT", "8000")
+    if panel_port and panel_port != "80":
+        info(f"Panel: http://<your-server-ip>:{panel_port}")
+    else:
+        info(f"Panel: http://<your-server-ip>")

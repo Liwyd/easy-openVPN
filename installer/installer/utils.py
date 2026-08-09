@@ -252,7 +252,7 @@ def seed_backend_admin(username: str, password: str) -> None:
 # Docker helpers
 # ---------------------------------------------------------------------------
 def docker_compose_up(stream_output: bool = True) -> tuple[int, str]:
-    # Pass the repo-root .env explicitly so ${BACKEND_PORT} etc. interpolate.
+    # Pass the repo-root .env explicitly so ${PANEL_PORT} etc. interpolate.
     # Without --env-file, compose only reads docker/.env for interpolation.
     cmd = ["docker", "compose", "--env-file", str(REPO_ENV), "-f", str(COMPOSE_FILE), "up", "-d", "--build"]
     return run_cmd(cmd, cwd=str(DOCKER_DIR), stream=stream_output)

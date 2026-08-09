@@ -74,12 +74,13 @@ def cmd_install(args) -> None:
     info(f"Public IP: {public_ip or '(will auto-detect)'}")
     info(f"Interface: {iface}")
 
-    # Backend host port — the panel is served on 80/443, this is only the direct
-    # API port. Ask only if the default is taken (e.g. another service on 8000).
-    backend_port = args.backend_port
+    # Panel host port — Marzban-style: this single port serves the frontend,
+    # the API, and the subscription page. The backend is proxied internally
+    # by nginx (no separate backend port exposed on the host).
+    panel_port = args.panel_port
     if not args.non_interactive:
-        backend_port = prompt_str("Backend API host port", backend_port)
-    info(f"Backend host port: {backend_port}")
+        panel_port = prompt_str("Panel host port", panel_port)
+    info(f"Panel host port: {panel_port}")
 
     # ── Step 2: Admin account ──────────────────────────────────────────
     step(3, TOTAL_STEPS, "Admin account")
@@ -186,7 +187,7 @@ def cmd_install(args) -> None:
     env.setdefault("DEBUG", "false")
     env.setdefault("HOST", "0.0.0.0")
     env.setdefault("PORT", "8000")
-    env["BACKEND_PORT"] = backend_port
+    env["PANEL_PORT"] = panel_port
     # Docker compose mounts the named volume at /app/data; a bare ./eovpanel.db
     # would land in the container's writable layer (root-owned, lost on recreate).
     if env.get("DATABASE_URL", "") == "sqlite:///./eovpanel.db":
@@ -262,8 +263,10 @@ def cmd_install(args) -> None:
     # ── Done ───────────────────────────────────────────────────────────
     heading("Installation complete!")
     ip = public_ip or detect_public_ip() or "<your-server-ip>"
+    panel_port = panel_port if panel_port != "80" else ""
+    panel_url = f"http://{ip}:{panel_port}" if panel_port else f"http://{ip}"
     print(f"""
-  {bold('Panel URL:')}     http://{ip}
+  {bold('Panel URL:')}     {panel_url}
   {bold('Login:')}         {admin_user} / {'<password>' if admin_pass == args.admin_pass else '<password>'}
   {bold('OpenVPN CA:')}    {REPO_ROOT}/vpn-core/
   {bold('Backend .env:')}  {ENV_FILE}

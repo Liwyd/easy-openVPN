@@ -87,7 +87,7 @@ cp .env.example .env    # edit with your settings — set JWT_SECRET_KEY!
 cd docker && docker compose up -d --build
 ```
 
-Backend runs on port 8000, frontend nginx on port 80.  OpenVPN must be installed on the host separately.
+The panel, API, and subscription page are all served on a single configurable port (`PANEL_PORT`, default 8000 — Marzban-style).  The backend is proxied internally by nginx.  OpenVPN must be installed on the host separately.
 
 See [docs/docker-verification.md](docs/docker-verification.md) for the full verification checklist.
 
@@ -120,7 +120,8 @@ docs/           Architecture docs, ADRs, and verification guides
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `DATABASE_URL` | `sqlite:///./data/eovpanel.db` | Database connection string |
-| `BACKEND_PORT` | `8000` | Host port for direct backend API access (change if 8000 is taken) |
+| `PANEL_PORT` | `8000` | Single panel port — serves frontend + API + subscriptions (Marzban-style) |
+| `PANEL_SSL_PORT` | `443` | Optional HTTPS port (used only when TLS certs are mounted) |
 | `JWT_SECRET_KEY` | `changeme-in-production` | JWT signing key — **change this!** |
 | `JWT_ACCESS_TOKEN_EXPIRE_MINUTES` | `30` | Access token lifetime |
 | `JWT_REFRESH_TOKEN_EXPIRE_DAYS` | `7` | Refresh token lifetime |

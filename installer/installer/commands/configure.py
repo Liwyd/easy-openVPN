@@ -35,8 +35,8 @@ def cmd_configure(args) -> None:
         _configure_telegram(False)
     elif args.vpn_port or args.vpn_protocol:
         _configure_vpn_cli(args)
-    elif args.backend_port:
-        _configure_backend_port(args.backend_port)
+    elif args.panel_port:
+        _configure_panel_port(args.panel_port)
     else:
         _interactive_menu()
 
@@ -49,7 +49,7 @@ def _interactive_menu() -> None:
   {bold('3')}  Enable Telegram bot
   {bold('4')}  Disable Telegram bot
   {bold('5')}  Edit OpenVPN server settings
-  {bold('6')}  Change backend API port
+  {bold('6')}  Change panel port
   {bold('0')}  Back
 """)
     choice = prompt_str("Select option", "0")
@@ -75,7 +75,7 @@ def _interactive_menu() -> None:
     elif choice == "5":
         _interactive_vpn_config()
     elif choice == "6":
-        _interactive_backend_port()
+        _interactive_panel_port()
     else:
         info("Returning to menu.")
 
@@ -300,29 +300,29 @@ def _interactive_vpn_config() -> None:
         warn("Container restart had issues.")
 
 
-def _configure_backend_port(port: str) -> None:
-    """Change the host port for direct backend API access."""
-    heading("Backend API port")
+def _configure_panel_port(port: str) -> None:
+    """Change the panel host port (frontend + subscription page)."""
+    heading("Panel port")
 
     env = read_env()
-    current = env.get("BACKEND_PORT", "8000")
+    current = env.get("PANEL_PORT", "8000")
 
     if not port or not port.isdigit():
         fail("Port must be a number.")
         return
 
     if port == current:
-        info(f"Backend port is already {port}. No change.")
+        info(f"Panel port is already {port}. No change.")
         return
 
-    info(f"Backend port: {current} -> {port}")
+    info(f"Panel port: {current} -> {port}")
     if not confirm("Apply this change?", default=True):
         info("Aborted.")
         return
 
-    update_env({"BACKEND_PORT": port})
-    update_env({"BACKEND_PORT": port}, REPO_ENV)
-    ok("Backend port updated.")
+    update_env({"PANEL_PORT": port})
+    update_env({"PANEL_PORT": port}, REPO_ENV)
+    ok("Panel port updated.")
 
     info("Recreating containers to apply...")
     rc, _ = docker_compose_up()
@@ -332,14 +332,14 @@ def _configure_backend_port(port: str) -> None:
         fail("Failed to recreate containers.")
 
 
-def _interactive_backend_port() -> None:
-    """Prompt for a new backend port."""
+def _interactive_panel_port() -> None:
+    """Prompt for a new panel port."""
     env = read_env()
-    current = env.get("BACKEND_PORT", "8000")
-    info(f"Current backend port: {current}")
-    port = prompt_str("New backend port", current)
+    current = env.get("PANEL_PORT", "8000")
+    info(f"Current panel port: {current}")
+    port = prompt_str("New panel port", current)
     if port and port.isdigit():
-        _configure_backend_port(port)
+        _configure_panel_port(port)
     elif not port:
         info("No change made.")
     else:

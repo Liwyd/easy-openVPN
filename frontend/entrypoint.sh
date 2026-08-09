@@ -43,20 +43,22 @@ server {
 
     location /api/ {
         proxy_pass http://backend:8000/api/;
-        proxy_set_header Host $host;
+        proxy_set_header Host $http_host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Port $server_port;
         proxy_read_timeout 300s;
         proxy_connect_timeout 60s;
     }
 
     location /sub/ {
         proxy_pass http://backend:8000/sub/;
-        proxy_set_header Host $host;
+        proxy_set_header Host $http_host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Port $server_port;
         proxy_read_timeout 300s;
         proxy_connect_timeout 60s;
     }
