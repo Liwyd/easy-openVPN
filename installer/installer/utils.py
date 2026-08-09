@@ -252,17 +252,19 @@ def seed_backend_admin(username: str, password: str) -> None:
 # Docker helpers
 # ---------------------------------------------------------------------------
 def docker_compose_up(stream_output: bool = True) -> tuple[int, str]:
-    cmd = ["docker", "compose", "-f", str(COMPOSE_FILE), "up", "-d", "--build"]
+    # Pass the repo-root .env explicitly so ${BACKEND_PORT} etc. interpolate.
+    # Without --env-file, compose only reads docker/.env for interpolation.
+    cmd = ["docker", "compose", "--env-file", str(REPO_ENV), "-f", str(COMPOSE_FILE), "up", "-d", "--build"]
     return run_cmd(cmd, cwd=str(DOCKER_DIR), stream=stream_output)
 
 
 def docker_compose_down(remove_volumes: bool = False, stream_output: bool = True) -> tuple[int, str]:
-    cmd = ["docker", "compose", "-f", str(COMPOSE_FILE), "down"]
+    cmd = ["docker", "compose", "--env-file", str(REPO_ENV), "-f", str(COMPOSE_FILE), "down"]
     if remove_volumes:
         cmd.append("-v")
     return run_cmd(cmd, cwd=str(DOCKER_DIR), stream=stream_output)
 
 
 def docker_compose_restart(stream_output: bool = True) -> tuple[int, str]:
-    cmd = ["docker", "compose", "-f", str(COMPOSE_FILE), "restart"]
+    cmd = ["docker", "compose", "--env-file", str(REPO_ENV), "-f", str(COMPOSE_FILE), "restart"]
     return run_cmd(cmd, cwd=str(DOCKER_DIR), stream=stream_output)
