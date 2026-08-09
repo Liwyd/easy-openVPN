@@ -139,3 +139,26 @@ def prompt_secret(label: str) -> str:
     except (EOFError, UnicodeDecodeError):
         print()
         return ""
+
+
+def prompt_str_required(label: str, default: str = "", min_length: int = 1) -> str:
+    """Ask for a string that must not be empty. Loops until valid input."""
+    while True:
+        value = prompt_str(label, default)
+        if value and len(value) >= min_length:
+            return value
+        fail(f"{label} cannot be empty. Please enter a valid value.")
+
+
+def prompt_secret_required(label: str, min_length: int = 1) -> str:
+    """Ask for a password that must not be empty. Loops until valid input."""
+    if not _is_interactive():
+        return ""
+    while True:
+        value = prompt_secret(label)
+        if value and len(value) >= min_length:
+            return value
+        if min_length > 1:
+            fail(f"{label} must be at least {min_length} characters.")
+        else:
+            fail(f"{label} cannot be empty. Please enter a password.")

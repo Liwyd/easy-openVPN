@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import os
+import shutil
 import sys
 
 from installer.output import (
     banner, bold, confirm, dim, fail, green, heading, info, ok, prompt_secret,
-    prompt_str, step, warn, yellow,
+    prompt_secret_required, prompt_str, prompt_str_required, step, warn, yellow,
 )
 from installer.utils import (
     COMPOSE_FILE, DOCKER_ENV, ESSL_CERT_DIR, ENV_FILE, REPO_ENV, REPO_ROOT,
@@ -87,11 +89,15 @@ def cmd_install(args) -> None:
     if args.non_interactive:
         admin_user = args.admin_user
         admin_pass = args.admin_pass
-    else:
-        admin_user = prompt_str("Admin username", args.admin_user)
-        admin_pass = prompt_secret("Admin password")
+        if not admin_user:
+            fail("Admin username cannot be empty. Use --admin-user to set one.")
+            sys.exit(1)
         if not admin_pass:
-            admin_pass = args.admin_pass
+            fail("Admin password cannot be empty. Use --admin-pass to set one.")
+            sys.exit(1)
+    else:
+        admin_user = prompt_str_required("Admin username", args.admin_user)
+        admin_pass = prompt_secret_required("Admin password")
 
     info(f"Admin user: {admin_user}")
     ok("Admin credentials ready.")
@@ -274,6 +280,13 @@ def cmd_install(args) -> None:
         fail("docker compose up failed")
         sys.exit(1)
     ok("Containers started successfully.")
+
+    # 7. Ensure eovpanel CLI is in PATH
+    venv_bin = str(REPO_ROOT / ".venv-installer" / "bin" / "eovpanel")
+    target = "/usr/local/bin/eovpanel"
+    if not shutil.which("eovpanel") or not os.path.islink(target):
+        os.symlink(venv_bin, target)
+        ok("eovpanel CLI added to /usr/local/bin/")
 
     # ── Done ───────────────────────────────────────────────────────────
     heading("Installation complete!")

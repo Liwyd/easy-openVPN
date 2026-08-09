@@ -113,6 +113,13 @@ launch_installer() {
     info "Launching eovpanel CLI..."
     echo ""
 
+    # Ensure eovpanel is in PATH for future sessions
+    local VENV_BIN="${VENV_DIR}/bin"
+    if [[ ! -L /usr/local/bin/eovpanel ]]; then
+        ln -sf "${VENV_BIN}/eovpanel" /usr/local/bin/eovpanel
+        info "eovpanel added to /usr/local/bin/"
+    fi
+
     # shellcheck disable=SC1091
     source "${VENV_DIR}/bin/activate"
     eovpanel install
