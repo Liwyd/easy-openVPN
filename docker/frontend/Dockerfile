@@ -28,6 +28,8 @@ RUN npm run build
 # ---------------------------------------------------------------------------
 FROM nginx:alpine
 
+RUN apk add --no-cache curl
+
 # Copy built SPA assets
 COPY --from=build /app/dist /usr/share/nginx/html
 
@@ -42,6 +44,6 @@ EXPOSE 80
 EXPOSE 443
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:80/ || exit 1
+    CMD curl -f http://localhost:80/ || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
