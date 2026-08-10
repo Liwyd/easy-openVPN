@@ -111,7 +111,12 @@ def list_admins(
 
     result = []
     for adm in admins_list:
-        user_count = db.query(func.count(User.id)).filter(User.admin_id == adm.id, User.revoked.is_(False)).scalar() or 0
+        user_count = (
+            db.query(func.count(User.id))
+            .filter(User.admin_id == adm.id, User.revoked.is_(False))
+            .scalar()
+            or 0
+        )
         limitless_user_count = (
             db.query(func.count(User.id))
             .filter(User.admin_id == adm.id, User.revoked.is_(False), User.data_limit.is_(None))

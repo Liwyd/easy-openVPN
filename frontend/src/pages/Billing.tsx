@@ -437,7 +437,7 @@ export default function Billing() {
                   <Text color="fg.muted" fontSize="sm" py={4}>No records yet.</Text>
                 ) : (
                   <Box maxH="400px" overflowY="auto">
-                    <Table.Root size="xs">
+                    <Table.Root size="sm">
                       <Table.Header>
                         <Table.Row>
                           <Table.ColumnHeader>Date</Table.ColumnHeader>

@@ -34,10 +34,10 @@ def register_jobs() -> None:
     Called once at application startup.  Each job module is imported
     for its side-effect of adding jobs to the scheduler.
     """
+    from app.jobs.billing import billing_job
     from app.jobs.enforce_limits import enforce_limits_job
     from app.jobs.reset_periodic_limits import reset_periodic_limits_job
     from app.jobs.sync_usage import sync_usage_job
-    from app.jobs.billing import billing_job
 
     scheduler.add_job(
         sync_usage_job,
