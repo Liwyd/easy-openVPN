@@ -2,16 +2,31 @@
 
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 from installer.output import (
-    banner, bold, confirm, fail, heading, info, ok, prompt_str, step, warn,
+    banner,
+    bold,
+    confirm,
+    fail,
+    heading,
+    info,
+    ok,
+    prompt_str,
+    step,
+    warn,
     yellow,
 )
 from installer.utils import (
-    BACKEND_DIR, DOCKER_DIR, ENV_FILE, OPENVPN_SERVER_DIR,
-    docker_compose_down, containers_running, run_cmd,
+    BACKEND_DIR,
+    ENV_FILE,
+    ESSL_CERT_DIR,
+    ESSL_DIR,
+    OPENVPN_SERVER_DIR,
+    REPO_ROOT,
+    containers_running,
+    docker_compose_down,
+    run_cmd,
 )
 
 
@@ -96,6 +111,10 @@ def _remove_containers() -> None:
     rc, _ = docker_compose_down(remove_volumes=True)
     if rc == 0:
         ok("Containers and volumes removed.")
+        for image in ["liwyd/easy-openvpn-backend", "liwyd/easy-openvpn-frontend"]:
+            rc, _ = run_cmd(["docker", "image", "rm", "-f", image], timeout=60)
+            if rc == 0:
+                ok(f"Docker image removed: {image}")
         info("OpenVPN data preserved at /etc/openvpn/")
     else:
         fail("Failed to remove containers.")
@@ -105,11 +124,13 @@ def _purge_all() -> None:
     """Full purge — remove everything."""
     heading("Full purge")
     warn("This will delete:")
-    print(f"    - All Docker containers and images")
-    print(f"    - OpenVPN services, iptables rules, and sysctl settings")
-    print(f"    - /etc/openvpn/server/ (certs, keys, CRL, easy-rsa)")
-    print(f"    - OpenVPN package")
-    print(f"    - Backend database and .env files")
+    print("    - All Docker containers, volumes, networks, and images")
+    print("    - OpenVPN services, iptables rules, and sysctl settings")
+    print("    - /etc/openvpn/server/ (certs, keys, CRL, easy-rsa)")
+    print("    - OpenVPN package")
+    print("    - Backend database and .env files")
+    print("    - The installer itself: /opt/eovpanel/ and /usr/local/bin/eovpanel")
+    print(f"    - TLS artifacts: /opt/essl and {ESSL_CERT_DIR}")
     print()
     warn("This action is IRREVERSIBLE.")
     print()
@@ -123,28 +144,34 @@ def _purge_all() -> None:
         return
 
     # Step 1: Docker
-    step(1, 5, "Removing Docker containers...")
+    step(1, 6, "Removing Docker containers and images...")
     rc, _ = docker_compose_down(remove_volumes=True)
     if rc == 0:
-        ok("Docker containers removed.")
+        ok("Docker containers and volumes removed.")
     else:
         warn("Docker removal had issues (may already be stopped).")
 
+    # Remove the panel images too (purge claims images are wiped).
+    for image in ["liwyd/easy-openvpn-backend", "liwyd/easy-openvpn-frontend"]:
+        rc, _ = run_cmd(["docker", "image", "rm", "-f", image], timeout=60)
+        if rc == 0:
+            ok(f"Docker image removed: {image}")
+
     # Step 2: OpenVPN service & state
-    step(2, 5, "Removing OpenVPN services and state...")
+    step(2, 6, "Removing OpenVPN services and state...")
     import os
     import shutil
     import subprocess
 
     # Stop and disable systemd services
     for svc in ["openvpn-server@server.service", "openvpn-iptables.service"]:
-        subprocess.run(["systemctl", "stop", svc], capture_output=True, timeout=15)
-        subprocess.run(["systemctl", "disable", svc], capture_output=True, timeout=15)
+        subprocess.run(["systemctl", "stop", svc], capture_output=True, timeout=15, check=False)
+        subprocess.run(["systemctl", "disable", svc], capture_output=True, timeout=15, check=False)
         unit_file = Path(f"/etc/systemd/system/{svc}")
         if unit_file.exists():
             unit_file.unlink(missing_ok=True)
             info(f"Removed {unit_file}")
-    subprocess.run(["systemctl", "daemon-reload"], capture_output=True, timeout=15)
+    subprocess.run(["systemctl", "daemon-reload"], capture_output=True, timeout=15, check=False)
 
     # Remove iptables NAT/FORWARD rules
     iptables = shutil.which("iptables")
@@ -156,7 +183,7 @@ def _purge_all() -> None:
             [iptables, "-w", "5", "-D", "FORWARD", "-s", vpn_subnet, "-j", "ACCEPT"],
             [iptables, "-w", "5", "-D", "FORWARD", "-m", "state", "--state", "RELATED,ESTABLISHED", "-j", "ACCEPT"],
         ]:
-            subprocess.run(cmd, capture_output=True, timeout=10)
+            subprocess.run(cmd, capture_output=True, timeout=10, check=False)
         info("Removed iptables rules.")
 
     # Remove /etc/openvpn/server/ (certs, keys, CRL, easy-rsa, hooks, CCD)
@@ -175,7 +202,7 @@ def _purge_all() -> None:
         shutil.rmtree(run_dir, ignore_errors=True)
 
     # Step 3: Backend data
-    step(3, 5, "Removing backend data...")
+    step(3, 6, "Removing backend data...")
     for db_file in list(BACKEND_DIR.glob("*.db")) + list(BACKEND_DIR.glob("*.sqlite*")):
         db_file.unlink(missing_ok=True)
         info(f"Removed {db_file}")
@@ -188,19 +215,39 @@ def _purge_all() -> None:
         info("Removed /opt/eovpanel/.env")
 
     # Step 4: Remove OpenVPN package
-    step(4, 5, "Removing OpenVPN package...")
+    step(4, 6, "Removing OpenVPN package...")
     rc, _ = run_cmd(["apt-get", "remove", "-y", "openvpn"], timeout=120)
     if rc == 0:
         ok("OpenVPN package removed.")
     else:
         warn("Could not remove OpenVPN package (may not be installed).")
 
-    # Step 5: CLI symlink
-    step(5, 5, "Cleaning up...")
+    # Step 5: TLS artifacts
+    step(5, 6, "Removing TLS artifacts...")
+    if ESSL_DIR.exists():
+        shutil.rmtree(ESSL_DIR, ignore_errors=True)
+        ok(f"Removed {ESSL_DIR}")
+    if ESSL_CERT_DIR.exists():
+        shutil.rmtree(ESSL_CERT_DIR, ignore_errors=True)
+        ok(f"Removed {ESSL_CERT_DIR}")
+
+    # Step 6: CLI symlink and installer itself
+    step(6, 6, "Cleaning up installer...")
     symlink = Path("/usr/local/bin/eovpanel")
     if symlink.exists() or symlink.is_symlink():
         symlink.unlink(missing_ok=True)
         info("Removed /usr/local/bin/eovpanel")
 
+    # Remove the entire install directory (repo + .venv-installer).
+    # This CLI is running FROM that venv, so move out of it first and
+    # finish with plain prints only — no imports after this point.
+    os.chdir("/")
+    if REPO_ROOT.exists():
+        shutil.rmtree(REPO_ROOT, ignore_errors=True)
+        if not REPO_ROOT.exists():
+            ok(f"Removed {REPO_ROOT}")
+        else:
+            warn(f"Could not fully remove {REPO_ROOT}")
+
     print()
-    ok("Full purge complete. OpenVPN, all configs, certs, and data have been removed.")
+    ok("Full purge complete. OpenVPN, all configs, certs, data, and the installer have been removed.")
