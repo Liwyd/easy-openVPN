@@ -1,27 +1,22 @@
 """Billing router — debt tracking, settlements, top-ups, and pricing.
 
 GET  /api/billing/summary          — sudo: all admins' billing overview
+GET  /api/billing/me               — any admin: own debt view
 GET  /api/billing/{admin_id}       — sudo: one admin's records
 POST /api/billing/{admin_id}/settle — sudo: settle debt
 POST /api/billing/{admin_id}/topup  — sudo: increase capacity
 PUT  /api/billing/{admin_id}/pricing — sudo: set prices
-GET  /api/billing/me               — any admin: own debt view
 """
 
 from __future__ import annotations
 
-import datetime as dt
-import math
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.bot.events import EventCategory, emit
 from app.db import get_db
 from app.models.admin import Admin
 from app.models.billing import BillingRecord, BillingType
-from app.models.user import User
 from app.schemas.billing import (
     BillingAdminSummary,
     BillingMeResponse,
@@ -31,63 +26,27 @@ from app.schemas.billing import (
     TopUpRequest,
 )
 from app.services.auth import get_current_admin, get_current_sudo_admin
+from app.services.billing import calc_charges_for_admin, calculate_admin_debt
 
 router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 
-def _calc_user_months(user: User, now: dt.datetime) -> int:
-    """How many full months this user has existed (minimum 1)."""
-    created = user.created_at
-    if created.tzinfo is None:
-        created = created.replace(tzinfo=dt.UTC)
-    days = (now - created).days
-    return max(1, math.ceil(days / 30))
-
-
-def _calc_billing_for_admin(admin: Admin, db: Session) -> dict:
-    """Calculate current billing state for an admin (anti-gaming).
-
-    Counts ALL users including revoked.  Volumed users contribute their
-    data_limit to a total; unlimited users each contribute user-months.
-    """
-    now = dt.datetime.now(dt.UTC)
-
-    # --- Volumed users (have data_limit) ---
-    volumed_total_bytes = (
-        db.query(func.coalesce(func.sum(User.data_limit), 0))
-        .filter(User.admin_id == admin.id, User.data_limit.isnot(None))
-        .scalar()
-        or 0
+def _billing_summary(admin: Admin, db: Session) -> BillingAdminSummary:
+    """Build a BillingAdminSummary with a live-computed debt."""
+    billing = calc_charges_for_admin(admin, db)
+    return BillingAdminSummary(
+        admin_id=admin.id,
+        username=admin.username,
+        is_sudo=admin.is_sudo,
+        price_per_user=admin.price_per_user,
+        price_per_gb=admin.price_per_gb,
+        debt=calculate_admin_debt(admin, db),
+        data_limit=admin.data_limit,
+        data_used=admin.data_used,
+        unlimited_user_count=billing["unlimited_user_count"],
+        volumed_user_count=billing["volumed_user_count"],
+        total_user_months=billing["total_user_months"],
     )
-    volumed_user_count = (
-        db.query(func.count(User.id))
-        .filter(User.admin_id == admin.id, User.data_limit.isnot(None))
-        .scalar()
-        or 0
-    )
-
-    # --- Unlimited users (no data_limit) ---
-    unlimited_users = (
-        db.query(User)
-        .filter(User.admin_id == admin.id, User.data_limit.is_(None))
-        .all()
-    )
-    unlimited_user_count = len(unlimited_users)
-    total_user_months = sum(_calc_user_months(u, now) for u in unlimited_users)
-
-    # --- Charges ---
-    volumed_charge = (volumed_total_bytes / (1024 ** 3)) * (admin.price_per_gb or 0) if admin.price_per_gb else 0
-    unlimited_charge = total_user_months * (admin.price_per_user or 0) if admin.price_per_user else 0
-
-    return {
-        "volumed_total_bytes": volumed_total_bytes,
-        "volumed_user_count": volumed_user_count,
-        "unlimited_user_count": unlimited_user_count,
-        "total_user_months": total_user_months,
-        "volumed_charge": volumed_charge,
-        "unlimited_charge": unlimited_charge,
-        "total_charge": volumed_charge + unlimited_charge,
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -104,20 +63,7 @@ def get_billing_summary(
 
     result = []
     for adm in admins:
-        billing = _calc_billing_for_admin(adm, db)
-        result.append(BillingAdminSummary(
-            admin_id=adm.id,
-            username=adm.username,
-            is_sudo=adm.is_sudo,
-            price_per_user=adm.price_per_user,
-            price_per_gb=adm.price_per_gb,
-            debt=adm.debt,
-            data_limit=adm.data_limit,
-            data_used=adm.data_used,
-            unlimited_user_count=billing["unlimited_user_count"],
-            volumed_user_count=billing["volumed_user_count"],
-            total_user_months=billing["total_user_months"],
-        ))
+        result.append(_billing_summary(adm, db))
     return result
 
 
@@ -133,7 +79,8 @@ def get_my_billing(
     current_admin: Admin = Depends(get_current_admin),
 ):
     """Return the current admin's own billing info and recent records."""
-    billing = _calc_billing_for_admin(current_admin, db)
+    billing = calc_charges_for_admin(current_admin, db)
+    debt = calculate_admin_debt(current_admin, db)
 
     records = (
         db.query(BillingRecord)
@@ -147,7 +94,7 @@ def get_my_billing(
     monthly_user_cost = billing["unlimited_charge"]
 
     return BillingMeResponse(
-        debt=current_admin.debt,
+        debt=debt,
         price_per_user=current_admin.price_per_user,
         price_per_gb=current_admin.price_per_gb,
         unlimited_user_count=billing["unlimited_user_count"],
@@ -206,13 +153,14 @@ def settle_debt(
     if admin is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Admin not found")
 
-    if body.amount > admin.debt:
+    current_debt = calculate_admin_debt(admin, db)
+    if body.amount > current_debt:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Amount exceeds debt of {admin.debt:.2f}",
+            detail=f"Amount exceeds debt of {current_debt:.2f}",
         )
 
-    admin.debt = round(admin.debt - body.amount, 6)
+    admin.debt = round(current_debt - body.amount, 6)
 
     record = BillingRecord(
         admin_id=admin_id,
@@ -259,8 +207,6 @@ def topup_capacity(
 
     db.commit()
 
-    billing = _calc_billing_for_admin(admin, db)
-
     emit(
         category=EventCategory.ADMIN_ACTION,
         action="capacity_topped_up",
@@ -268,19 +214,7 @@ def topup_capacity(
         admin_username=current_admin.username,
     )
 
-    return BillingAdminSummary(
-        admin_id=admin.id,
-        username=admin.username,
-        is_sudo=admin.is_sudo,
-        price_per_user=admin.price_per_user,
-        price_per_gb=admin.price_per_gb,
-        debt=admin.debt,
-        data_limit=admin.data_limit,
-        data_used=admin.data_used,
-        unlimited_user_count=billing["unlimited_user_count"],
-        volumed_user_count=billing["volumed_user_count"],
-        total_user_months=billing["total_user_months"],
-    )
+    return _billing_summary(admin, db)
 
 
 @router.put("/{admin_id}/pricing", response_model=BillingAdminSummary)
@@ -302,18 +236,4 @@ def set_pricing(
 
     db.commit()
 
-    billing = _calc_billing_for_admin(admin, db)
-
-    return BillingAdminSummary(
-        admin_id=admin.id,
-        username=admin.username,
-        is_sudo=admin.is_sudo,
-        price_per_user=admin.price_per_user,
-        price_per_gb=admin.price_per_gb,
-        debt=admin.debt,
-        data_limit=admin.data_limit,
-        data_used=admin.data_used,
-        unlimited_user_count=billing["unlimited_user_count"],
-        volumed_user_count=billing["volumed_user_count"],
-        total_user_months=billing["total_user_months"],
-    )
+    return _billing_summary(admin, db)
