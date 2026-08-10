@@ -41,11 +41,22 @@ def db_session():
 
 @pytest.fixture(autouse=True)
 def _reset_rate_limiter():
-    """Reset the global login rate limiter between tests."""
+    """Reset global rate limiters between tests.
+
+    Both limiters are module-level singletons shared across the whole
+    test session; without clearing them, earlier tests leak hits into
+    later ones and cause spurious 429s (e.g. the /sub/{token} tests in
+    different files hitting the same in-memory counter).
+    """
     yield
     try:
         from app.routers.auth import _login_rate_limiter
         _login_rate_limiter._hits.clear()
+    except ImportError:
+        pass
+    try:
+        from app.services.rate_limiter import subscription_rate_limiter
+        subscription_rate_limiter._hits.clear()
     except ImportError:
         pass
 

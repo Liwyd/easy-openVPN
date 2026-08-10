@@ -11,10 +11,8 @@ temporarily unreachable, returns an empty list and logs a warning.
 from __future__ import annotations
 
 import logging
-import re
 import socket
 from dataclasses import dataclass
-from typing import Optional
 
 log = logging.getLogger(__name__)
 
@@ -124,54 +122,72 @@ def _parse_status(raw: str) -> list[ClientStatus]:
     """
     Parse the output of `status 2` from the management interface.
 
-    The status 2 format has sections separated by blank lines.
-    We look for the "Virtual Address" section which contains:
-        Common Name,Real Address,Bytes Received,Bytes Sent,Connected Since, ...
+    The status 2 format is line-based with a tag prefix on every line
+    (TITLE, TIME, HEADER, CLIENT_LIST, ROUTING_TABLE, GLOBAL_STATS).
+    The per-client byte counters live in the CLIENT_LIST rows; the
+    HEADER,CLIENT_LIST line declares the column names, so we map them
+    positionally instead of assuming a fixed layout.  This stays
+    correct across OpenVPN versions (e.g. 2.3 omits the Virtual IPv6
+    Address column that 2.4+ includes).
     """
     clients: list[ClientStatus] = []
 
-    # Split into lines
-    lines = raw.splitlines()
+    # Column name -> data-row index, derived from HEADER,CLIENT_LIST.
+    # A data row has one fewer leading tag than its header line, so
+    # column names starting at header index 2 land at data index 1.
+    columns: dict[str, int] = {}
 
-    # Find the "Virtual Address" section header
-    in_section = False
-    header_seen = False
-
-    for line in lines:
+    for line in raw.splitlines():
         stripped = line.strip()
-
-        # Section headers look like: "Virtual Address Table" or "ROUTING TABLE"
-        if "Virtual Address" in stripped and "Table" in stripped:
-            in_section = True
-            header_seen = False
+        if not stripped:
             continue
 
-        if in_section:
-            # Skip the column header line (Common Name,Real Address,...)
-            if not header_seen and "Common Name" in stripped:
-                header_seen = True
-                continue
+        parts = stripped.split(",")
+        tag = parts[0]
 
-            # Empty line or section separator
-            if not stripped:
-                if header_seen:
-                    # End of section
-                    break
-                continue
+        # HEADER,CLIENT_LIST,<col names...> declares the CLIENT_LIST layout
+        if tag == "HEADER" and len(parts) > 2 and parts[1] == "CLIENT_LIST":
+            columns = {name: idx + 1 for idx, name in enumerate(parts[2:])}
+            continue
 
-            # Parse data line
-            # Format: CN,RealAddress,BytesReceived,BytesSent,ConnectedSince,...
-            parts = stripped.split(",")
-            if len(parts) >= 5:
-                clients.append(ClientStatus(
-                    common_name=parts[0].strip(),
-                    real_address=parts[1].strip(),
-                    bytes_received=_safe_int(parts[2]),
-                    bytes_sent=_safe_int(parts[3]),
-                    connected_since=parts[4].strip(),
-                ))
+        # Data rows carry: CLIENT_LIST,Common Name,Real Address,...
+        if tag == "CLIENT_LIST" and columns:
+            common_name = _column(parts, columns, "Common Name")
+            if not common_name:
+                continue
+            # Skip malformed rows that don't span the byte-counter columns
+            if not _row_complete(parts, columns):
+                continue
+            clients.append(ClientStatus(
+                common_name=common_name,
+                real_address=_column(parts, columns, "Real Address"),
+                bytes_received=_safe_int(_column(parts, columns, "Bytes Received")),
+                bytes_sent=_safe_int(_column(parts, columns, "Bytes Sent")),
+                connected_since=_column(parts, columns, "Connected Since"),
+            ))
 
     return clients
+
+
+def _column(parts: list[str], columns: dict[str, int], name: str) -> str:
+    """Extract a named column from a CLIENT_LIST data row, or '' if absent."""
+    idx = columns.get(name)
+    if idx is None or idx >= len(parts):
+        return ""
+    return parts[idx].strip()
+
+
+def _row_complete(parts: list[str], columns: dict[str, int]) -> bool:
+    """Return True if a data row spans all columns we read.
+
+    A malformed/truncated row (e.g. a partial read) would otherwise
+    parse into zeroed byte counters and corrupt a user's usage totals.
+    """
+    for name in ("Common Name", "Real Address", "Bytes Received", "Bytes Sent", "Connected Since"):
+        idx = columns.get(name)
+        if idx is None or idx >= len(parts):
+            return False
+    return True
 
 
 def _safe_int(value: str) -> int:

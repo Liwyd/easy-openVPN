@@ -285,7 +285,8 @@ def _landing_page_html(
   if (isIOS) {{
     connectBtn.href = 'openvpn://import?url=' + encodeURIComponent('{download_url}');
   }} else if (isAndroid) {{
-    connectBtn.href = 'intent://import?url=' + encodeURIComponent('{download_url}') + '#Intent;scheme=openvpn;package=de.blinkt.openvpn;end';
+    connectBtn.href = 'intent://import?url=' + encodeURIComponent('{download_url}')
+        + '#Intent;scheme=openvpn;package=de.blinkt.openvpn;end';
   }}
 }})();
 </script>
