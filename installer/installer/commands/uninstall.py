@@ -11,7 +11,7 @@ from installer.output import (
 )
 from installer.utils import (
     BACKEND_DIR, DOCKER_DIR, ENV_FILE, OPENVPN_SERVER_DIR,
-    docker_compose_down, containers_running,
+    docker_compose_down, containers_running, run_cmd,
 )
 
 
@@ -106,7 +106,9 @@ def _purge_all() -> None:
     heading("Full purge")
     warn("This will delete:")
     print(f"    - All Docker containers and images")
-    print(f"    - /etc/openvpn/server/ (certs, keys, CRL)")
+    print(f"    - OpenVPN services, iptables rules, and sysctl settings")
+    print(f"    - /etc/openvpn/server/ (certs, keys, CRL, easy-rsa)")
+    print(f"    - OpenVPN package")
     print(f"    - Backend database and .env files")
     print()
     warn("This action is IRREVERSIBLE.")
@@ -121,16 +123,43 @@ def _purge_all() -> None:
         return
 
     # Step 1: Docker
-    step(1, 3, "Removing Docker containers...")
+    step(1, 5, "Removing Docker containers...")
     rc, _ = docker_compose_down(remove_volumes=True)
     if rc == 0:
         ok("Docker containers removed.")
     else:
         warn("Docker removal had issues (may already be stopped).")
 
-    # Step 2: OpenVPN state
-    step(2, 3, "Removing OpenVPN state...")
+    # Step 2: OpenVPN service & state
+    step(2, 5, "Removing OpenVPN services and state...")
+    import os
     import shutil
+    import subprocess
+
+    # Stop and disable systemd services
+    for svc in ["openvpn-server@server.service", "openvpn-iptables.service"]:
+        subprocess.run(["systemctl", "stop", svc], capture_output=True, timeout=15)
+        subprocess.run(["systemctl", "disable", svc], capture_output=True, timeout=15)
+        unit_file = Path(f"/etc/systemd/system/{svc}")
+        if unit_file.exists():
+            unit_file.unlink(missing_ok=True)
+            info(f"Removed {unit_file}")
+    subprocess.run(["systemctl", "daemon-reload"], capture_output=True, timeout=15)
+
+    # Remove iptables NAT/FORWARD rules
+    iptables = shutil.which("iptables")
+    if iptables:
+        vpn_subnet = "10.8.0.0/24"
+        for cmd in [
+            [iptables, "-w", "5", "-t", "nat", "-D", "POSTROUTING", "-s", vpn_subnet, "!", "-d", vpn_subnet, "-j", "SNAT"],
+            [iptables, "-w", "5", "-D", "INPUT", "-p", "udp", "--dport", "1194", "-j", "ACCEPT"],
+            [iptables, "-w", "5", "-D", "FORWARD", "-s", vpn_subnet, "-j", "ACCEPT"],
+            [iptables, "-w", "5", "-D", "FORWARD", "-m", "state", "--state", "RELATED,ESTABLISHED", "-j", "ACCEPT"],
+        ]:
+            subprocess.run(cmd, capture_output=True, timeout=10)
+        info("Removed iptables rules.")
+
+    # Remove /etc/openvpn/server/ (certs, keys, CRL, easy-rsa, hooks, CCD)
     if OPENVPN_SERVER_DIR.exists():
         shutil.rmtree(OPENVPN_SERVER_DIR, ignore_errors=True)
         if not OPENVPN_SERVER_DIR.exists():
@@ -140,8 +169,13 @@ def _purge_all() -> None:
     else:
         info("No OpenVPN state found.")
 
+    # Remove management socket directory
+    run_dir = Path("/run/openvpn")
+    if run_dir.exists():
+        shutil.rmtree(run_dir, ignore_errors=True)
+
     # Step 3: Backend data
-    step(3, 3, "Removing backend data...")
+    step(3, 5, "Removing backend data...")
     for db_file in list(BACKEND_DIR.glob("*.db")) + list(BACKEND_DIR.glob("*.sqlite*")):
         db_file.unlink(missing_ok=True)
         info(f"Removed {db_file}")
@@ -153,12 +187,20 @@ def _purge_all() -> None:
         (Path("/opt/eovpanel") / ".env").unlink(missing_ok=True)
         info("Removed /opt/eovpanel/.env")
 
-    # Step 4: CLI symlink
-    import os
+    # Step 4: Remove OpenVPN package
+    step(4, 5, "Removing OpenVPN package...")
+    rc, _ = run_cmd(["apt-get", "remove", "-y", "openvpn"], timeout=120)
+    if rc == 0:
+        ok("OpenVPN package removed.")
+    else:
+        warn("Could not remove OpenVPN package (may not be installed).")
+
+    # Step 5: CLI symlink
+    step(5, 5, "Cleaning up...")
     symlink = Path("/usr/local/bin/eovpanel")
     if symlink.exists() or symlink.is_symlink():
         symlink.unlink(missing_ok=True)
         info("Removed /usr/local/bin/eovpanel")
 
     print()
-    ok("Full purge complete. The system is back to its pre-install state.")
+    ok("Full purge complete. OpenVPN, all configs, certs, and data have been removed.")

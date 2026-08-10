@@ -56,7 +56,7 @@ OPENVPN_MANAGEMENT_SOCKET: str = config(
 )
 OPENVPN_STATUS_LOG: str = config(
     "OPENVPN_STATUS_LOG",
-    default="/etc/openvpn/status.log",
+    default="/etc/openvpn/server/status.log",
 )
 EASYRSA_DIR: str = config(
     "EASYRSA_DIR",
