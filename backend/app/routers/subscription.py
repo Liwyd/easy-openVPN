@@ -47,8 +47,8 @@ def _render_ovpn_for_user(user: User, db: Session) -> str | None:
 
 def _get_base_url(request: Request) -> str:
     """Derive the base URL from the incoming request."""
-    scheme = request.url.scheme
-    host = request.headers.get("host", request.url.hostname)
+    host = request.headers.get("host", request.url.hostname or "")
+    scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
     return f"{scheme}://{host}"
 
 

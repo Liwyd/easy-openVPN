@@ -613,14 +613,16 @@ def get_subscription_url(
     if cfg.subscription_url_prefix:
         prefix = cfg.subscription_url_prefix.rstrip("/")
     else:
-        # No explicit prefix — build from the request so the subscription
+        # No explicit prefix — build from the Host header so the subscription
         # page lives on the same host:port as the panel (nginx forwards the
         # real Host + X-Forwarded-Port).
+        host = request.headers.get("host", request.url.hostname or "")
+        scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
         forwarded_port = request.headers.get("x-forwarded-port")
         if forwarded_port and forwarded_port not in ("80", "443"):
-            base = f"{request.url.scheme}://{request.url.hostname}:{forwarded_port}"
+            base = f"{scheme}://{host.split(':')[0]}:{forwarded_port}"
         else:
-            base = f"{request.url.scheme}://{request.url.hostname}"
+            base = f"{scheme}://{host}"
         prefix = base
 
     url = f"{prefix}/sub/{user.subscription_token}"
