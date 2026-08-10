@@ -324,50 +324,167 @@ class TestEnforceLimitsExpiry:
 
 
 # ===========================================================================
-# 5. Counter reset handled without negative usage
+# 5. Usage accounting — baseline seeding, reconnect/restart, atomic updates
 # ===========================================================================
 
 
-class TestSyncUsageCounterReset:
-    @patch("app.jobs.sync_usage.get_live_status")
-    def test_counter_reset_uses_full_delta(self, mock_status, db_session):
-        from app.jobs import sync_usage
+class TestSyncUsageAccounting:
+    def _sync_user(self, db_session, username, *runs):
         from app.jobs.sync_usage import sync_usage_job
-
-        admin = _make_admin(db_session, "sync_admin")
-        user = _make_user(db_session, admin.id, "reconnect_user")
-        user.common_name = "reconnect_user"
+        admin = _make_admin(db_session, f"sync_{username}")
+        user = _make_user(db_session, admin.id, username)
+        user.common_name = username
         user.data_used = 5000
         db_session.commit()
+        original = _patch_db(db_session)
+        try:
+            with patch("app.jobs.sync_usage.get_live_status") as mock_status:
+                for run in runs:
+                    mock_status.return_value = [run]
+                    sync_usage_job()
+        finally:
+            import app.db
+            app.db.SessionLocal = original
+        db_session.expire_all()
+        db_session.refresh(user)
+        return user
 
+    @patch("app.jobs.sync_usage.get_live_status")
+    def test_first_observe_seeds_baseline_no_double_count(self, mock_status, db_session):
+        """A connected client's pre-existing session must NOT be re-counted
+        after a backend restart (baseline is seeded instead)."""
+        from app.jobs.sync_usage import sync_usage_job
+
+        admin = _make_admin(db_session, "seed_admin")
+        user = _make_user(db_session, admin.id, "seed_user")
+        user.common_name = "seed_user"
+        user.data_used = 5000
+        db_session.commit()
         original = _patch_db(db_session)
 
-        # First call: set initial snapshot (rx=3000, tx=2000)
+        # Single poll of an already-running session (as seen right after a
+        # backend restart): this seeds the baseline and counts nothing.
         mock_status.return_value = [
-            {"common_name": "reconnect_user", "real_address": "1.2.3.4",
+            {"common_name": "seed_user", "real_address": "1.2.3.4",
              "bytes_received": 3000, "bytes_sent": 2000, "connected_since": "2025-01-01"},
         ]
         sync_usage_job()
-        # After first sync: data_used = 5000 + 3000 + 2000 = 10000
-
-        # Reset the snapshot to simulate an OpenVPN restart
-        sync_usage._last_snapshot.clear()
-
-        # Second call: counters went DOWN (OpenVPN restarted)
-        # Instead of negative delta, treat as new session baseline
-        mock_status.return_value = [
-            {"common_name": "reconnect_user", "real_address": "1.2.3.4",
-             "bytes_received": 500, "bytes_sent": 200, "connected_since": "2025-01-02"},
-        ]
-        sync_usage_job()
-        # After second sync: data_used = 10000 + 500 + 200 = 10700
 
         import app.db
         app.db.SessionLocal = original
 
         db_session.expire_all()
         db_session.refresh(user)
-        assert user.data_used == 10700
+        assert user.data_used == 5000  # no double-count of the 5000-byte session
+
+    @patch("app.jobs.sync_usage.get_live_status")
+    def test_deltas_accumulate_after_baseline(self, mock_status, db_session):
+        """Only traffic observed AFTER the baseline is accumulated."""
+        from app.jobs.sync_usage import sync_usage_job
+
+        admin = _make_admin(db_session, "delta_admin")
+        user = _make_user(db_session, admin.id, "delta_user")
+        user.common_name = "delta_user"
+        user.data_used = 5000
+        db_session.commit()
+        original = _patch_db(db_session)
+
+        mock_status.return_value = [
+            {"common_name": "delta_user", "real_address": "1.2.3.4",
+             "bytes_received": 1000, "bytes_sent": 500, "connected_since": "2025-01-01"},
+        ]
+        sync_usage_job()  # seed baseline, counts nothing
+        mock_status.return_value = [
+            {"common_name": "delta_user", "real_address": "1.2.3.4",
+             "bytes_received": 3500, "bytes_sent": 2500, "connected_since": "2025-01-01"},
+        ]
+        sync_usage_job()  # 5000 + 2500 + 2000 = 9500
+
+        import app.db
+        app.db.SessionLocal = original
+
+        db_session.expire_all()
+        db_session.refresh(user)
+        assert user.data_used == 9500
+
+    def test_reconnect_counts_full_new_session(self, db_session):
+        """Counters going down (OpenVPN reconnect/restart) restart the
+        session and the full new totals are counted."""
+        user = self._sync_user(
+            db_session, "reconnect_user",
+            {"common_name": "reconnect_user", "real_address": "1.2.3.4",
+             "bytes_received": 3000, "bytes_sent": 2000, "connected_since": "2025-01-01"},
+            {"common_name": "reconnect_user", "real_address": "1.2.3.4",
+             "bytes_received": 2500, "bytes_sent": 200, "connected_since": "2025-01-02"},
+        )
+        # seed run counts nothing; reconnect run counts 2500 + 200
+        assert user.data_used == 5000 + 2700
+
+    def test_session_change_detected_via_connected_since(self, db_session):
+        """A reconnect whose new session already outgrew the old baseline is
+        still counted in full (previously under-counted by the delta)."""
+        user = self._sync_user(
+            db_session, "sesschange_user",
+            {"common_name": "sesschange_user", "real_address": "1.2.3.4",
+             "bytes_received": 100, "bytes_sent": 50, "connected_since": "2025-01-01"},
+            {"common_name": "sesschange_user", "real_address": "1.2.3.4",
+             "bytes_received": 5000, "bytes_sent": 3000, "connected_since": "2025-01-02"},
+        )
+        # second poll: new session (timestamp differs) → count full 8000,
+        # NOT only 8000 - 150
+        assert user.data_used == 5000 + 8000
+
+    def test_atomic_update_not_clobbered_by_reset(self, db_session):
+        """A usage reset committed between the delta read and the write must
+        not be resurrected: data_used is updated atomically in SQL."""
+        from app.jobs.sync_usage import sync_usage_job
+
+        admin = _make_admin(db_session, "atomic_admin")
+        user = _make_user(db_session, admin.id, "atomic_user")
+        user.common_name = "atomic_user"
+        user.data_used = 5000
+        db_session.commit()
+        original = _patch_db(db_session)
+        try:
+            with patch("app.jobs.sync_usage.get_live_status") as mock_status:
+                mock_status.return_value = [
+                    {"common_name": "atomic_user", "real_address": "1.2.3.4",
+                     "bytes_received": 1000, "bytes_sent": 500, "connected_since": "2025-01-01"},
+                ]
+                sync_usage_job()  # seed baseline, counts nothing
+        finally:
+            import app.db
+            app.db.SessionLocal = original
+
+        # Concurrent reset-usage via a separate session while the client is
+        # still connected.
+        factory = db_session.info["test_session_factory"]
+        other = factory()
+        try:
+            u = other.query(User).filter(User.username == "atomic_user").first()
+            u.data_used = 0
+            other.commit()
+        finally:
+            other.close()
+
+        original = _patch_db(db_session)
+        try:
+            with patch("app.jobs.sync_usage.get_live_status") as mock_status:
+                mock_status.return_value = [
+                    {"common_name": "atomic_user", "real_address": "1.2.3.4",
+                     "bytes_received": 1500, "bytes_sent": 900, "connected_since": "2025-01-01"},
+                ]
+                sync_usage_job()  # delta = (1500-1000) + (900-500) = 900
+        finally:
+            import app.db
+            app.db.SessionLocal = original
+
+        db_session.expire_all()
+        db_session.refresh(user)
+        # Atomic `data_used = data_used + delta` is applied relative to the
+        # CURRENT committed value (0 after the reset), so the reset survives
+        # and only the new delta is accumulated.
+        assert user.data_used == 0 + 900
 
 
 # ===========================================================================
