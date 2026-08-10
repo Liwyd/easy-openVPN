@@ -117,6 +117,14 @@ const editStatusCollection = createListCollection({
   ],
 });
 
+const perPageCollection = createListCollection({
+  items: [
+    { label: "10", value: "10" },
+    { label: "20", value: "20" },
+    { label: "30", value: "30" },
+  ],
+});
+
 const unitCollection = createListCollection({
   items: [
     { label: "GB", value: "gb" },
@@ -219,7 +227,7 @@ export default function Users() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [page, setPage] = useState(1);
-  const perPage = 20;
+  const [perPage, setPerPage] = useState(20);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState<CreateUserForm>(emptyCreateForm);
@@ -711,30 +719,64 @@ export default function Users() {
       )}
 
       {!isLoading && !error && (users?.length ?? 0) > 0 && (
-        <Flex justify="space-between" align="center">
+        <Flex justify="space-between" align="center" wrap="wrap" gap={3}>
           <Text fontSize="sm" color="fg.muted">
             Page {page}
             {hasMore ? " (more available)" : ""}
           </Text>
-          <HStack gap={2}>
-            <Button
-              size="sm"
-              variant="outline"
-              css={buttonOutline}
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Previous
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              css={buttonOutline}
-              disabled={!hasMore}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Next
-            </Button>
+          <HStack gap={3}>
+            <HStack gap={1} align="center">
+              <Text fontSize="sm" color="fg.muted">
+                Rows:
+              </Text>
+              <Select.Root
+                collection={perPageCollection}
+                value={[String(perPage)]}
+                onValueChange={(details) => {
+                  setPerPage(Number(details.value[0]));
+                  setPage(1);
+                }}
+                size="sm"
+                width="80px"
+              >
+                <Select.Control>
+                  <Select.Trigger>
+                    <Select.ValueText />
+                  </Select.Trigger>
+                </Select.Control>
+                <Select.Positioner>
+                  <Select.Content>
+                    <For each={perPageCollection.items}>
+                      {(item) => (
+                        <Select.Item key={item.value} item={item}>
+                          <Select.ItemText>{item.label}</Select.ItemText>
+                        </Select.Item>
+                      )}
+                    </For>
+                  </Select.Content>
+                </Select.Positioner>
+              </Select.Root>
+            </HStack>
+            <HStack gap={2}>
+              <Button
+                size="sm"
+                variant="outline"
+                css={buttonOutline}
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                css={buttonOutline}
+                disabled={!hasMore}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </HStack>
           </HStack>
         </Flex>
       )}
