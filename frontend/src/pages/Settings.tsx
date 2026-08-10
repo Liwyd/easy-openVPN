@@ -143,12 +143,6 @@ function TelegramSection() {
 }
 
 function ServerConfigSection() {
-  const queryClient = useQueryClient();
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [pendingValues, setPendingValues] = useState<Record<string, unknown> | null>(null);
-  const [localDns, setLocalDns] = useState<string[]>([]);
-  const [currentDnsPreset, setCurrentDnsPreset] = useState<string>("");
-
   const { data: config, isLoading, error } = useQuery<ServerConfig>({
     queryKey: ["server-config"],
     queryFn: async () => {
@@ -156,6 +150,27 @@ function ServerConfigSection() {
       return data;
     },
   });
+
+  if (isLoading) return <LoadingState />;
+  if (error || !config) return <ErrorState message="Failed to load server config." />;
+
+  // Keyed by updated_at so the form remounts (fresh state) after every apply.
+  return <ServerConfigForm key={config.updated_at} config={config} />;
+}
+
+function ServerConfigForm({ config }: { config: ServerConfig }) {
+  const queryClient = useQueryClient();
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingValues, setPendingValues] = useState<Record<string, unknown> | null>(null);
+  const [localDns, setLocalDns] = useState<string[]>(config.dns_servers ?? []);
+
+  const [protocol, setProtocol] = useState(config.protocol);
+  const [cipher, setCipher] = useState(config.cipher);
+  const [authDigest, setAuthDigest] = useState(config.auth_digest);
+  const [tlsMode, setTlsMode] = useState(config.tls_mode);
+  const [dnsPreset, setDnsPreset] = useState(config.dns_preset);
+  const [clientToClient, setClientToClient] = useState(config.client_to_client);
+  const [redirectGateway, setRedirectGateway] = useState(config.redirect_gateway);
 
   const applyMutation = useMutation({
     mutationFn: async (values: Record<string, unknown>) => {
@@ -185,24 +200,23 @@ function ServerConfigSection() {
     const formData = new FormData(form);
     const values: Record<string, unknown> = {};
 
-    values.protocol = formData.get("protocol") as string;
+    values.protocol = protocol;
     values.port = Number(formData.get("port"));
-    values.cipher = formData.get("cipher") as string;
-    values.auth_digest = formData.get("auth_digest") as string;
-    values.tls_mode = formData.get("tls_mode") as string;
-    values.dns_preset = formData.get("dns_preset") as string;
+    values.cipher = cipher;
+    values.auth_digest = authDigest;
+    values.tls_mode = tlsMode;
+    values.dns_preset = dnsPreset;
     values.public_host = formData.get("public_host") as string;
     values.tunnel_host = formData.get("tunnel_host") as string;
     values.subscription_url_prefix = formData.get("subscription_url_prefix") as string;
     values.keepalive_interval = Number(formData.get("keepalive_interval"));
     values.keepalive_timeout = Number(formData.get("keepalive_timeout"));
-    values.client_to_client = formData.get("client_to_client") === "on";
-    values.redirect_gateway = formData.get("redirect_gateway") === "on";
+    values.client_to_client = clientToClient;
+    values.redirect_gateway = redirectGateway;
 
     const mtuVal = formData.get("mtu") as string;
     values.mtu = mtuVal ? Number(mtuVal) : null;
 
-    const dnsPreset = formData.get("dns_preset") as string;
     if (dnsPreset === "custom") {
       values.dns_servers = localDns.filter((d) => d.trim());
     } else {
@@ -219,11 +233,6 @@ function ServerConfigSection() {
     setPendingValues(null);
   };
 
-  if (isLoading) return <LoadingState />;
-  if (error || !config) return <ErrorState message="Failed to load server config." />;
-
-  const effectiveDnsPreset = currentDnsPreset || config.dns_preset;
-
   return (
     <>
       <SectionCard title="OpenVPN Server Configuration">
@@ -232,7 +241,11 @@ function ServerConfigSection() {
             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
               <Field.Root>
                 <Field.Label>Protocol</Field.Label>
-                <Select.Root name="protocol" defaultValue={[config.protocol]} collection={protocolCollection}>
+                <Select.Root
+                  value={[protocol]}
+                  onValueChange={(details) => setProtocol(details.value[0])}
+                  collection={protocolCollection}
+                >
                   <Select.Control>
                     <Select.Trigger>
                       <Select.ValueText />
@@ -259,7 +272,11 @@ function ServerConfigSection() {
 
               <Field.Root>
                 <Field.Label>Cipher</Field.Label>
-                <Select.Root name="cipher" defaultValue={[config.cipher]} collection={cipherCollection}>
+                <Select.Root
+                  value={[cipher]}
+                  onValueChange={(details) => setCipher(details.value[0])}
+                  collection={cipherCollection}
+                >
                   <Select.Control>
                     <Select.Trigger>
                       <Select.ValueText />
@@ -281,7 +298,11 @@ function ServerConfigSection() {
 
               <Field.Root>
                 <Field.Label>Auth Digest</Field.Label>
-                <Select.Root name="auth_digest" defaultValue={[config.auth_digest]} collection={authCollection}>
+                <Select.Root
+                  value={[authDigest]}
+                  onValueChange={(details) => setAuthDigest(details.value[0])}
+                  collection={authCollection}
+                >
                   <Select.Control>
                     <Select.Trigger>
                       <Select.ValueText />
@@ -303,7 +324,11 @@ function ServerConfigSection() {
 
               <Field.Root>
                 <Field.Label>TLS Mode</Field.Label>
-                <Select.Root name="tls_mode" defaultValue={[config.tls_mode]} collection={tlsCollection}>
+                <Select.Root
+                  value={[tlsMode]}
+                  onValueChange={(details) => setTlsMode(details.value[0])}
+                  collection={tlsCollection}
+                >
                   <Select.Control>
                     <Select.Trigger>
                       <Select.ValueText />
@@ -326,12 +351,11 @@ function ServerConfigSection() {
               <Field.Root>
                 <Field.Label>DNS Preset</Field.Label>
                 <Select.Root
-                  name="dns_preset"
-                  defaultValue={[config.dns_preset]}
+                  value={[dnsPreset]}
                   collection={dnsCollection}
                   onValueChange={(details) => {
                     const val = details.value[0];
-                    setCurrentDnsPreset(val);
+                    setDnsPreset(val);
                     if (val === "custom") {
                       setLocalDns(config.dns_servers ?? ["", ""]);
                     } else {
@@ -392,7 +416,7 @@ function ServerConfigSection() {
               </Field.Root>
             </SimpleGrid>
 
-            {effectiveDnsPreset === "custom" && (
+            {dnsPreset === "custom" && (
               <VStack align="stretch" gap={2}>
                 <Field.Label>Custom DNS Servers</Field.Label>
                 {(localDns.length > 0 ? localDns : ["", ""]).map((dns, i) => (
@@ -419,14 +443,20 @@ function ServerConfigSection() {
             )}
 
             <HStack gap={6}>
-              <Switch.Root name="client_to_client" defaultChecked={config.client_to_client}>
+              <Switch.Root
+                checked={clientToClient}
+                onCheckedChange={(e) => setClientToClient(e.checked)}
+              >
                 <Switch.Control>
                   <Switch.Thumb />
                 </Switch.Control>
                 <Switch.Label>Client-to-Client</Switch.Label>
               </Switch.Root>
 
-              <Switch.Root name="redirect_gateway" defaultChecked={config.redirect_gateway}>
+              <Switch.Root
+                checked={redirectGateway}
+                onCheckedChange={(e) => setRedirectGateway(e.checked)}
+              >
                 <Switch.Control>
                   <Switch.Thumb />
                 </Switch.Control>
