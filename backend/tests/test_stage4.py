@@ -434,6 +434,57 @@ class TestSyncUsageAccounting:
         # NOT only 8000 - 150
         assert user.data_used == 5000 + 8000
 
+    def test_reconnect_after_disconnect_counts_new_session(self, db_session):
+        """A disconnect+reconnect between polls must NOT lose the new session.
+
+        The snapshot lives in the DB (not process memory) and is never
+        cleared on disconnect, so the fresh session's full counters are
+        counted instead of being re-baselined (which would count nothing).
+        """
+        from app.jobs.sync_usage import sync_usage_job
+
+        admin = _make_admin(db_session, "re_dc_admin")
+        user = _make_user(db_session, admin.id, "re_dc_user")
+        user.common_name = "re_dc_user"
+        user.data_used = 5000
+        db_session.commit()
+        original = _patch_db(db_session)
+        try:
+            with patch("app.jobs.sync_usage.get_live_status") as mock_status:
+                # Session A — seed baseline, then count a delta
+                mock_status.return_value = [
+                    {"common_name": "re_dc_user", "real_address": "1.2.3.4",
+                     "bytes_received": 3000, "bytes_sent": 2000,
+                     "connected_since": "2025-01-01"},
+                ]
+                sync_usage_job()  # seed, counts nothing
+                mock_status.return_value = [
+                    {"common_name": "re_dc_user", "real_address": "1.2.3.4",
+                     "bytes_received": 3500, "bytes_sent": 2500,
+                     "connected_since": "2025-01-01"},
+                ]
+                sync_usage_job()  # delta = 1000 -> 6000
+
+                # Client disconnects — the snapshot must survive.
+                mock_status.return_value = []
+                sync_usage_job()
+
+                # Reconnect — fresh per-session counters (lower than the
+                # snapshot): must be counted as a full new session.
+                mock_status.return_value = [
+                    {"common_name": "re_dc_user", "real_address": "1.2.3.4",
+                     "bytes_received": 500, "bytes_sent": 300,
+                     "connected_since": "2025-01-02"},
+                ]
+                sync_usage_job()  # full 800 -> 6800
+        finally:
+            import app.db
+            app.db.SessionLocal = original
+
+        db_session.expire_all()
+        db_session.refresh(user)
+        assert user.data_used == 5000 + 1000 + 800
+
     def test_atomic_update_not_clobbered_by_reset(self, db_session):
         """A usage reset committed between the delta read and the write must
         not be resurrected: data_used is updated atomically in SQL."""

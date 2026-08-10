@@ -102,6 +102,19 @@ class User(Base):
         DateTime(timezone=True), nullable=True, default=None
     )
 
+    # Per-user byte-counter snapshot used by the usage-sync job.
+    # last_rx/last_tx hold the last observed session counters from the
+    # OpenVPN management interface; last_connected_since disambiguates
+    # reconnects whose new session already outgrew the old baseline.
+    # Persisted in the DB (not process memory) so a disconnect or backend
+    # restart cannot lose the baseline — otherwise a reconnect would
+    # re-seed it and silently undercount the whole new session.
+    last_rx: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    last_tx: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    last_connected_since: Mapped[str | None] = mapped_column(
+        String(64), nullable=True, default=None
+    )
+
     # Relationships
     admin: Mapped[Admin] = relationship("Admin", back_populates="users", lazy="select")
     usage_logs: Mapped[list[UsageLog]] = relationship(

@@ -238,6 +238,7 @@ export default function Users() {
     data: users,
     isLoading,
     error,
+    isFetching,
   } = useQuery<User[]>({
     queryKey: ["users", search, offset, perPage],
     queryFn: async () => {
@@ -528,6 +529,17 @@ export default function Users() {
         </Select.Root>
 
         <Box flex="1" />
+
+        <IconButton
+          aria-label="Refresh users list"
+          variant="outline"
+          css={buttonOutline}
+          onClick={() => queryClient.refetchQueries({ queryKey: ["users"] })}
+          disabled={isFetching}
+          title="Refresh users list"
+        >
+          <FiRefreshCw />
+        </IconButton>
 
         <Button css={buttonSolid} onClick={() => setCreateOpen(true)}>
           <FiPlus />
