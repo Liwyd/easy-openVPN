@@ -87,6 +87,8 @@ setup_easyrsa() {
     local url="https://github.com/OpenVPN/easy-rsa/releases/download/v${EASYRSA_VERSION}/EasyRSA-${EASYRSA_VERSION}.tgz"
     wget -qO- "$url" 2>/dev/null | tar xz -C "$EASYRSA_DIR" --strip-components 1
     chown -R root:root "$EASYRSA_DIR"
+    # Lock down easy-rsa private keys
+    chmod -R go-rwx "${EASYRSA_DIR}/pki/private" 2>/dev/null || true
 
     echo "[*] Initialising PKI..."
     cd "$EASYRSA_DIR"
@@ -117,6 +119,9 @@ DHPARAM
 
     chown nobody:"${GROUP}" "${SERVER_DIR}/crl.pem"
     chmod o+x "$SERVER_DIR"
+
+    # Lock down private keys — only root should read them
+    chmod 0600 "${SERVER_DIR}/ca.key" "${SERVER_DIR}/server.key" "${SERVER_DIR}/tc.key"
 }
 
 # --- IP forwarding & NAT -----------------------------------------------------

@@ -109,52 +109,42 @@ def _generate_ovpn(
     public_ip: str,
     protocol: str,
     port: int,
+    cipher: str = "AES-256-GCM",
+    auth: str = "SHA256",
+    tls_mode: str = "tls-crypt",
 ) -> str:
-    """Build a complete .ovpn profile file with inline certificates."""
+    """Build a complete .ovpn profile file with inline certificates.
+
+    Reads the current cipher, auth, and TLS mode from the DB (passed as
+    parameters) instead of relying on the stale client-common.txt template.
+    This ensures subscription links always serve the latest config.
+    """
     # If public_ip is empty, try to detect it from server.conf or network
     if not public_ip:
         public_ip = _detect_public_ip(server_dir)
 
-    # Read client-common.txt as base
-    client_common = server_dir / "client-common.txt"
-    if client_common.exists():
-        base = client_common.read_text(encoding="utf-8").rstrip("\n")
-    else:
-        base = f"""client
-dev tun
-proto {protocol}
-remote {public_ip} {port}
-resolv-retry infinite
-nobind
-persist-key
-persist-tun
-remote-cert-tls server
-cipher AES-256-GCM
-auth SHA256
-ignore-unknown-option block-outside-dns
-verb 3"""
+    # Build the base config dynamically from current settings
+    lines = [
+        "client",
+        "dev tun",
+        f"proto {protocol}",
+        f"remote {public_ip} {port}",
+        "resolv-retry infinite",
+        "nobind",
+        "persist-key",
+        "persist-tun",
+        "remote-cert-tls server",
+        f"cipher {cipher}",
+        f"auth {auth}",
+    ]
+    if tls_mode == "tls-crypt":
+        lines.append("tls-crypt")
+    elif tls_mode == "tls-auth":
+        lines.append("tls-auth")
+    lines.append("ignore-unknown-option block-outside-dns")
+    lines.append("verb 3")
 
-    # Always replace or inject the remote line with the correct IP and port.
-    # client-common.txt may have a wrong/missing remote line (e.g. only port
-    # without IP), so we enforce the correct one here.
-    import re as _re
-
-    remote_line = f"remote {public_ip} {port}"
-    remote_pattern = _re.compile(r"^remote\s+.*$", _re.MULTILINE)
-    if remote_pattern.search(base):
-        base = remote_pattern.sub(remote_line, base)
-    else:
-        # No remote line found — inject after "proto" or after "dev tun"
-        lines = base.split("\n")
-        insert_idx = 0
-        for i, line in enumerate(lines):
-            if line.strip().startswith("proto"):
-                insert_idx = i + 1
-                break
-            if line.strip().startswith("dev tun"):
-                insert_idx = i + 1
-        lines.insert(insert_idx, remote_line)
-        base = "\n".join(lines)
+    base = "\n".join(lines)
 
     # Read CA certificate
     ca_cert = (server_dir / "ca.crt").read_text(encoding="utf-8").strip()
@@ -177,15 +167,18 @@ verb 3"""
     pki_private = server_dir / "easy-rsa" / "pki" / "private" / f"{client_name}.key"
     client_key = pki_private.read_text(encoding="utf-8").strip()
 
-    # Read TLS crypt key
-    tc_key = (server_dir / "tc.key").read_text(encoding="utf-8").strip()
-
-    # Assemble .ovpn
+    # Read TLS key (only if needed)
     ovpn = base + "\n"
     ovpn += f"<ca>\n{ca_cert}\n</ca>\n"
     ovpn += f"<cert>\n{client_cert}\n</cert>\n"
     ovpn += f"<key>\n{client_key}\n</key>\n"
-    ovpn += f"<tls-crypt>\n{tc_key}\n</tls-crypt>\n"
+
+    if tls_mode == "tls-crypt":
+        tc_key = (server_dir / "tc.key").read_text(encoding="utf-8").strip()
+        ovpn += f"<tls-crypt>\n{tc_key}\n</tls-crypt>\n"
+    elif tls_mode == "tls-auth":
+        ta_key = (server_dir / "ta.key").read_text(encoding="utf-8").strip()
+        ovpn += f"<tls-auth>\n{ta_key}\n</tls-auth>\n"
 
     return ovpn
 
@@ -211,6 +204,9 @@ def create_client(
     public_ip: str = "",
     protocol: str = "udp",
     port: int = 1194,
+    cipher: str = "AES-256-GCM",
+    auth: str = "SHA256",
+    tls_mode: str = "tls-crypt",
 ) -> str:
     """
     Generate a client key/cert via easy-rsa and return the .ovpn file content.
@@ -247,6 +243,9 @@ def create_client(
         public_ip,
         protocol,
         port,
+        cipher=cipher,
+        auth=auth,
+        tls_mode=tls_mode,
     )
 
     return ovpn_content

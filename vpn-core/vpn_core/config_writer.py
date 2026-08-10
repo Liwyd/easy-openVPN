@@ -178,6 +178,91 @@ def _get_group_name() -> str:
     return "nobody"
 
 
+def _render_client_common(cfg: ServerConfigRow, server_dir: Path) -> None:
+    """Regenerate client-common.txt with current cipher/auth/TLS settings.
+
+    This template is the base for all .ovpn files served via subscription
+    links. Keeping it current ensures every download reflects the latest
+    server configuration.
+    """
+    tls_line = ""
+    if cfg.tls_crypt:
+        tls_line = "tls-crypt"
+    elif cfg.tls_auth:
+        tls_line = "tls-auth"
+
+    lines = [
+        "client",
+        "dev tun",
+        f"proto {cfg.protocol}",
+        "resolv-retry infinite",
+        "nobind",
+        "persist-key",
+        "persist-tun",
+        "remote-cert-tls server",
+        f"cipher {cfg.cipher}",
+        f"auth {cfg.auth}",
+    ]
+    if tls_line:
+        lines.append(tls_line)
+    lines.append("ignore-unknown-option block-outside-dns")
+    lines.append("verb 3")
+
+    client_common = server_dir / "client-common.txt"
+    client_common.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    log.info("Regenerated client-common.txt with cipher=%s auth=%s tls=%s",
+             cfg.cipher, cfg.auth,
+             "tls-crypt" if cfg.tls_crypt else "tls-auth" if cfg.tls_auth else "none")
+
+
+def _restart_openvpn_via_management(management_socket: str) -> bool:
+    """Restart OpenVPN via the management interface unix socket.
+
+    This works inside Docker without needing host systemd access.
+    Returns True on success.
+    """
+    import socket
+
+    sock_path = management_socket
+    if not os.path.exists(sock_path):
+        log.warning("Management socket %s not found, trying systemctl fallback", sock_path)
+        try:
+            subprocess.run(
+                ["systemctl", "restart", "openvpn-server@server.service"],
+                check=True,
+                timeout=30,
+            )
+            log.info("OpenVPN restarted via systemctl.")
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as exc:
+            log.error("systemctl restart failed: %s", exc)
+            return False
+
+    try:
+        sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        sock.settimeout(10)
+        sock.connect(sock_path)
+        sock.sendall(b"restart\n")
+        resp = sock.recv(1024)
+        sock.close()
+        log.info("OpenVPN restart sent via management socket. Response: %s", resp.decode(errors="replace").strip())
+        return True
+    except (OSError, socket.error, socket.timeout) as exc:
+        log.error("Management socket restart failed: %s", exc)
+        # Fallback to systemctl
+        try:
+            subprocess.run(
+                ["systemctl", "restart", "openvpn-server@server.service"],
+                check=True,
+                timeout=30,
+            )
+            log.info("OpenVPN restarted via systemctl fallback.")
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as exc2:
+            log.error("systemctl fallback also failed: %s", exc2)
+            return False
+
+
 def apply_server_config(
     cfg: ServerConfigRow,
     conf_path: Path | str = DEFAULT_SERVER_CONF,
@@ -201,7 +286,11 @@ def apply_server_config(
 
     # Write new config
     conf_path.write_text(rendered, encoding="utf-8")
+    os.chmod(conf_path, 0o600)
     log.info("Wrote server.conf to %s", conf_path)
+
+    # Regenerate client-common.txt with current settings
+    _render_client_common(cfg, server_dir)
 
     # Ensure CRL permissions (OpenVPN reads it as nobody)
     crl = server_dir / "crl.pem"
@@ -211,18 +300,5 @@ def apply_server_config(
         # OpenVPN needs +x on the directory to stat() the CRL
         os.chmod(server_dir, os.stat(server_dir).st_mode | 0o001)
 
-    # Restart OpenVPN
-    try:
-        subprocess.run(
-            ["systemctl", "restart", "openvpn-server@server.service"],
-            check=True,
-            timeout=30,
-        )
-        log.info("OpenVPN service restarted successfully.")
-        return True
-    except subprocess.CalledProcessError as exc:
-        log.error("Failed to restart OpenVPN: %s", exc)
-        return False
-    except FileNotFoundError:
-        log.error("systemctl not found — are we on a systemd host?")
-        return False
+    # Restart OpenVPN via management socket (works in Docker)
+    return _restart_openvpn_via_management(cfg.management_socket)

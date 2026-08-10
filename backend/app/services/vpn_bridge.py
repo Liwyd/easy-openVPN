@@ -29,6 +29,9 @@ def create_client_cert(
     public_ip: str = "",
     protocol: str = "udp",
     port: int = 1194,
+    cipher: str = "AES-256-GCM",
+    auth: str = "SHA256",
+    tls_mode: str = "tls-crypt",
 ) -> str:
     """Create a client certificate and return the .ovpn content.
 
@@ -44,6 +47,9 @@ def create_client_cert(
         public_ip=public_ip,
         protocol=protocol,
         port=port,
+        cipher=cipher,
+        auth=auth,
+        tls_mode=tls_mode,
     )
 
 
@@ -127,6 +133,9 @@ def generate_ovpn_file(
     public_ip: str = "",
     protocol: str = "udp",
     port: int = 1194,
+    cipher: str = "AES-256-GCM",
+    auth: str = "SHA256",
+    tls_mode: str = "tls-crypt",
 ) -> str:
     """Render the .ovpn file for an existing client without re-creating the cert.
 
@@ -141,6 +150,9 @@ def generate_ovpn_file(
         public_ip=public_ip,
         protocol=protocol,
         port=port,
+        cipher=cipher,
+        auth=auth,
+        tls_mode=tls_mode,
     )
 
 

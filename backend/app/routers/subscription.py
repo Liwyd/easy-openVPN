@@ -35,6 +35,9 @@ def _render_ovpn_for_user(user: User, db: Session) -> str | None:
         )
         protocol = cfg.protocol.value if cfg else "udp"
         port = cfg.port if cfg else 1194
+        cipher = cfg.cipher.value if cfg else "AES-256-GCM"
+        auth = cfg.auth_digest.value if cfg else "SHA256"
+        tls_mode = cfg.tls_mode.value if cfg else "tls-crypt"
 
         return generate_ovpn_file(
             common_name=user.common_name or user.username,
@@ -42,6 +45,9 @@ def _render_ovpn_for_user(user: User, db: Session) -> str | None:
             public_ip=public_ip,
             protocol=protocol,
             port=port,
+            cipher=cipher,
+            auth=auth,
+            tls_mode=tls_mode,
         )
     except Exception:
         log.exception("Failed to generate ovpn for user %s", user.username)
@@ -63,6 +69,7 @@ def _landing_page_html(
     username: str,
     token: str,
     base_url: str,
+    config_updated: bool = False,
 ) -> str:
     """Render the user-friendly subscription landing page."""
     download_url = f"{base_url}/sub/{token}/download"
@@ -227,6 +234,16 @@ def _landing_page_html(
     font-size: 0.8rem;
     margin-top: 1.5rem;
   }}
+  .banner {{
+    background: #f59e0b;
+    color: #000;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }}
   @media (max-width: 480px) {{
     .card {{ padding: 1.5rem; }}
     .stores {{ flex-direction: column; }}
@@ -238,6 +255,8 @@ def _landing_page_html(
   <div class="shield">&#128737;</div>
   <h1>Your VPN is Ready</h1>
   <p class="subtitle">Profile for <strong>{username}</strong></p>
+
+  {"<div class='banner'>⚠️ Server config has been updated. Download the latest config below.</div>" if config_updated else ""}
 
   <div class="qr-section">
     <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={download_url}&bgcolor=ffffff&color=000000"
@@ -337,11 +356,19 @@ def get_subscription_landing(
             status_code=404,
         )
 
+    # Check if server config changed since user's last download
+    cfg = db.query(ServerConfig).first()
+    config_updated = False
+    if cfg and user.subscription_updated_at and cfg.updated_at:
+        if cfg.updated_at > user.subscription_updated_at:
+            config_updated = True
+
     base_url = _get_base_url(request)
     html = _landing_page_html(
         username=user.username,
         token=token,
         base_url=base_url,
+        config_updated=config_updated,
     )
     return HTMLResponse(content=html)
 
@@ -373,6 +400,12 @@ def download_subscription_config(
             content="Failed to generate VPN config. Admin must regenerate this user's certificate.",
             status_code=500,
         )
+
+    # Track download time so landing page can show "config updated" banner
+    import datetime as _dt
+    user.subscription_updated_at = _dt.datetime.now(_dt.timezone.utc)
+    db.commit()
+
     return Response(
         content=ovpn_content,
         media_type="application/x-openvpn-profile",

@@ -22,6 +22,7 @@ from app.logging_config import enforcement_log
 from app.models.admin import Admin
 from app.models.admin_log import AdminAction, TargetType
 from app.models.server_config import ServerConfig
+from app.models.user import User, UserStatus
 from app.schemas.server_config import (
     ServerConfigApplyResult,
     ServerConfigResponse,
@@ -199,6 +200,11 @@ def update_server_config(
     db.refresh(cfg)
 
     redownload_fields = sorted(changed_fields & REDISTRIBUTION_FIELDS)
+
+    # Notify all active users to redownload their config via Telegram
+    if needs_redownload and is_configured():
+        _notify_users_redownload(db, redownload_fields)
+
     return ServerConfigApplyResult(
         success=True,
         requires_redownload=needs_redownload,
@@ -212,6 +218,37 @@ def update_server_config(
             )
         ),
     )
+
+
+# ---------------------------------------------------------------------------
+# Telegram notification for config redownload
+# ---------------------------------------------------------------------------
+
+def _notify_users_redownload(db: Session, changed_fields: list[str]) -> None:
+    """Send Telegram notification to all active users to redownload their config."""
+    try:
+        users = (
+            db.query(User)
+            .filter(
+                User.status == UserStatus.ACTIVE,
+                User.revoked == False,  # noqa: E712
+                User.subscription_token != "",
+            )
+            .all()
+        )
+        if not users:
+            return
+
+        fields_str = ", ".join(changed_fields)
+        text = (
+            f"{EMOJI_SYSTEM} *Server Configuration Updated*\n"
+            f"  Changed: `{fields_str}`\n"
+            f"  Please redownload your VPN config from your subscription link."
+        )
+        send_message(text)
+        logger.info("Notified %d active users about config change via Telegram.", len(users))
+    except Exception as exc:
+        logger.warning("Failed to send Telegram redownload notification: %s", exc)
 
 
 # ---------------------------------------------------------------------------

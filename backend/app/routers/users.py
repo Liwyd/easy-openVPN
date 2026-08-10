@@ -110,6 +110,9 @@ def _render_ovpn_for_user(user: User, db: Session) -> str:
         public_ip=_resolve_client_host(cfg.public_host, cfg.tunnel_host),
         protocol=cfg.protocol.value,
         port=cfg.port,
+        cipher=cfg.cipher.value,
+        auth=cfg.auth_digest.value,
+        tls_mode=cfg.tls_mode.value,
     )
 
 
@@ -152,6 +155,9 @@ def create_user(
             public_ip=_resolve_client_host(cfg.public_host, cfg.tunnel_host),
             protocol=cfg.protocol.value,
             port=cfg.port,
+            cipher=cfg.cipher.value,
+            auth=cfg.auth_digest.value,
+            tls_mode=cfg.tls_mode.value,
         )
     except FileExistsError as exc:
         raise HTTPException(
