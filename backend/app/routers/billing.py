@@ -121,6 +121,49 @@ def get_billing_summary(
     return result
 
 
+# ---------------------------------------------------------------------------
+# Sub-admin endpoint
+# ---------------------------------------------------------------------------
+# NOTE: must be registered BEFORE the `/{admin_id}` route below — otherwise
+# a GET to /billing/me would be matched as admin_id="me" and 422.
+
+@router.get("/me", response_model=BillingMeResponse)
+def get_my_billing(
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin),
+):
+    """Return the current admin's own billing info and recent records."""
+    billing = _calc_billing_for_admin(current_admin, db)
+
+    records = (
+        db.query(BillingRecord)
+        .filter(BillingRecord.admin_id == current_admin.id)
+        .order_by(BillingRecord.created_at.desc())
+        .limit(50)
+        .all()
+    )
+
+    monthly_traffic_cost = billing["volumed_charge"]
+    monthly_user_cost = billing["unlimited_charge"]
+
+    return BillingMeResponse(
+        debt=current_admin.debt,
+        price_per_user=current_admin.price_per_user,
+        price_per_gb=current_admin.price_per_gb,
+        unlimited_user_count=billing["unlimited_user_count"],
+        volumed_user_count=billing["volumed_user_count"],
+        total_user_months=billing["total_user_months"],
+        volumed_total_bytes=billing["volumed_total_bytes"],
+        estimated_monthly_user_cost=monthly_user_cost,
+        estimated_monthly_traffic_cost=monthly_traffic_cost,
+        records=[BillingRecordResponse.model_validate(r) for r in records],
+    )
+
+
+# ---------------------------------------------------------------------------
+# Admin-scoped endpoints (registered after the literal /me route)
+# ---------------------------------------------------------------------------
+
 @router.get("/{admin_id}", response_model=list[BillingRecordResponse])
 def get_billing_records(
     admin_id: int,
@@ -273,41 +316,4 @@ def set_pricing(
         unlimited_user_count=billing["unlimited_user_count"],
         volumed_user_count=billing["volumed_user_count"],
         total_user_months=billing["total_user_months"],
-    )
-
-
-# ---------------------------------------------------------------------------
-# Sub-admin endpoint
-# ---------------------------------------------------------------------------
-
-@router.get("/me", response_model=BillingMeResponse)
-def get_my_billing(
-    db: Session = Depends(get_db),
-    current_admin: Admin = Depends(get_current_admin),
-):
-    """Return the current admin's own billing info and recent records."""
-    billing = _calc_billing_for_admin(current_admin, db)
-
-    records = (
-        db.query(BillingRecord)
-        .filter(BillingRecord.admin_id == current_admin.id)
-        .order_by(BillingRecord.created_at.desc())
-        .limit(50)
-        .all()
-    )
-
-    monthly_traffic_cost = billing["volumed_charge"]
-    monthly_user_cost = billing["unlimited_charge"]
-
-    return BillingMeResponse(
-        debt=current_admin.debt,
-        price_per_user=current_admin.price_per_user,
-        price_per_gb=current_admin.price_per_gb,
-        unlimited_user_count=billing["unlimited_user_count"],
-        volumed_user_count=billing["volumed_user_count"],
-        total_user_months=billing["total_user_months"],
-        volumed_total_bytes=billing["volumed_total_bytes"],
-        estimated_monthly_user_cost=monthly_user_cost,
-        estimated_monthly_traffic_cost=monthly_traffic_cost,
-        records=[BillingRecordResponse.model_validate(r) for r in records],
     )

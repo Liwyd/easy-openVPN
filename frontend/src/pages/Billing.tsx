@@ -15,6 +15,7 @@ import {
   Badge,
   Input,
   Spinner,
+  Alert,
   Dialog,
   Portal,
   Field,
@@ -74,7 +75,7 @@ function fmtDebt(v: number): string {
 export default function Billing() {
   const queryClient = useQueryClient();
 
-  const { data: admins, isLoading } = useQuery<BillingAdmin[]>({
+  const { data: admins, isLoading, error } = useQuery<BillingAdmin[]>({
     queryKey: ["billing-summary"],
     queryFn: async () => {
       const { data } = await api.get("/billing/summary");
@@ -189,6 +190,13 @@ export default function Billing() {
 
       {isLoading ? (
         <Flex py={20} justify="center"><Spinner size="lg" color="accent" /></Flex>
+      ) : error ? (
+        <Alert.Root status="error" borderRadius="lg">
+          <Alert.Title>Failed to load billing summary</Alert.Title>
+          <Alert.Description>
+            {(error as Error).message || "An unexpected error occurred."}
+          </Alert.Description>
+        </Alert.Root>
       ) : !admins || admins.length === 0 ? (
         <Box {...card} p={12} textAlign="center">
           <Text color="fg.muted">No sub-admins yet.</Text>

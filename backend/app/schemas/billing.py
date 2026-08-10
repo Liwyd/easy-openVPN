@@ -20,7 +20,7 @@ class BillingRecordResponse(BaseModel):
 
 class BillingAdminSummary(BaseModel):
     admin_id: int
-    username: int
+    username: str
     is_sudo: bool
     price_per_user: float | None
     price_per_gb: float | None
