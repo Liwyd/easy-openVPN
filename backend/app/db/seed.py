@@ -124,7 +124,7 @@ def _detect_public_ip() -> str:
                 match = re.match(r"^\s*local\s+(\S+)", line)
                 if match:
                     return match.group(1)
-    except FileNotFoundError:
+    except (FileNotFoundError, PermissionError, OSError):
         pass
 
     # Fallback: detect from network

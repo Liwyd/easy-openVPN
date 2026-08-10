@@ -377,7 +377,7 @@ class TestSyncUsageCounterReset:
 
 class TestSubscriptionEndpoint:
     @patch("app.routers.subscription.generate_ovpn_file")
-    def test_valid_token_returns_config(self, mock_ovpn, client, db_session):
+    def test_valid_token_returns_landing_page(self, mock_ovpn, client, db_session):
         from app.db.seed import seed_default_server_config
 
         mock_ovpn.return_value = "client\ndev tun\nproto udp\n"
@@ -387,7 +387,6 @@ class TestSubscriptionEndpoint:
         user.common_name = "sub_user"
         db_session.commit()
 
-        # Seed server config with public_host
         seed_default_server_config(db_session)
         cfg = db_session.query(ServerConfig).first()
         cfg.public_host = "vpn.example.com"
@@ -396,11 +395,38 @@ class TestSubscriptionEndpoint:
 
         resp = client.get(f"/sub/{user.subscription_token}")
         assert resp.status_code == 200
+        assert "text/html" in resp.headers["content-type"]
+        assert "sub_user" in resp.text
+        assert "Download Config" in resp.text
+
+    @patch("app.routers.subscription.generate_ovpn_file")
+    def test_valid_token_returns_ovpn_on_download(self, mock_ovpn, client, db_session):
+        from app.db.seed import seed_default_server_config
+
+        mock_ovpn.return_value = "client\ndev tun\nproto udp\n"
+
+        admin = _make_admin(db_session, "dl_admin")
+        user = _make_user(db_session, admin.id, "dl_user")
+        user.common_name = "dl_user"
+        db_session.commit()
+
+        seed_default_server_config(db_session)
+        cfg = db_session.query(ServerConfig).first()
+        cfg.public_host = "vpn.example.com"
+        cfg.port = 1194
+        db_session.commit()
+
+        resp = client.get(f"/sub/{user.subscription_token}/download")
+        assert resp.status_code == 200
         assert resp.headers["content-type"] == "application/x-openvpn-profile"
-        assert "sub_user" in resp.headers.get("content-disposition", "")
+        assert "dl_user" in resp.headers.get("content-disposition", "")
 
     def test_invalid_token_returns_404(self, client, db_session):
         resp = client.get("/sub/this_token_does_not_exist")
+        assert resp.status_code == 404
+
+    def test_invalid_token_download_returns_404(self, client, db_session):
+        resp = client.get("/sub/this_token_does_not_exist/download")
         assert resp.status_code == 404
 
     def test_revoked_token_returns_404(self, client, db_session):
@@ -421,9 +447,7 @@ class TestSubscriptionEndpoint:
         user.common_name = "pub_user"
         db_session.commit()
 
-        # Explicitly remove any auth headers
         resp = client.get(f"/sub/{user.subscription_token}", headers={})
-        # Should not return 401 (no auth required)
         assert resp.status_code != 401
 
     @patch("app.routers.subscription.generate_ovpn_file")
@@ -437,7 +461,6 @@ class TestSubscriptionEndpoint:
 
         old_token = user.subscription_token
 
-        # Revoke subscription (regenerate token)
         headers = _login(client, "tok_admin")
         resp = client.post(
             f"/api/users/{user.username}/subscription/revoke",
@@ -447,8 +470,10 @@ class TestSubscriptionEndpoint:
         new_user = resp.json()
         assert new_user["username"] == "tok_user"
 
-        # Old token should 404
         resp = client.get(f"/sub/{old_token}")
+        assert resp.status_code == 404
+
+        resp = client.get(f"/sub/{old_token}/download")
         assert resp.status_code == 404
 
 
