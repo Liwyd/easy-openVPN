@@ -49,6 +49,10 @@ def main() -> None:
     p_uninst.add_argument("--purge", action="store_true", help="Full purge (wipe everything)")
     p_uninst.set_defaults(func=_cmd_uninstall)
 
+    # ── admin ─────────────────────────────────────────────────────────
+    p_admin = sub.add_parser("admin", help="List all admins with details")
+    p_admin.set_defaults(func=_cmd_admin)
+
     # ── status ─────────────────────────────────────────────────────────
     p_status = sub.add_parser("status", help="Show installation status")
     p_status.set_defaults(func=_cmd_status)
@@ -109,6 +113,11 @@ def _cmd_restart(args) -> None:
     cmd_restart(args)
 
 
+def _cmd_admin(args) -> None:
+    from installer.commands.admin import cmd_admin
+    cmd_admin(args)
+
+
 def _print_usage() -> None:
     from installer.output import banner, bold
     banner()
@@ -121,6 +130,7 @@ def _print_usage() -> None:
     restart       Restart Docker containers
     uninstall     Remove eovpanel and optionally all data
     status        Show current installation status
+    admin         List all admins with details
 
   {bold('Examples:')}
     sudo eovpanel install
@@ -132,6 +142,7 @@ def _print_usage() -> None:
     sudo eovpanel restart
     sudo eovpanel uninstall --purge
     eovpanel status
+    eovpanel admin
 
   {bold('One-liner install:')}
     sudo bash -c "$(curl -fsSL https://raw.githubusercontent.com/Liwyd/easy-openVPN/main/installer/bootstrap.sh)"
