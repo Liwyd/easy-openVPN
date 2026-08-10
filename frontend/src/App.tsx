@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import Admins from "./pages/Admins";
+import Billing from "./pages/Billing";
 import Settings from "./pages/Settings";
 
 export default function App() {
@@ -43,6 +44,14 @@ export default function App() {
               element={
                 <ProtectedRoute requireSudo>
                   <Admins />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/billing"
+              element={
+                <ProtectedRoute requireSudo>
+                  <Billing />
                 </ProtectedRoute>
               }
             />

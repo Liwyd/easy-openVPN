@@ -67,6 +67,18 @@ interface SystemMetrics {
   disk: { total_bytes: number; used_bytes: number; free_bytes: number; percent: number };
 }
 
+interface BillingMe {
+  debt: number;
+  price_per_user: number | null;
+  price_per_gb: number | null;
+  unlimited_user_count: number;
+  volumed_user_count: number;
+  total_user_months: number;
+  volumed_total_bytes: number;
+  estimated_monthly_user_cost: number;
+  estimated_monthly_traffic_cost: number;
+}
+
 function formatBytes(bytes: number): string {
   if (bytes === 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
@@ -216,6 +228,15 @@ export default function Dashboard() {
     refetchInterval: 5000,
   });
 
+  const { data: billingMe } = useQuery<BillingMe>({
+    queryKey: ["billing-me"],
+    queryFn: async () => {
+      const { data } = await api.get("/billing/me");
+      return data;
+    },
+    enabled: !isSudo,
+  });
+
   if (usageLoading || summaryLoading) return <LoadingState />;
   if (usageError) return <ErrorState message="Failed to load dashboard data." />;
 
@@ -287,6 +308,36 @@ export default function Dashboard() {
         <Box {...card} p={5}>
           <Heading size="sm" mb={2}>Quota Usage</Heading>
           <Text color="fg.muted" fontSize="sm">No quota limit set. Usage: {formatBytes(used)}</Text>
+        </Box>
+      )}
+
+      {!isSudo && billingMe && (
+        <Box {...card} p={5}>
+          <VStack align="stretch" gap={3}>
+            <Heading size="sm">Billing</Heading>
+            <Flex justify="space-between" align="center">
+              <Text fontSize="sm" color="fg.muted">Current debt</Text>
+              <Text fontSize="xl" fontWeight="bold" color={billingMe.debt > 0 ? "red.400" : "fg"}>
+                ${billingMe.debt.toFixed(2)}
+              </Text>
+            </Flex>
+            <SimpleGrid columns={2} gap={3} pt={2} borderTop="1px solid" borderColor="border">
+              <VStack align="stretch" gap={1}>
+                <Text fontSize="xs" color="fg.subtle">Unlimited users</Text>
+                <Text fontSize="sm" fontWeight="medium">{billingMe.unlimited_user_count} ({billingMe.total_user_months} months)</Text>
+                {billingMe.price_per_user != null && (
+                  <Text fontSize="xs" color="fg.subtle">${billingMe.price_per_user}/user/mo</Text>
+                )}
+              </VStack>
+              <VStack align="stretch" gap={1}>
+                <Text fontSize="xs" color="fg.subtle">Volumed users</Text>
+                <Text fontSize="sm" fontWeight="medium">{billingMe.volumed_user_count} ({formatBytes(billingMe.volumed_total_bytes)})</Text>
+                {billingMe.price_per_gb != null && (
+                  <Text fontSize="xs" color="fg.subtle">${billingMe.price_per_gb}/GB</Text>
+                )}
+              </VStack>
+            </SimpleGrid>
+          </VStack>
         </Box>
       )}
 

@@ -8,7 +8,7 @@ import {
   useBreakpointValue,
   Icon,
 } from "@chakra-ui/react";
-import { FiMenu, FiX, FiGrid, FiUsers, FiShield, FiSettings } from "react-icons/fi";
+import { FiMenu, FiX, FiGrid, FiUsers, FiShield, FiSettings, FiDollarSign } from "react-icons/fi";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
@@ -17,6 +17,7 @@ const NAV_ITEMS = [
   { label: "Dashboard", icon: FiGrid, path: "/dashboard" },
   { label: "Users", icon: FiUsers, path: "/users" },
   { label: "Admins", icon: FiShield, path: "/admins", sudoOnly: true },
+  { label: "Billing", icon: FiDollarSign, path: "/billing", sudoOnly: true },
   { label: "Settings", icon: FiSettings, path: "/settings" },
 ] as const;
 

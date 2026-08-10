@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import datetime as dt
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -50,6 +50,14 @@ class Admin(Base):
     parent_admin_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("admins.id", ondelete="SET NULL"), nullable=True, default=None
     )
+
+    # Billing — pricing and accumulated debt for sub-admins.
+    # price_per_user: $ per unlimited user per month (set by sudo).
+    # price_per_gb: $ per GB of traffic (set by sudo).
+    # debt: accumulated debt (charges go up, settlements go down, never negative).
+    price_per_user: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
+    price_per_gb: Mapped[float | None] = mapped_column(Float, nullable=True, default=None)
+    debt: Mapped[float] = mapped_column(Float, default=0, nullable=False)
 
     # Relationships
     parent_admin: Mapped[Admin | None] = relationship(

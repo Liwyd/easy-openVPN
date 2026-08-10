@@ -37,6 +37,7 @@ def register_jobs() -> None:
     from app.jobs.enforce_limits import enforce_limits_job
     from app.jobs.reset_periodic_limits import reset_periodic_limits_job
     from app.jobs.sync_usage import sync_usage_job
+    from app.jobs.billing import billing_job
 
     scheduler.add_job(
         sync_usage_job,
@@ -66,4 +67,14 @@ def register_jobs() -> None:
         replace_existing=True,
     )
 
-    logger.info("Background jobs registered: sync_usage, enforce_limits, reset_periodic_limits")
+    scheduler.add_job(
+        billing_job,
+        "cron",
+        hour=1,
+        minute=0,
+        id="billing",
+        name="Daily billing — calculate debt for all sub-admins",
+        replace_existing=True,
+    )
+
+    logger.info("Background jobs registered: sync_usage, enforce_limits, reset_periodic_limits, billing")
