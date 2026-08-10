@@ -21,6 +21,13 @@ export const BASE_PATH = raw
   .replace(/^([^/].*)$/, "/$1")
   .replace(/\/$/, "");
 
+/**
+ * App path of the home screen. With a base path the router basename already
+ * points to the panel root, so the dashboard route is "/" (avoids doubling,
+ * e.g. "/dashboard/dashboard"); otherwise it keeps its historical "/dashboard".
+ */
+export const HOME_PATH = BASE_PATH ? "/" : "/dashboard";
+
 /** Full API prefix, e.g. "/dashboard/api" (or "/api" at the root). */
 export const API_BASE = BASE_PATH ? `${BASE_PATH}/api` : "/api";
 

@@ -11,10 +11,11 @@ import {
 import { FiMenu, FiX, FiGrid, FiUsers, FiShield, FiSettings, FiDollarSign } from "react-icons/fi";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { HOME_PATH } from "../lib/base";
 import { useState } from "react";
 
 const NAV_ITEMS = [
-  { label: "Dashboard", icon: FiGrid, path: "/dashboard" },
+  { label: "Dashboard", icon: FiGrid, path: HOME_PATH },
   { label: "Users", icon: FiUsers, path: "/users" },
   { label: "Admins", icon: FiShield, path: "/admins", sudoOnly: true },
   { label: "Billing", icon: FiDollarSign, path: "/billing", sudoOnly: true },

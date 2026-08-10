@@ -108,8 +108,13 @@ if [ -n "$BASE_PATH" ]; then
     }
 
     # SPA shell + routes (fall back to index.html, sub_filter injects path)
-    location $BASE_PATH {
+    location $BASE_PATH/ {
         try_files \$uri \$uri/ /index.html;
+    }
+
+    # The bare base path (no trailing slash) serves the shell itself
+    location = $BASE_PATH {
+        try_files index.html =404;
     }
 
     # Static assets (loaded by the SPA shell)

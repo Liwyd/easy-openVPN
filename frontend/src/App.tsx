@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster, Toast } from "@chakra-ui/react";
 import { AuthProvider } from "./context/AuthContext";
 import { toaster } from "./lib/toaster";
-import { BASE_PATH } from "./lib/base";
+import { BASE_PATH, HOME_PATH } from "./lib/base";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
@@ -38,7 +38,7 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path={HOME_PATH} element={<Dashboard />} />
             <Route path="/users" element={<Users />} />
             <Route
               path="/admins"
@@ -59,7 +59,7 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
           </Route>
 
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to={HOME_PATH} replace />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

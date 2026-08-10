@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { Box, Spinner, Flex } from "@chakra-ui/react";
 import { useAuth } from "../context/AuthContext";
+import { HOME_PATH } from "../lib/base";
 
 export default function ProtectedRoute({
   children,
@@ -21,7 +22,7 @@ export default function ProtectedRoute({
 
   if (!admin) return <Navigate to="/login" replace />;
 
-  if (requireSudo && !admin.is_sudo) return <Navigate to="/dashboard" replace />;
+  if (requireSudo && !admin.is_sudo) return <Navigate to={HOME_PATH} replace />;
 
   return <Box>{children}</Box>;
 }

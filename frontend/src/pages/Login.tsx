@@ -14,6 +14,7 @@ import {
 import { HiOutlineEye, HiOutlineEyeOff } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { HOME_PATH } from "../lib/base";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -30,7 +31,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(username, password);
-      navigate("/dashboard", { replace: true });
+      navigate(HOME_PATH, { replace: true });
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data
