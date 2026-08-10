@@ -18,7 +18,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { FiUsers, FiShield, FiActivity } from "react-icons/fi";
+import { FiUsers, FiShield, FiActivity, FiCpu, FiDatabase, FiServer } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import api from "../lib/api";
 import StatusBadge from "../components/StatusBadge";
@@ -59,6 +59,12 @@ interface StatusBreakdown {
   limited: number;
   expired: number;
   disabled: number;
+}
+
+interface SystemMetrics {
+  cpu_percent: number;
+  ram: { total_bytes: number; used_bytes: number; available_bytes: number; percent: number };
+  disk: { total_bytes: number; used_bytes: number; free_bytes: number; percent: number };
 }
 
 function formatBytes(bytes: number): string {
@@ -141,17 +147,32 @@ function StatusDonut({ data }: { data: StatusBreakdown }) {
   );
 }
 
+function GaugeBar({ label, percent, color }: { label: string; percent: number; color: string }) {
+  return (
+    <VStack align="stretch" gap={1}>
+      <Flex justify="space-between" fontSize="sm">
+        <Text color="fg.muted">{label}</Text>
+        <Text fontWeight="medium">{percent.toFixed(1)}%</Text>
+      </Flex>
+      <Progress.Root value={percent} size="sm" colorPalette={percent > 90 ? "red" : percent > 70 ? "orange" : color as any}>
+        <Progress.Track>
+          <Progress.Range />
+        </Progress.Track>
+      </Progress.Root>
+    </VStack>
+  );
+}
+
 export default function Dashboard() {
   const { admin } = useAuth();
   const isSudo = admin?.is_sudo;
 
   const { data: usage, isLoading: usageLoading, error: usageError } = useQuery<UsageData>({
-    queryKey: ["admin-usage", admin?.id],
+    queryKey: ["stats-me-usage"],
     queryFn: async () => {
-      const { data } = await api.get(`/admins/${admin!.id}/usage`);
+      const { data } = await api.get("/stats/me/usage");
       return data;
     },
-    enabled: !!admin?.id,
   });
 
   const { data: summary, isLoading: summaryLoading } = useQuery<SummaryData>({
@@ -186,6 +207,15 @@ export default function Dashboard() {
     },
   });
 
+  const { data: systemMetrics } = useQuery<SystemMetrics>({
+    queryKey: ["stats-system"],
+    queryFn: async () => {
+      const { data } = await api.get("/stats/system");
+      return data;
+    },
+    refetchInterval: 5000,
+  });
+
   if (usageLoading || summaryLoading) return <LoadingState />;
   if (usageError) return <ErrorState message="Failed to load dashboard data." />;
 
@@ -202,7 +232,7 @@ export default function Dashboard() {
     <VStack align="stretch" gap={6}>
       <Heading size="lg">Dashboard</Heading>
 
-      <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+      <SimpleGrid columns={{ base: 1, md: isSudo ? 3 : 2 }} gap={4}>
         <StatCard
           label={isSudo ? "Total Users" : "My Users"}
           value={summary?.total_users ?? 0}
@@ -258,6 +288,44 @@ export default function Dashboard() {
           <Heading size="sm" mb={2}>Quota Usage</Heading>
           <Text color="fg.muted" fontSize="sm">No quota limit set. Usage: {formatBytes(used)}</Text>
         </Box>
+      )}
+
+      {systemMetrics && (
+        <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+          <Box {...card} p={5}>
+            <VStack align="stretch" gap={3}>
+              <Flex align="center" gap={2}>
+                <FiCpu />
+                <Heading size="sm">CPU</Heading>
+              </Flex>
+              <GaugeBar label="Usage" percent={systemMetrics.cpu_percent} color="blue" />
+            </VStack>
+          </Box>
+          <Box {...card} p={5}>
+            <VStack align="stretch" gap={3}>
+              <Flex align="center" gap={2}>
+                <FiServer />
+                <Heading size="sm">RAM</Heading>
+              </Flex>
+              <GaugeBar label="Usage" percent={systemMetrics.ram.percent} color="purple" />
+              <Text fontSize="xs" color="fg.muted">
+                {formatBytes(systemMetrics.ram.used_bytes)} / {formatBytes(systemMetrics.ram.total_bytes)}
+              </Text>
+            </VStack>
+          </Box>
+          <Box {...card} p={5}>
+            <VStack align="stretch" gap={3}>
+              <Flex align="center" gap={2}>
+                <FiDatabase />
+                <Heading size="sm">Disk</Heading>
+              </Flex>
+              <GaugeBar label="Usage" percent={systemMetrics.disk.percent} color="teal" />
+              <Text fontSize="xs" color="fg.muted">
+                {formatBytes(systemMetrics.disk.used_bytes)} / {formatBytes(systemMetrics.disk.total_bytes)}
+              </Text>
+            </VStack>
+          </Box>
+        </SimpleGrid>
       )}
 
       <SimpleGrid columns={{ base: 1, lg: 2 }} gap={4}>

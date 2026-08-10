@@ -53,6 +53,8 @@ interface Admin {
   data_limit: number | null;
   data_used: number;
   parent_admin_id: number | null;
+  user_count: number;
+  limitless_user_count: number;
 }
 
 function formatBytes(bytes: number): string {
@@ -256,12 +258,22 @@ export default function Admins() {
   const toggleDisabledMutation = useMutation({
     mutationFn: async ({ adminId, disabled }: { adminId: number; disabled: boolean }) =>
       api.put(`/admins/${adminId}`, { disabled }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admins"] });
+    onMutate: async ({ adminId, disabled }) => {
+      await queryClient.cancelQueries({ queryKey: ["admins"] });
+      const previous = queryClient.getQueryData<Admin[]>(["admins", search, offset, perPage]);
+      queryClient.setQueryData<Admin[]>(["admins", search, offset, perPage], (old) =>
+        old?.map((a) => (a.id === adminId ? { ...a, disabled } : a)) ?? old,
+      );
+      return { previous };
     },
-    onError: (err: any) => {
-      const msg = err?.response?.data?.detail || "Failed to toggle admin";
-      toaster.create({ title: msg, type: "error" });
+    onError: (_err, _vars, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["admins", search, offset, perPage], context.previous);
+      }
+      toaster.create({ title: "Failed to toggle admin", type: "error" });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["admins"] });
     },
   });
 
@@ -381,7 +393,7 @@ export default function Admins() {
       )}
 
       {!isLoading && !error && (admins?.length ?? 0) > 0 && (
-        <Box css={tableRoot}>
+        <Box css={tableRoot} overflowX="auto">
           <Table.Root size="sm" variant="outline">
             <Table.Header>
               <Table.Row>
@@ -390,7 +402,13 @@ export default function Admins() {
                 <Table.ColumnHeader minW="160px">
                   Data Quota
                 </Table.ColumnHeader>
-                <Table.ColumnHeader hideBelow="md">
+                <Table.ColumnHeader textAlign="center">
+                  Users
+                </Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="center">
+                  Limitless
+                </Table.ColumnHeader>
+                <Table.ColumnHeader hideBelow="lg">
                   Disabled
                 </Table.ColumnHeader>
                 <Table.ColumnHeader textAlign="right">
@@ -416,7 +434,21 @@ export default function Admins() {
                         limit={adm.data_limit}
                       />
                     </Table.Cell>
-                    <Table.Cell hideBelow="md">
+                    <Table.Cell textAlign="center">
+                      <Badge colorPalette="blue" variant="subtle" fontSize="xs">
+                        {adm.user_count}
+                      </Badge>
+                    </Table.Cell>
+                    <Table.Cell textAlign="center">
+                      <Badge
+                        colorPalette={adm.limitless_user_count > 0 ? "orange" : "gray"}
+                        variant="subtle"
+                        fontSize="xs"
+                      >
+                        {adm.limitless_user_count}
+                      </Badge>
+                    </Table.Cell>
+                    <Table.Cell hideBelow="lg">
                       <Switch.Root
                         size="sm"
                         checked={adm.disabled}

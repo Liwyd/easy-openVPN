@@ -4,11 +4,15 @@ GET /api/stats/summary → total users, admins, traffic across the panel
 GET /api/stats/usage-over-time → daily aggregated traffic for charts
 GET /api/stats/top-users → top users by usage
 GET /api/stats/status-breakdown → counts per user status
+GET /api/stats/system → live CPU, RAM, disk metrics
+GET /api/stats/me/usage → current admin's own quota usage
 """
 
 from __future__ import annotations
 
 import datetime as dt
+import os
+import time
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
@@ -19,6 +23,7 @@ from app.models.admin import Admin
 from app.models.usage_log import UsageLog
 from app.models.user import User, UserStatus
 from app.services.auth import get_current_admin
+from app.services.quota import remaining_allocatable
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])
 
@@ -138,3 +143,129 @@ def get_status_breakdown(
         breakdown[status.value] = count
 
     return breakdown
+
+
+def _read_cpu_times() -> tuple[int, int]:
+    """Read aggregate CPU idle/total from /proc/stat."""
+    try:
+        with open("/proc/stat") as f:
+            parts = f.readline().split()
+        # user nice system idle iowait irq softirq steal
+        vals = [int(x) for x in parts[1:9]]
+        idle = vals[3] + vals[4]  # idle + iowait
+        total = sum(vals)
+        return idle, total
+    except (OSError, ValueError, IndexError):
+        return 0, 0
+
+
+_prev_idle: int = 0
+_prev_total: int = 0
+_prev_time: float = 0.0
+
+
+def _get_cpu_percent() -> float:
+    """Sample CPU usage over a short interval (returns 0-100)."""
+    global _prev_idle, _prev_total, _prev_time
+
+    idle, total = _read_cpu_times()
+    now = time.monotonic()
+
+    if _prev_total == 0 or now - _prev_time < 0.1:
+        _prev_idle, _prev_total, _prev_time = idle, total, now
+        time.sleep(0.1)
+        idle, total = _read_cpu_times()
+        now = time.monotonic()
+
+    d_idle = idle - _prev_idle
+    d_total = total - _prev_total
+    _prev_idle, _prev_total, _prev_time = idle, total, now
+
+    if d_total == 0:
+        return 0.0
+    return round((1.0 - d_idle / d_total) * 100, 1)
+
+
+def _get_mem_info() -> dict:
+    """Read RAM info from /proc/meminfo."""
+    info: dict[str, int] = {}
+    try:
+        with open("/proc/meminfo") as f:
+            for line in f:
+                parts = line.split()
+                key = parts[0].rstrip(":")
+                info[key] = int(parts[1]) * 1024  # kB → bytes
+    except (OSError, ValueError, IndexError):
+        pass
+
+    total = info.get("MemTotal", 0)
+    available = info.get("MemAvailable", 0)
+    used = total - available
+    return {
+        "total_bytes": total,
+        "used_bytes": used,
+        "available_bytes": available,
+        "percent": round((used / total) * 100, 1) if total > 0 else 0,
+    }
+
+
+def _get_disk_info(path: str = "/") -> dict:
+    """Get disk usage for the given path."""
+    try:
+        st = os.statvfs(path)
+        total = st.f_blocks * st.f_frsize
+        free = st.f_bavail * st.f_frsize
+        used = total - free
+        return {
+            "total_bytes": total,
+            "used_bytes": used,
+            "free_bytes": free,
+            "percent": round((used / total) * 100, 1) if total > 0 else 0,
+        }
+    except OSError:
+        return {"total_bytes": 0, "used_bytes": 0, "free_bytes": 0, "percent": 0}
+
+
+@router.get("/system")
+def get_system_metrics():
+    """Return live CPU, RAM, and disk metrics for the server."""
+    cpu = _get_cpu_percent()
+    mem = _get_mem_info()
+    disk = _get_disk_info()
+    return {
+        "cpu_percent": cpu,
+        "ram": mem,
+        "disk": disk,
+    }
+
+
+@router.get("/me/usage")
+def get_my_usage(
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_admin),
+):
+    """Return quota usage for the current admin (works for both sudo and non-sudo)."""
+    child_admins_bytes = (
+        db.query(func.sum(Admin.data_used))
+        .filter(Admin.parent_admin_id == current_admin.id)
+        .scalar()
+        or 0
+    )
+    direct_users_bytes = (
+        db.query(func.sum(User.data_used))
+        .filter(User.admin_id == current_admin.id)
+        .scalar()
+        or 0
+    )
+
+    remaining = remaining_allocatable(current_admin, db)
+
+    return {
+        "admin_id": current_admin.id,
+        "username": current_admin.username,
+        "data_limit": current_admin.data_limit,
+        "data_used": current_admin.data_used,
+        "remaining": remaining,
+        "child_admins_bytes": child_admins_bytes,
+        "direct_users_bytes": direct_users_bytes,
+    }

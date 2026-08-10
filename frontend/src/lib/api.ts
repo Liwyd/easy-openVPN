@@ -5,8 +5,11 @@ const api = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
-let accessToken: string | null = null;
-let refreshToken: string | null = null;
+const TOKEN_KEY = "eovpanel_access_token";
+const REFRESH_KEY = "eovpanel_refresh_token";
+
+let accessToken: string | null = localStorage.getItem(TOKEN_KEY);
+let refreshToken: string | null = localStorage.getItem(REFRESH_KEY);
 let isRefreshing = false;
 let pendingQueue: Array<{
   resolve: (token: string) => void;
@@ -16,11 +19,15 @@ let pendingQueue: Array<{
 export function setTokens(access: string, refresh: string) {
   accessToken = access;
   refreshToken = refresh;
+  localStorage.setItem(TOKEN_KEY, access);
+  localStorage.setItem(REFRESH_KEY, refresh);
 }
 
 export function clearTokens() {
   accessToken = null;
   refreshToken = null;
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_KEY);
 }
 
 export function getAccessToken(): string | null {

@@ -49,3 +49,18 @@ class AdminUsageResponse(BaseModel):
     remaining: int | None
     child_admins_bytes: int
     direct_users_bytes: int
+
+
+class AdminWithStatsResponse(BaseModel):
+    id: int
+    username: str
+    is_sudo: bool
+    disabled: bool
+    created_at: dt.datetime
+    data_limit: int | None
+    data_used: int
+    parent_admin_id: int | None
+    user_count: int
+    limitless_user_count: int
+
+    model_config = {"from_attributes": True}

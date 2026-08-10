@@ -11,7 +11,7 @@ from app.db import get_db
 from app.models.admin import Admin
 from app.models.admin_log import AdminAction, TargetType
 from app.models.user import User
-from app.schemas.admin import AdminCreate, AdminResponse, AdminUpdate, AdminUsageResponse
+from app.schemas.admin import AdminCreate, AdminResponse, AdminUpdate, AdminUsageResponse, AdminWithStatsResponse
 from app.services.auth import get_current_sudo_admin
 from app.services.quota import (
     can_admin_allocate,
@@ -90,7 +90,7 @@ def create_admin(
     return new_admin
 
 
-@router.get("", response_model=list[AdminResponse])
+@router.get("", response_model=list[AdminWithStatsResponse])
 def list_admins(
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
@@ -99,16 +99,38 @@ def list_admins(
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_sudo_admin),
 ):
-    """List admins.  Only sudo admins can list admins."""
+    """List admins with user stats. Only sudo admins can list admins."""
     q = db.query(Admin)
     if username:
         q = q.filter(Admin.username.ilike(f"%{username}%"))
     if parent_admin_id is not None:
         q = q.filter(Admin.parent_admin_id == parent_admin_id)
     else:
-        # Default: list only direct children of the calling admin
         q = q.filter(Admin.parent_admin_id == current_admin.id)
-    return q.order_by(Admin.id).offset(offset).limit(limit).all()
+    admins_list = q.order_by(Admin.id).offset(offset).limit(limit).all()
+
+    result = []
+    for adm in admins_list:
+        user_count = db.query(func.count(User.id)).filter(User.admin_id == adm.id, User.revoked.is_(False)).scalar() or 0
+        limitless_user_count = (
+            db.query(func.count(User.id))
+            .filter(User.admin_id == adm.id, User.revoked.is_(False), User.data_limit.is_(None))
+            .scalar()
+            or 0
+        )
+        result.append(AdminWithStatsResponse(
+            id=adm.id,
+            username=adm.username,
+            is_sudo=adm.is_sudo,
+            disabled=adm.disabled,
+            created_at=adm.created_at,
+            data_limit=adm.data_limit,
+            data_used=adm.data_used,
+            parent_admin_id=adm.parent_admin_id,
+            user_count=user_count,
+            limitless_user_count=limitless_user_count,
+        ))
+    return result
 
 
 @router.get("/{admin_id}", response_model=AdminResponse)
