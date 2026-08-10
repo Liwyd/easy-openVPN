@@ -9,6 +9,8 @@ window (no Redis needed for single-node).
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
@@ -20,22 +22,27 @@ from app.services.rate_limiter import subscription_rate_limiter
 from app.services.vpn_bridge import generate_ovpn_file
 
 router = APIRouter(tags=["subscription"])
+log = logging.getLogger(__name__)
 
 
-def _render_ovpn_for_user(user: User, db: Session) -> str:
-    """Render the .ovpn file content for a user."""
-    cfg = db.query(ServerConfig).first()
-    public_ip = cfg.public_host if cfg else ""
-    protocol = cfg.protocol.value if cfg else "udp"
-    port = cfg.port if cfg else 1194
+def _render_ovpn_for_user(user: User, db: Session) -> str | None:
+    """Render the .ovpn file content for a user. Returns None on error."""
+    try:
+        cfg = db.query(ServerConfig).first()
+        public_ip = cfg.public_host if cfg else ""
+        protocol = cfg.protocol.value if cfg else "udp"
+        port = cfg.port if cfg else 1194
 
-    return generate_ovpn_file(
-        common_name=user.common_name or user.username,
-        server_dir="/etc/openvpn/server",
-        public_ip=public_ip,
-        protocol=protocol,
-        port=port,
-    )
+        return generate_ovpn_file(
+            common_name=user.common_name or user.username,
+            server_dir="/etc/openvpn/server",
+            public_ip=public_ip,
+            protocol=protocol,
+            port=port,
+        )
+    except Exception:
+        log.exception("Failed to generate ovpn for user %s", user.username)
+        return None
 
 
 def _get_base_url(request: Request) -> str:
@@ -354,6 +361,11 @@ def download_subscription_config(
         return Response(status_code=404)
 
     ovpn_content = _render_ovpn_for_user(user, db)
+    if not ovpn_content:
+        return Response(
+            content="Failed to generate VPN config. Admin must regenerate this user's certificate.",
+            status_code=500,
+        )
     return Response(
         content=ovpn_content,
         media_type="application/x-openvpn-profile",

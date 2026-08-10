@@ -37,6 +37,9 @@ def _detect_public_ip(server_dir: Path) -> str:
                 match = re.match(r"^\s*local\s+(\S+)", line)
                 if match:
                     return match.group(1)
+                match = re.match(r"^\s*remote\s+(\S+)\s+\d+", line)
+                if match and match.group(1) not in ("0.0.0.0", "127.0.0.1"):
+                    return match.group(1)
     except FileNotFoundError:
         pass
 
