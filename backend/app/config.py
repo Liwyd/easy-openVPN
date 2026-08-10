@@ -11,6 +11,14 @@ APP_NAME: str = config("APP_NAME", default="eovpanel")
 APP_VERSION: str = config("APP_VERSION", default="0.1.0")
 DEBUG: bool = config("DEBUG", default=False, cast=bool)
 
+# Optional base path the panel is served under (e.g. "/dashboard"), used to
+# hide the panel from internet scanners. Empty = served at root. Subscription
+# links and the landing page are prefixed with it so they keep working behind
+# the nginx prefix-stripping proxy.
+APP_BASE_PATH: str = config("APP_BASE_PATH", default="").strip().rstrip("/")
+if APP_BASE_PATH and not APP_BASE_PATH.startswith("/"):
+    APP_BASE_PATH = "/" + APP_BASE_PATH
+
 # --- Server ---
 HOST: str = config("HOST", default="0.0.0.0")
 PORT: int = config("PORT", default=8000, cast=int)

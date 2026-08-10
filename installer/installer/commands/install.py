@@ -84,6 +84,19 @@ def cmd_install(args) -> None:
         panel_port = prompt_str("Panel host port", panel_port)
     info(f"Panel host port: {panel_port}")
 
+    # Optional base path — serves the panel only under /<path> so internet
+    # scanners hitting the root get a 404. Empty = panel at the root.
+    panel_path = args.panel_path
+    if not args.non_interactive:
+        panel_path = prompt_str(
+            "Panel path (optional, e.g. dashboard)", panel_path
+        )
+    panel_path = panel_path.strip().strip("/")
+    if panel_path:
+        info(f"Panel path: /{panel_path} (root returns 404)")
+    else:
+        info("Panel path: none (served at root)")
+
     # ── Step 2: Admin account ──────────────────────────────────────────
     step(3, TOTAL_STEPS, "Admin account")
     if args.non_interactive:
@@ -204,6 +217,7 @@ def cmd_install(args) -> None:
     env.setdefault("HOST", "0.0.0.0")
     env.setdefault("PORT", "8000")
     env["PANEL_PORT"] = panel_port
+    env["APP_BASE_PATH"] = f"/{panel_path}" if panel_path else ""
     # Docker compose mounts the named volume at /app/data; a bare ./eovpanel.db
     # would land in the container's writable layer (root-owned, lost on recreate).
     if env.get("DATABASE_URL", "") == "sqlite:///./eovpanel.db":
@@ -293,6 +307,8 @@ def cmd_install(args) -> None:
     ip = public_ip or detect_public_ip() or "<your-server-ip>"
     panel_port = panel_port if panel_port != "80" else ""
     panel_url = f"http://{ip}:{panel_port}" if panel_port else f"http://{ip}"
+    if panel_path:
+        panel_url = f"{panel_url}/{panel_path}"
     print(f"""
   {bold('Panel URL:')}     {panel_url}
   {bold('Login:')}         {admin_user} / {'<password>' if admin_pass == args.admin_pass else '<password>'}

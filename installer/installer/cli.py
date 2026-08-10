@@ -18,6 +18,7 @@ def main() -> None:
     p_install.add_argument("--port", default="1194", help="VPN port (default: 1194)")
     p_install.add_argument("--protocol", default="udp", choices=["udp", "tcp"], help="VPN protocol (default: udp)")
     p_install.add_argument("--panel-port", default="8000", help="Panel host port (default: 8000, Marzban-style single port)")
+    p_install.add_argument("--panel-path", default="", help="Optional base path (e.g. dashboard) — serves the panel only at /dashboard, root returns 404 (default: root)")
     p_install.add_argument("--admin-user", default="admin", help="Admin username (default: admin)")
     p_install.add_argument("--admin-pass", default="admin", help="Admin password (default: admin)")
     p_install.add_argument("--telegram-token", default="", help="Telegram bot token")
@@ -40,6 +41,7 @@ def main() -> None:
     p_config.add_argument("--vpn-port", default="", help="New VPN port")
     p_config.add_argument("--vpn-protocol", default="", choices=["", "udp", "tcp"], help="New VPN protocol")
     p_config.add_argument("--panel-port", default="", help="New panel host port")
+    p_config.add_argument("--panel-path", default=None, help="New panel base path (e.g. dashboard, or empty to serve at root)")
     p_config.set_defaults(func=_cmd_configure)
 
     # ── uninstall ──────────────────────────────────────────────────────
@@ -135,6 +137,7 @@ def _print_usage() -> None:
   {bold('Examples:')}
     sudo eovpanel install
     sudo eovpanel install --port 1194 --protocol udp --admin-user admin
+    sudo eovpanel install --panel-path dashboard
     sudo eovpanel install -y
     eovpanel configure --rotate-jwt
     eovpanel configure --domain panel.example.com --email admin@example.com

@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.orm import Session
 
+from app import config as app_config
 from app.db import get_db
 from app.models.server_config import ServerConfig
 from app.models.user import User, UserStatus
@@ -48,10 +49,14 @@ def _render_ovpn_for_user(user: User, db: Session) -> str | None:
 
 
 def _get_base_url(request: Request) -> str:
-    """Derive the base URL from the incoming request."""
+    """Derive the base URL from the incoming request.
+
+    Includes APP_BASE_PATH so the generated links point at the panel's real
+    public path (nginx strips the prefix before proxying to the backend).
+    """
     host = request.headers.get("host", request.url.hostname or "")
     scheme = request.headers.get("x-forwarded-proto", request.url.scheme)
-    return f"{scheme}://{host}"
+    return f"{scheme}://{host}{app_config.APP_BASE_PATH}"
 
 
 def _landing_page_html(

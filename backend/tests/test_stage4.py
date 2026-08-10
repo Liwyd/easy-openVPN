@@ -568,6 +568,45 @@ class TestSubscriptionEndpoint:
         assert "Download Config" in resp.text
 
     @patch("app.routers.subscription.generate_ovpn_file")
+    def test_subscription_links_include_base_path(
+        self, mock_ovpn, client, sudo_client, db_session
+    ):
+        """With APP_BASE_PATH set, subscription URLs point at the prefix."""
+        from app import config as app_config
+        from app.db.seed import seed_default_server_config
+
+        mock_ovpn.return_value = "client\ndev tun\nproto udp\n"
+
+        admin = _make_admin(db_session, "bp_admin")
+        user = _make_user(db_session, admin.id, "bp_user")
+        user.common_name = "bp_user"
+        db_session.commit()
+
+        seed_default_server_config(db_session)
+        cfg = db_session.query(ServerConfig).first()
+        cfg.public_host = "vpn.example.com"
+        cfg.port = 1194
+        cfg.subscription_url_prefix = ""
+        db_session.commit()
+
+        token = user.subscription_token
+        old = app_config.APP_BASE_PATH
+        app_config.APP_BASE_PATH = "/dashboard"
+        try:
+            # Landing page download link points at the prefixed path
+            resp = client.get(f"/sub/{token}")
+            assert resp.status_code == 200
+            assert f"/dashboard/sub/{token}/download" in resp.text
+
+            # The admin-facing subscription URL includes the prefix too
+            resp = sudo_client.get(f"/api/users/{user.username}/subscription-url")
+            assert resp.status_code == 200
+            url = resp.json()["subscription_url"]
+            assert f"http://testserver/dashboard/sub/{token}" == url
+        finally:
+            app_config.APP_BASE_PATH = old
+
+    @patch("app.routers.subscription.generate_ovpn_file")
     def test_valid_token_returns_ovpn_on_download(self, mock_ovpn, client, db_session):
         from app.db.seed import seed_default_server_config
 

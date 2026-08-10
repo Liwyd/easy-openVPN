@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster, Toast } from "@chakra-ui/react";
 import { AuthProvider } from "./context/AuthContext";
 import { toaster } from "./lib/toaster";
+import { BASE_PATH } from "./lib/base";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Login from "./pages/Login";
@@ -13,7 +14,7 @@ import Settings from "./pages/Settings";
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={BASE_PATH || undefined}>
       <AuthProvider>
         <Toaster toaster={toaster}>
           {(toast) => (

@@ -69,6 +69,10 @@ services:
     image: ${DOCKERHUB_USERNAME:-liwyd}/easy-openvpn-frontend:${IMAGE_TAG:-latest}
     container_name: eovpanel-frontend
     restart: unless-stopped
+    environment:
+      # Optional base path (e.g. /dashboard). When set, the panel is served
+      # only under that prefix — everything else returns 404 (scanner-proof).
+      BASE_PATH: ${APP_BASE_PATH:-}
     ports:
       # Marzban-style: a single configurable port serves the panel + API +
       # subscriptions; the backend is proxied internally (no host mapping).
@@ -84,7 +88,9 @@ services:
     # volumes:
     #   - /etc/letsencrypt/live/yourdomain.com:/etc/nginx/ssl:ro
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:80/"]
+      # favicon.svg is served at the root in both default and hidden modes
+      # (in hidden mode "/" returns 404 by design, so we probe an asset).
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost:80/favicon.svg"]
       interval: 30s
       timeout: 5s
       start_period: 5s

@@ -1,7 +1,8 @@
 import axios from "axios";
+import { API_BASE, LOGIN_PATH } from "./base";
 
 const api = axios.create({
-  baseURL: "/api",
+  baseURL: API_BASE,
   headers: { "Content-Type": "application/json" },
 });
 
@@ -72,12 +73,12 @@ api.interceptors.response.use(
     if (!refreshToken) {
       isRefreshing = false;
       clearTokens();
-      window.location.href = "/login";
+      window.location.href = LOGIN_PATH;
       return Promise.reject(err);
     }
 
     try {
-      const { data } = await axios.post("/api/admin/refresh", {
+      const { data } = await axios.post(`${API_BASE}/admin/refresh`, {
         refresh_token: refreshToken,
       });
       const newAccess: string = data.access_token;
@@ -89,7 +90,7 @@ api.interceptors.response.use(
     } catch (refreshErr) {
       processQueue(refreshErr, null);
       clearTokens();
-      window.location.href = "/login";
+      window.location.href = LOGIN_PATH;
       return Promise.reject(refreshErr);
     } finally {
       isRefreshing = false;

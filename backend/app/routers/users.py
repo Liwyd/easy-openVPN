@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
+from app import config as app_config
 from app.bot.events import EventCategory, emit
 from app.config import (
     EASYRSA_DIR,
@@ -626,7 +627,9 @@ def get_subscription_url(
             base = f"{scheme}://{host.split(':')[0]}:{forwarded_port}"
         else:
             base = f"{scheme}://{host}"
-        prefix = base
+        # nginx strips APP_BASE_PATH before proxying, so re-add it to the
+        # link for the link to point at the panel's real public path.
+        prefix = base + app_config.APP_BASE_PATH
 
     url = f"{prefix}/sub/{user.subscription_token}"
     return SubscriptionURLResponse(subscription_url=url)

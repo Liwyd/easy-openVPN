@@ -37,6 +37,8 @@ def cmd_configure(args) -> None:
         _configure_vpn_cli(args)
     elif args.panel_port:
         _configure_panel_port(args.panel_port)
+    elif args.panel_path is not None:
+        _configure_panel_path(args.panel_path)
     else:
         _interactive_menu()
 
@@ -50,6 +52,7 @@ def _interactive_menu() -> None:
   {bold('4')}  Disable Telegram bot
   {bold('5')}  Edit OpenVPN server settings
   {bold('6')}  Change panel port
+  {bold('7')}  Change panel path (hide from scanners)
   {bold('0')}  Back
 """)
     choice = prompt_str("Select option", "0")
@@ -76,6 +79,8 @@ def _interactive_menu() -> None:
         _interactive_vpn_config()
     elif choice == "6":
         _interactive_panel_port()
+    elif choice == "7":
+        _interactive_panel_path()
     else:
         info("Returning to menu.")
 
@@ -349,6 +354,58 @@ def _interactive_panel_port() -> None:
         info("No change made.")
     else:
         warn("Invalid port. No change made.")
+
+
+def _configure_panel_path(path: str) -> None:
+    """Set the panel base path (empty = serve at root; otherwise hidden).
+
+    Requires pulling the frontend image again once so the container gets the
+    new BASE_PATH environment and the entrypoint regenerates nginx config.
+    """
+    heading("Panel path")
+
+    path = path.strip().strip("/")
+    env = read_env()
+    current = env.get("APP_BASE_PATH", "").strip("/")
+
+    if path == current:
+        info(f"Panel path is already /{current or ''}. No change.")
+        return
+
+    info(f"Panel path: /{current or ''} -> /{path or ''}")
+    info("Panels served under a path return 404 at the root (scanner-proof).")
+    if not confirm("Apply this change?", default=True):
+        info("Aborted.")
+        return
+
+    update_env({"APP_BASE_PATH": f"/{path}" if path else ""})
+    update_env({"APP_BASE_PATH": f"/{path}" if path else ""}, REPO_ENV)
+    update_env({"APP_BASE_PATH": f"/{path}" if path else ""}, DOCKER_ENV)
+    ok("Panel path updated.")
+
+    info("Pulling and recreating containers...")
+    rc, _ = docker_compose_pull()
+    if rc != 0:
+        fail("Failed to pull images.")
+        return
+    rc, _ = docker_compose_up()
+    if rc == 0:
+        ok("Containers recreated.")
+    else:
+        fail("Failed to recreate containers.")
+
+
+def _interactive_panel_path() -> None:
+    """Prompt for a new panel base path."""
+    env = read_env()
+    current = env.get("APP_BASE_PATH", "").strip("/")
+    info(f"Current panel path: /{current if current else '(root)'}")
+    info("Leave empty to serve the panel at the root (e.g. /dashboard).")
+    path = prompt_str("New panel path", current)
+    if path != current:
+        _configure_panel_path(path)
+    else:
+        info("No change made.")
 
 
 def _configure_vpn_cli(args) -> None:
