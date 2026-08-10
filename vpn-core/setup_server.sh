@@ -173,6 +173,7 @@ detect_public_ip() {
 setup_ccd() {
     mkdir -p "$CCD_DIR"
     mkdir -p "$HOOKS_DIR"
+    mkdir -p "${SERVER_DIR}/state"
 }
 
 # --- Generate baseline server.conf -------------------------------------------

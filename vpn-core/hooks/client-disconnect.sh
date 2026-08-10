@@ -13,7 +13,7 @@
 #   $trusted_ip    — client's real IP
 #   $script_type   — "client-disconnect"
 
-set -euo pipefail
+set -uo pipefail
 
 # --- Configuration -----------------------------------------------------------
 STATE_DIR="/etc/openvpn/server/state"
