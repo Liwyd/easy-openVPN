@@ -224,6 +224,9 @@ verb 3
 # Management interface (unix socket)
 management /run/openvpn/management.sock unix
 
+# Allow external scripts (hooks, CCD)
+script-security 2
+
 # Client-config-dir for per-client overrides
 client-config-dir ${CCD_DIR}
 

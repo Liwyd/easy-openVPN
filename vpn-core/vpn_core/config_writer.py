@@ -135,6 +135,9 @@ def render_server_conf(cfg: ServerConfigRow) -> str:
     # --- Management interface ---
     _w(f"management {cfg.management_socket} unix")
 
+    # --- Allow external scripts (hooks, CCD) ---
+    _w("script-security 2")
+
     # --- Client-config-dir ---
     _w(f"client-config-dir {cfg.ccd_dir}")
 
