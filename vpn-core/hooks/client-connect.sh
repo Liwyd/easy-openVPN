@@ -16,8 +16,8 @@
 #   $script_type   — "client-connect"
 
 # --- Configuration -----------------------------------------------------------
-STATE_DIR="/etc/openvpn/server/state"
-CCD_DIR="/etc/openvpn/server/ccd"
+STATE_DIR="/opt/eovpanel/vpn/state"
+CCD_DIR="/opt/eovpanel/vpn/ccd"
 LOG_FILE="/var/log/openvpn-hooks.log"
 
 # --- Helpers -----------------------------------------------------------------

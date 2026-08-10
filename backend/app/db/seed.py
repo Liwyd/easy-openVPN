@@ -117,7 +117,7 @@ def _detect_public_ip() -> str:
     import subprocess
 
     # Try reading from existing server.conf (setup_server.sh writes it there)
-    server_conf = "/etc/openvpn/server/server.conf"
+    server_conf = "/opt/eovpanel/vpn/server.conf"
     try:
         with open(server_conf, encoding="utf-8") as f:
             for line in f:

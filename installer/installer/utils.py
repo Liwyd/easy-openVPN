@@ -25,7 +25,7 @@ ENV_FILE = BACKEND_DIR / ".env"
 REPO_ENV = REPO_ROOT / ".env"
 DOCKER_ENV = DOCKER_DIR / ".env"
 NGINX_CONF = FRONTEND_DIR / "nginx.conf"
-OPENVPN_SERVER_DIR = Path("/etc/openvpn/server")
+OPENVPN_SERVER_DIR = Path("/opt/eovpanel/vpn")
 ESSL_DIR = Path("/opt/essl")
 ESSL_CERT_DIR = Path("/etc/ssl/eovpanel")
 

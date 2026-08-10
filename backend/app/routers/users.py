@@ -106,7 +106,7 @@ def _render_ovpn_for_user(user: User, db: Session) -> str:
     cfg = _get_server_settings(db)
     return _generate_ovpn_file(
         common_name=user.common_name or user.username,
-        server_dir="/etc/openvpn/server",
+        server_dir="/opt/eovpanel/vpn",
         public_ip=_resolve_client_host(cfg.public_host, cfg.tunnel_host),
         protocol=cfg.protocol.value,
         port=cfg.port,
@@ -150,7 +150,7 @@ def create_user(
         cfg = _get_server_settings(db)
         _create_client_cert(
             common_name=body.username,
-            server_dir="/etc/openvpn/server",
+            server_dir="/opt/eovpanel/vpn",
             easyrsa_dir=EASYRSA_DIR,
             public_ip=_resolve_client_host(cfg.public_host, cfg.tunnel_host),
             protocol=cfg.protocol.value,

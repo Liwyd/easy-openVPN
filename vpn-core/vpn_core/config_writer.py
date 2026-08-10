@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Defaults
 # ---------------------------------------------------------------------------
-DEFAULT_SERVER_DIR = Path("/etc/openvpn/server")
+DEFAULT_SERVER_DIR = Path("/opt/eovpanel/vpn")
 DEFAULT_SERVER_CONF = DEFAULT_SERVER_DIR / "server.conf"
 DEFAULT_BACKUP_SUFFIX = ".bak"
 
@@ -58,10 +58,10 @@ class ServerConfigRow:
     group: str = "nogroup"
     verbosity: int = 3
     public_ip: str = ""
-    status_log: str = "/etc/openvpn/server/status.log"
+    status_log: str = "/opt/eovpanel/vpn/status.log"
     management_socket: str = "/run/openvpn/management.sock"
-    ccd_dir: str = "/etc/openvpn/server/ccd"
-    hooks_dir: str = "/etc/openvpn/server/hooks"
+    ccd_dir: str = "/opt/eovpanel/vpn/ccd"
+    hooks_dir: str = "/opt/eovpanel/vpn/hooks"
     tls_crypt: bool = True
     tls_auth: bool = False
 

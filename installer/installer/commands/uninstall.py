@@ -115,7 +115,7 @@ def _remove_containers() -> None:
             rc, _ = run_cmd(["docker", "image", "rm", "-f", image], timeout=60)
             if rc == 0:
                 ok(f"Docker image removed: {image}")
-        info("OpenVPN data preserved at /etc/openvpn/")
+        info("OpenVPN data preserved at /opt/eovpanel/vpn/")
     else:
         fail("Failed to remove containers.")
 
@@ -126,7 +126,7 @@ def _purge_all() -> None:
     warn("This will delete:")
     print("    - All Docker containers, volumes, networks, and images")
     print("    - OpenVPN services, iptables rules, and sysctl settings")
-    print("    - /etc/openvpn/server/ (certs, keys, CRL, easy-rsa)")
+    print("    - /opt/eovpanel/vpn/ (certs, keys, CRL, easy-rsa)")
     print("    - OpenVPN package")
     print("    - Backend database and .env files")
     print("    - The installer itself: /opt/eovpanel/ and /usr/local/bin/eovpanel")
@@ -186,7 +186,7 @@ def _purge_all() -> None:
             subprocess.run(cmd, capture_output=True, timeout=10, check=False)
         info("Removed iptables rules.")
 
-    # Remove /etc/openvpn/server/ (certs, keys, CRL, easy-rsa, hooks, CCD)
+    # Remove /opt/eovpanel/vpn/ (certs, keys, CRL, easy-rsa, hooks, CCD)
     if OPENVPN_SERVER_DIR.exists():
         shutil.rmtree(OPENVPN_SERVER_DIR, ignore_errors=True)
         if not OPENVPN_SERVER_DIR.exists():

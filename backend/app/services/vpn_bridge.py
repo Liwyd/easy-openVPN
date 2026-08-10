@@ -24,8 +24,8 @@ def resolve_client_host(public_host: str, tunnel_host: str = "") -> str:
 
 def create_client_cert(
     common_name: str,
-    server_dir: str = "/etc/openvpn/server",
-    easyrsa_dir: str = "/etc/openvpn/easy-rsa",
+    server_dir: str = "/opt/eovpanel/vpn",
+    easyrsa_dir: str = "/opt/eovpanel/vpn/easy-rsa",
     public_ip: str = "",
     protocol: str = "udp",
     port: int = 1194,
@@ -55,8 +55,8 @@ def create_client_cert(
 
 def revoke_client_cert(
     common_name: str,
-    easyrsa_dir: str = "/etc/openvpn/easy-rsa",
-    server_dir: str = "/etc/openvpn/server",
+    easyrsa_dir: str = "/opt/eovpanel/vpn/easy-rsa",
+    server_dir: str = "/opt/eovpanel/vpn",
 ) -> None:
     """Revoke a client certificate.  Raises on failure."""
     from vpn_core.client_manager import revoke_client
@@ -104,7 +104,7 @@ def kill_client_session(
 
 def disable_client(
     common_name: str,
-    ccd_dir: str = "/etc/openvpn/server/ccd",
+    ccd_dir: str = "/opt/eovpanel/vpn/ccd",
     management_socket: str = "/run/openvpn/management.sock",
 ) -> bool:
     """Disable a client via CCD.  Returns True on success."""
@@ -119,7 +119,7 @@ def disable_client(
 
 def enable_client(
     common_name: str,
-    ccd_dir: str = "/etc/openvpn/server/ccd",
+    ccd_dir: str = "/opt/eovpanel/vpn/ccd",
 ) -> bool:
     """Re-enable a client by removing the CCD file.  Returns True on success."""
     from vpn_core.enforcement import enable_client as _enable
@@ -129,7 +129,7 @@ def enable_client(
 
 def generate_ovpn_file(
     common_name: str,
-    server_dir: str = "/etc/openvpn/server",
+    server_dir: str = "/opt/eovpanel/vpn",
     public_ip: str = "",
     protocol: str = "udp",
     port: int = 1194,
@@ -172,8 +172,8 @@ def apply_server_config(
     tls_crypt: bool = True,
     tls_auth: bool = False,
     management_socket: str = "/run/openvpn/management.sock",
-    ccd_dir: str = "/etc/openvpn/server/ccd",
-    hooks_dir: str = "/etc/openvpn/server/hooks",
+    ccd_dir: str = "/opt/eovpanel/vpn/ccd",
+    hooks_dir: str = "/opt/eovpanel/vpn/hooks",
 ) -> bool:
     """Apply server configuration via vpn-core.  Returns True on success."""
     from vpn_core.config_writer import ServerConfigRow

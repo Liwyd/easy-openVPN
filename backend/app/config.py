@@ -64,11 +64,11 @@ OPENVPN_MANAGEMENT_SOCKET: str = config(
 )
 OPENVPN_STATUS_LOG: str = config(
     "OPENVPN_STATUS_LOG",
-    default="/etc/openvpn/server/status.log",
+    default="/opt/eovpanel/vpn/status.log",
 )
 EASYRSA_DIR: str = config(
     "EASYRSA_DIR",
-    default="/etc/openvpn/easy-rsa",
+    default="/opt/eovpanel/vpn/easy-rsa",
 )
 
 # --- Telegram Bot ---

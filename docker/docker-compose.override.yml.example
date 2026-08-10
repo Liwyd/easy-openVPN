@@ -29,7 +29,7 @@ services:
       # Keep the data volume for persistence
       - eovpanel_data:/app/data
       # OpenVPN paths (same as production)
-      - /etc/openvpn:/etc/openvpn:rw
+      - /opt/eovpanel/vpn:/opt/eovpanel/vpn:rw
       - /run/openvpn:/run/openvpn:rw
     environment:
       - DEBUG=true

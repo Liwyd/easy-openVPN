@@ -13,7 +13,7 @@
 #   - frontend: React SPA served by nginx (reverse proxy to backend)
 #
 # OpenVPN runs on the HOST (not in Docker). The backend needs access to:
-#   - /etc/openvpn/          — server config, certs, easy-rsa, CCD directory
+#   - /opt/eovpanel/vpn/     — server config, certs, easy-rsa, CCD directory
 #   - /run/openvpn/          — management socket for live status + client control
 #
 # These host paths are created by vpn-core's setup_server.sh on the host.
@@ -47,7 +47,7 @@ services:
     # nginx (Marzban-style). Re-add e.g. "127.0.0.1:8000:8000" for debugging.
     volumes:
       # OpenVPN server config, certs, easy-rsa, CCD directory (read/write)
-      - /etc/openvpn:/etc/openvpn:rw
+      - /opt/eovpanel/vpn:/opt/eovpanel/vpn:rw
       # Management socket for live client status and control commands.
       # Must be :rw because the backend sends management commands (kill, status).
       - /run/openvpn:/run/openvpn:rw

@@ -41,7 +41,7 @@ def _render_ovpn_for_user(user: User, db: Session) -> str | None:
 
         return generate_ovpn_file(
             common_name=user.common_name or user.username,
-            server_dir="/etc/openvpn/server",
+            server_dir="/opt/eovpanel/vpn",
             public_ip=public_ip,
             protocol=protocol,
             port=port,

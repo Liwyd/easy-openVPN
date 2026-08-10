@@ -22,8 +22,8 @@ log = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Defaults
 # ---------------------------------------------------------------------------
-DEFAULT_SERVER_DIR = Path("/etc/openvpn/server")
-DEFAULT_EASYRSA_DIR = Path("/etc/openvpn/easy-rsa")
+DEFAULT_SERVER_DIR = Path("/opt/eovpanel/vpn")
+DEFAULT_EASYRSA_DIR = Path("/opt/eovpanel/vpn/easy-rsa")
 DEFAULT_CLIENT_COMMON = DEFAULT_SERVER_DIR / "client-common.txt"
 DEFAULT_CERT_DAYS = 3650
 

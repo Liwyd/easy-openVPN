@@ -228,8 +228,8 @@ def cmd_install(args) -> None:
     env.setdefault("JWT_REFRESH_TOKEN_EXPIRE_DAYS", "7")
     env.setdefault("CORS_ORIGINS", "http://localhost,http://localhost:5173,http://localhost:3000")
     env.setdefault("OPENVPN_MANAGEMENT_SOCKET", "/run/openvpn/management.sock")
-    env.setdefault("OPENVPN_STATUS_LOG", "/etc/openvpn/status.log")
-    env.setdefault("EASYRSA_DIR", "/etc/openvpn/server/easy-rsa")
+    env.setdefault("OPENVPN_STATUS_LOG", "/opt/eovpanel/vpn/status.log")
+    env.setdefault("EASYRSA_DIR", "/opt/eovpanel/vpn/easy-rsa")
     if public_ip:
         env["PUBLIC_HOST"] = public_ip
 

@@ -22,7 +22,7 @@ log = logging.getLogger(__name__)
 # Defaults
 # ---------------------------------------------------------------------------
 DEFAULT_MANAGEMENT_SOCKET = "/run/openvpn/management.sock"
-DEFAULT_CCD_DIR = "/etc/openvpn/server/ccd"
+DEFAULT_CCD_DIR = "/opt/eovpanel/vpn/ccd"
 DEFAULT_TIMEOUT_SECONDS = 5
 
 

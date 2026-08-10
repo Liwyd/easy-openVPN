@@ -16,7 +16,7 @@
 set -uo pipefail
 
 # --- Configuration -----------------------------------------------------------
-STATE_DIR="/etc/openvpn/server/state"
+STATE_DIR="/opt/eovpanel/vpn/state"
 LOG_FILE="/var/log/openvpn-hooks.log"
 
 # --- Helpers -----------------------------------------------------------------
