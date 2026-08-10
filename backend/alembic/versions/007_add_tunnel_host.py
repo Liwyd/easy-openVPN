@@ -1,6 +1,6 @@
 """add_tunnel_host_to_server_config
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: f1e2d3c4b5a6
 Revises: f6a7b8c9d0e1
 Create Date: 2026-08-10 12:00:00.000000
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = 'a1b2c3d4e5f6'
+revision: str = 'f1e2d3c4b5a6'
 down_revision: str | Sequence[str] | None = 'f6a7b8c9d0e1'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
