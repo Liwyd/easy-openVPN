@@ -57,6 +57,9 @@ from app.services.vpn_bridge import (
     kill_client_session as _kill_client_session,
 )
 from app.services.vpn_bridge import (
+    resolve_client_host as _resolve_client_host,
+)
+from app.services.vpn_bridge import (
     revoke_client_cert as _revoke_client_cert,
 )
 
@@ -103,7 +106,7 @@ def _render_ovpn_for_user(user: User, db: Session) -> str:
     return _generate_ovpn_file(
         common_name=user.common_name or user.username,
         server_dir="/etc/openvpn/server",
-        public_ip=cfg.public_host,
+        public_ip=_resolve_client_host(cfg.public_host, cfg.tunnel_host),
         protocol=cfg.protocol.value,
         port=cfg.port,
     )
@@ -145,7 +148,7 @@ def create_user(
             common_name=body.username,
             server_dir="/etc/openvpn/server",
             easyrsa_dir=EASYRSA_DIR,
-            public_ip=cfg.public_host,
+            public_ip=_resolve_client_host(cfg.public_host, cfg.tunnel_host),
             protocol=cfg.protocol.value,
             port=cfg.port,
         )

@@ -421,6 +421,28 @@ class TestSubscriptionEndpoint:
         assert resp.headers["content-type"] == "application/x-openvpn-profile"
         assert "dl_user" in resp.headers.get("content-disposition", "")
 
+    @patch("app.routers.subscription.generate_ovpn_file")
+    def test_sub_download_uses_tunnel_host_when_set(self, mock_ovpn, client, db_session):
+        from app.db.seed import seed_default_server_config
+
+        mock_ovpn.return_value = "client\ndev tun\nproto udp\n"
+
+        admin = _make_admin(db_session, "sub_tun_admin")
+        user = _make_user(db_session, admin.id, "sub_tun_user")
+        user.common_name = "sub_tun_user"
+        db_session.commit()
+
+        seed_default_server_config(db_session)
+        cfg = db_session.query(ServerConfig).first()
+        cfg.public_host = "vpn.example.com"
+        cfg.tunnel_host = "tunnel.example.com"
+        db_session.commit()
+
+        resp = client.get(f"/sub/{user.subscription_token}/download")
+        assert resp.status_code == 200
+        mock_ovpn.assert_called_once()
+        assert mock_ovpn.call_args.kwargs["public_ip"] == "tunnel.example.com"
+
     def test_invalid_token_returns_404(self, client, db_session):
         resp = client.get("/sub/this_token_does_not_exist")
         assert resp.status_code == 404
@@ -623,6 +645,48 @@ class TestServerConfigApply:
         assert data["requires_redownload"] is False
         assert data["requires_redownload_fields"] == []
 
+    @patch("app.routers.settings._apply_server_config")
+    def test_tunnel_host_only_change_commits_without_restart(self, mock_apply, sudo_client, db_session):
+        from app.db.seed import seed_default_server_config
+        seed_default_server_config(db_session)
+        db_session.commit()
+
+        resp = sudo_client.put(
+            "/api/settings/server-config",
+            json={"tunnel_host": "tunnel.example.com"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is True
+        # Tunnel change is client-facing — no OpenVPN restart, but clients
+        # should redownload to pick up the new remote endpoint.
+        assert data["requires_redownload"] is True
+        assert "tunnel_host" in data["requires_redownload_fields"]
+        mock_apply.assert_not_called()
+
+        cfg = db_session.query(ServerConfig).first()
+        db_session.refresh(cfg)
+        assert cfg.tunnel_host == "tunnel.example.com"
+
+    @patch("app.routers.settings._apply_server_config")
+    def test_tunnel_host_cleared_without_restart(self, mock_apply, sudo_client, db_session):
+        from app.db.seed import seed_default_server_config
+        seed_default_server_config(db_session)
+        cfg = db_session.query(ServerConfig).first()
+        cfg.tunnel_host = "tunnel.example.com"
+        db_session.commit()
+
+        resp = sudo_client.put(
+            "/api/settings/server-config",
+            json={"tunnel_host": ""},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["success"] is True
+        mock_apply.assert_not_called()
+
+        db_session.refresh(cfg)
+        assert cfg.tunnel_host == ""
+
 
 # ===========================================================================
 # 9. Disable / Enable user
@@ -787,6 +851,50 @@ class TestConfigDownload:
         resp = sudo_client.get(f"/api/users/{user.username}/config")
         assert resp.status_code == 200
         assert resp.headers["content-type"] == "application/x-openvpn-profile"
+
+    @patch("app.routers.users._generate_ovpn_file")
+    def test_config_uses_tunnel_host_when_set(self, mock_ovpn, sudo_client, db_session):
+        from app.db.seed import seed_default_server_config
+
+        mock_ovpn.return_value = "client\ndev tun\nproto udp\n"
+
+        seed_default_server_config(db_session)
+        cfg = db_session.query(ServerConfig).first()
+        cfg.public_host = "vpn.example.com"
+        cfg.tunnel_host = "tunnel.example.com"
+        db_session.commit()
+
+        admin = db_session.query(Admin).filter(Admin.is_sudo.is_(True)).first()
+        user = _make_user(db_session, admin.id, "cfg_tun")
+        user.common_name = "cfg_tun"
+        db_session.commit()
+
+        resp = sudo_client.get(f"/api/users/{user.username}/config")
+        assert resp.status_code == 200
+        mock_ovpn.assert_called_once()
+        assert mock_ovpn.call_args.kwargs["public_ip"] == "tunnel.example.com"
+
+    @patch("app.routers.users._generate_ovpn_file")
+    def test_config_falls_back_to_public_host_without_tunnel(self, mock_ovpn, sudo_client, db_session):
+        from app.db.seed import seed_default_server_config
+
+        mock_ovpn.return_value = "client\ndev tun\nproto udp\n"
+
+        seed_default_server_config(db_session)
+        cfg = db_session.query(ServerConfig).first()
+        cfg.public_host = "vpn.example.com"
+        cfg.tunnel_host = ""
+        db_session.commit()
+
+        admin = db_session.query(Admin).filter(Admin.is_sudo.is_(True)).first()
+        user = _make_user(db_session, admin.id, "cfg_notun")
+        user.common_name = "cfg_notun"
+        db_session.commit()
+
+        resp = sudo_client.get(f"/api/users/{user.username}/config")
+        assert resp.status_code == 200
+        mock_ovpn.assert_called_once()
+        assert mock_ovpn.call_args.kwargs["public_ip"] == "vpn.example.com"
 
     def test_revoked_user_config_returns_410(self, sudo_client, db_session):
         admin = db_session.query(Admin).filter(Admin.is_sudo.is_(True)).first()

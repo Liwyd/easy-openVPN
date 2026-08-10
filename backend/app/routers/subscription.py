@@ -19,7 +19,7 @@ from app.db import get_db
 from app.models.server_config import ServerConfig
 from app.models.user import User, UserStatus
 from app.services.rate_limiter import subscription_rate_limiter
-from app.services.vpn_bridge import generate_ovpn_file
+from app.services.vpn_bridge import generate_ovpn_file, resolve_client_host
 
 router = APIRouter(tags=["subscription"])
 log = logging.getLogger(__name__)
@@ -29,7 +29,9 @@ def _render_ovpn_for_user(user: User, db: Session) -> str | None:
     """Render the .ovpn file content for a user. Returns None on error."""
     try:
         cfg = db.query(ServerConfig).first()
-        public_ip = cfg.public_host if cfg else ""
+        public_ip = resolve_client_host(
+            cfg.public_host if cfg else "", cfg.tunnel_host if cfg else ""
+        )
         protocol = cfg.protocol.value if cfg else "udp"
         port = cfg.port if cfg else 1194
 

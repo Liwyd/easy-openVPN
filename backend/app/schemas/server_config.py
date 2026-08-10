@@ -24,6 +24,7 @@ class ServerConfigUpdate(BaseModel):
     client_to_client: bool | None = None
     redirect_gateway: bool | None = None
     public_host: str | None = None
+    tunnel_host: str | None = None
     subscription_url_prefix: str | None = None
 
 
@@ -43,6 +44,7 @@ class ServerConfigResponse(BaseModel):
     client_to_client: bool
     redirect_gateway: bool
     public_host: str
+    tunnel_host: str
     subscription_url_prefix: str
     updated_at: dt.datetime
 

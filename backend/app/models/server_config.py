@@ -93,6 +93,12 @@ class ServerConfig(Base):
     # rendering .ovpn files.
     public_host: Mapped[str] = mapped_column(String(255), default="", nullable=False)
 
+    # Optional tunnel address — an alternative IP/domain that forwards traffic
+    # back to this server. When set, generated .ovpn configs use it as the
+    # `remote` endpoint instead of public_host. No setup is required on the
+    # tunnel itself; it simply forwards the OpenVPN port here.
+    tunnel_host: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+
     # Subscription URL prefix — used to build the full /sub/{token} URL.
     # e.g. "https://panel.example.com"
     subscription_url_prefix: Mapped[str] = mapped_column(String(255), default="", nullable=False)

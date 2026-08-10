@@ -40,6 +40,7 @@ interface ServerConfig {
   client_to_client: boolean;
   redirect_gateway: boolean;
   public_host: string;
+  tunnel_host: string;
   subscription_url_prefix: string;
   updated_at: string;
 }
@@ -191,6 +192,7 @@ function ServerConfigSection() {
     values.tls_mode = formData.get("tls_mode") as string;
     values.dns_preset = formData.get("dns_preset") as string;
     values.public_host = formData.get("public_host") as string;
+    values.tunnel_host = formData.get("tunnel_host") as string;
     values.subscription_url_prefix = formData.get("subscription_url_prefix") as string;
     values.keepalive_interval = Number(formData.get("keepalive_interval"));
     values.keepalive_timeout = Number(formData.get("keepalive_timeout"));
@@ -364,6 +366,19 @@ function ServerConfigSection() {
               <Field.Root>
                 <Field.Label>Public Host / Domain</Field.Label>
                 <Input name="public_host" defaultValue={config.public_host} placeholder="vpn.example.com" />
+              </Field.Root>
+
+              <Field.Root>
+                <Field.Label>Tunnel Address (optional)</Field.Label>
+                <Input name="tunnel_host" defaultValue={config.tunnel_host} placeholder="tunnel.example.com" />
+                <Field.HelperText>
+                  When set, generated .ovpn configs use this address as the{" "}
+                  <Text as="span" fontWeight="semibold">
+                    remote
+                  </Text>{" "}
+                  endpoint instead of the Public Host. It forwards the OpenVPN port back to this
+                  server — nothing needs to be installed on the tunnel itself.
+                </Field.HelperText>
               </Field.Root>
 
               <Field.Root>

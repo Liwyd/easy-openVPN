@@ -35,9 +35,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
-# Fields that require all clients to redownload their .ovpn
-REDISTRIBUTION_FIELDS = {"protocol", "port", "cipher", "tls_mode"}
-
 # Mapping from DB field names to ServerConfigRow field names for vpn-core
 _FIELD_MAP = {
     "protocol": "protocol",
@@ -54,8 +51,16 @@ _FIELD_MAP = {
     "client_to_client": "client_to_client",
     "redirect_gateway": "redirect_gateway",
     "public_host": "public_ip",
+    "tunnel_host": None,  # client-facing only — never touches server.conf
     "subscription_url_prefix": None,
 }
+
+# Fields that only affect client configs, not the running OpenVPN server.
+# Changing these must NOT restart OpenVPN — no vpn-core apply is needed.
+CLIENT_ONLY_FIELDS = {"tunnel_host", "subscription_url_prefix"}
+
+# Fields that require all clients to redownload their .ovpn
+REDISTRIBUTION_FIELDS = {"protocol", "port", "cipher", "tls_mode", "tunnel_host"}
 
 
 def _tls_mode_to_booleans(tls_mode: str) -> tuple[bool, bool]:
@@ -122,46 +127,55 @@ def update_server_config(
     # Determine if redownload is needed
     needs_redownload = bool(changed_fields & REDISTRIBUTION_FIELDS)
 
-    # Build vpn-core config row from current (now-updated) DB state
-    tls_crypt, tls_auth = _tls_mode_to_booleans(cfg.tls_mode.value)
+    # Fields that affect the running OpenVPN server — the rest (tunnel_host,
+    # subscription_url_prefix) only shape client configs/sub links and must
+    # not trigger a restart.
+    server_fields = changed_fields - CLIENT_ONLY_FIELDS
 
-    # Apply to vpn-core — only commit DB if this succeeds
-    try:
-        apply_success = _apply_server_config(
-            protocol=cfg.protocol.value,
-            port=cfg.port,
-            interface=cfg.interface,
-            cipher=cfg.cipher.value,
-            auth=cfg.auth_digest.value,
-            dns_servers=cfg.dns_servers,
-            mtu=cfg.mtu,
-            keepalive_interval=cfg.keepalive_interval,
-            keepalive_timeout=cfg.keepalive_timeout,
-            client_to_client=cfg.client_to_client,
-            redirect_gateway=cfg.redirect_gateway,
-            public_ip=cfg.public_host,
-            tls_crypt=tls_crypt,
-            tls_auth=tls_auth,
-        )
-    except Exception as exc:
-        logger.error("vpn-core apply_server_config failed: %s", exc)
-        # Roll back DB changes — the db was modified in-place but not committed
-        db.rollback()
-        return ServerConfigApplyResult(
-            success=False,
-            requires_redownload=False,
-            requires_redownload_fields=[],
-            message=f"Failed to apply server config: {exc}",
-        )
+    if server_fields:
+        # Build vpn-core config row from current (now-updated) DB state
+        tls_crypt, tls_auth = _tls_mode_to_booleans(cfg.tls_mode.value)
 
-    if not apply_success:
-        db.rollback()
-        return ServerConfigApplyResult(
-            success=False,
-            requires_redownload=False,
-            requires_redownload_fields=[],
-            message="vpn-core failed to restart OpenVPN. Config NOT committed.",
-        )
+        # Apply to vpn-core — only commit DB if this succeeds
+        try:
+            apply_success = _apply_server_config(
+                protocol=cfg.protocol.value,
+                port=cfg.port,
+                interface=cfg.interface,
+                cipher=cfg.cipher.value,
+                auth=cfg.auth_digest.value,
+                dns_servers=cfg.dns_servers,
+                mtu=cfg.mtu,
+                keepalive_interval=cfg.keepalive_interval,
+                keepalive_timeout=cfg.keepalive_timeout,
+                client_to_client=cfg.client_to_client,
+                redirect_gateway=cfg.redirect_gateway,
+                public_ip=cfg.public_host,
+                tls_crypt=tls_crypt,
+                tls_auth=tls_auth,
+            )
+        except Exception as exc:
+            logger.error("vpn-core apply_server_config failed: %s", exc)
+            # Roll back DB changes — the db was modified in-place but not committed
+            db.rollback()
+            return ServerConfigApplyResult(
+                success=False,
+                requires_redownload=False,
+                requires_redownload_fields=[],
+                message=f"Failed to apply server config: {exc}",
+            )
+
+        if not apply_success:
+            db.rollback()
+            return ServerConfigApplyResult(
+                success=False,
+                requires_redownload=False,
+                requires_redownload_fields=[],
+                message="vpn-core failed to restart OpenVPN. Config NOT committed.",
+            )
+    else:
+        # Only client-facing fields changed — no server restart needed.
+        apply_success = True
 
     # Apply succeeded — now commit DB
     cfg.updated_by_admin_id = current_admin.id

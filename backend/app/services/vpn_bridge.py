@@ -13,6 +13,15 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 
+def resolve_client_host(public_host: str, tunnel_host: str = "") -> str:
+    """Return the effective host clients connect to.
+
+    When a tunnel address is configured it forwards traffic back to this
+    server, so generated configs target it instead of public_host.
+    """
+    return tunnel_host.strip() or public_host
+
+
 def create_client_cert(
     common_name: str,
     server_dir: str = "/etc/openvpn/server",
