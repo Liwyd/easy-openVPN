@@ -13,11 +13,10 @@ export default function QRCodeDialog() {
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const username = qrUser?.user.username;
-  const source = qrUser?.source;
+  const username = qrUser?.username;
 
   useEffect(() => {
-    if (!username || !source) return;
+    if (!username) return;
     let cancelled = false;
     setLoading(true);
     setCopied(false);
@@ -36,7 +35,7 @@ export default function QRCodeDialog() {
     return () => {
       cancelled = true;
     };
-  }, [username, source]);
+  }, [username]);
 
   async function handleCopy() {
     if (!link) return;

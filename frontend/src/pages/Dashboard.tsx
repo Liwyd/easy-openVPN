@@ -27,6 +27,7 @@ import api from "../lib/api";
 import StatusBadge from "../components/StatusBadge";
 import LoadingState from "../components/LoadingState";
 import ErrorState from "../components/ErrorState";
+import EmptyState from "../components/EmptyState";
 import StatCard from "../components/StatCard";
 import SectionCard from "../components/SectionCard";
 import { formatBytes } from "../utils/formatByte";
@@ -96,9 +97,7 @@ function StatusDonut({ data }: { data: StatusBreakdown }) {
   return (
     <SectionCard title="User Status">
       {total === 0 ? (
-        <Text color="fg.muted" fontSize="sm">
-          No users yet
-        </Text>
+        <EmptyState icon={<FiActivity size={32} style={{ opacity: 0.3 }} />} message="No users yet" />
       ) : (
         <HStack gap={6} align="center" wrap="wrap">
           <Box width="160px" height="160px">
@@ -354,9 +353,7 @@ export default function Dashboard() {
       <SimpleGrid columns={{ base: 1, lg: 2 }} gap={4}>
         <SectionCard title="Traffic Over Time (30 days)">
           {chartData.length === 0 ? (
-            <Text color="fg.muted" fontSize="sm" py={8} textAlign="center">
-              No traffic data yet
-            </Text>
+            <EmptyState icon={<FiActivity size={32} style={{ opacity: 0.3 }} />} message="No traffic data yet" />
           ) : (
             <Box h="200px">
               <ResponsiveContainer width="100%" height="100%">

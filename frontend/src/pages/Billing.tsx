@@ -35,6 +35,7 @@ import api from "../lib/api";
 import { toaster } from "../lib/toaster";
 import { card, tableRoot, buttonSolid, buttonOutline } from "../theme-components";
 import StatCard from "../components/StatCard";
+import EmptyState from "../components/EmptyState";
 import { formatBytes } from "../utils/formatByte";
 import { formatDate } from "../utils/dateFormatter";
 
@@ -177,8 +178,11 @@ export default function Billing() {
           </Alert.Description>
         </Alert.Root>
       ) : !admins || admins.length === 0 ? (
-        <Box {...card} p={12} textAlign="center">
-          <Text color="fg.muted">No sub-admins yet.</Text>
+        <Box css={card} p={6}>
+          <EmptyState
+            icon={<FiUsers size={40} style={{ margin: "0 auto 16px", opacity: 0.3 }} />}
+            message="No sub-admins yet."
+          />
         </Box>
       ) : (
         <Box css={tableRoot} overflowX="auto">

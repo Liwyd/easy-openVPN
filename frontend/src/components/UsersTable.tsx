@@ -210,7 +210,7 @@ export default function UsersTable({
                         variant="ghost"
                         size="sm"
                         title="Show QR code"
-                        onClick={() => openQR(user, "link")}
+                        onClick={() => openQR(user)}
                       >
                         <FiGrid />
                       </IconButton>

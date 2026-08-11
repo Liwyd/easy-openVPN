@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import api from "../lib/api";
 import type { User, UsersQueryResult } from "../types/User";
@@ -24,19 +23,4 @@ export function useUsersQuery(params: {
       return { users: res.data as User[], total };
     },
   });
-}
-
-export function getStoredPerPage(): number {
-  const stored = localStorage.getItem(USERS_PER_PAGE_KEY);
-  const parsed = stored ? Number(stored) : 20;
-  return [10, 20, 30, 50].includes(parsed) ? parsed : 20;
-}
-
-export function useDebouncedValue<T>(value: T, delay = 300): T {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(timer);
-  }, [value, delay]);
-  return debounced;
 }

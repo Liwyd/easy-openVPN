@@ -3,12 +3,8 @@ import { VStack, Text, Spinner, Flex, Alert, Box } from "@chakra-ui/react";
 import { FiUsers } from "react-icons/fi";
 import { card } from "../theme-components";
 import { UserProvider, useUserContext } from "../contexts/UserContext";
-import {
-  useUsersQuery,
-  getStoredPerPage,
-  useDebouncedValue,
-  USERS_PER_PAGE_KEY,
-} from "../hooks/useUsers";
+import { useUsersQuery, USERS_PER_PAGE_KEY } from "../hooks/useUsers";
+import { useDebouncedValue, useStoredPerPage } from "../hooks/useCommon";
 import Filters from "../components/Filters";
 import UsersTable from "../components/UsersTable";
 import Pagination from "../components/Pagination";
@@ -19,7 +15,7 @@ import QRCodeDialog from "../components/QRCodeDialog";
 function UsersContent() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(getStoredPerPage());
+  const { perPage, setPerPage } = useStoredPerPage(USERS_PER_PAGE_KEY);
   const { openCreate } = useUserContext();
 
   const debouncedSearch = useDebouncedValue(search, 300);
@@ -47,7 +43,6 @@ function UsersContent() {
 
   function handlePerPage(value: number) {
     setPerPage(value);
-    localStorage.setItem(USERS_PER_PAGE_KEY, String(value));
     setPage(1);
   }
 

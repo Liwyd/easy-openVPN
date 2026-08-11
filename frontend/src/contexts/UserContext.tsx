@@ -15,8 +15,6 @@ interface ConfirmState {
   open: boolean;
 }
 
-export type QRSource = "link" | "config";
-
 interface UserMutation {
   mutate: (variables: string) => void;
   isPending: boolean;
@@ -26,8 +24,8 @@ interface UserContextValue {
   editUser: User | null;
   openEdit: (user: User) => void;
   closeEdit: () => void;
-  qrUser: { user: User; source: QRSource } | null;
-  openQR: (user: User, source: QRSource) => void;
+  qrUser: User | null;
+  openQR: (user: User) => void;
   closeQR: () => void;
   deleteState: ConfirmState;
   openDelete: (user: User) => void;
@@ -67,9 +65,7 @@ export function UserProvider({
 }) {
   const queryClient = useQueryClient();
   const [editUser, setEditUser] = useState<User | null>(null);
-  const [qrUser, setQrUser] = useState<{ user: User; source: QRSource } | null>(
-    null,
-  );
+  const [qrUser, setQrUser] = useState<User | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [deleteState, setDeleteState] = useState<ConfirmState>({
     user: null as never,
@@ -220,7 +216,7 @@ export function UserProvider({
         openEdit: setEditUser,
         closeEdit: () => setEditUser(null),
         qrUser,
-        openQR: (user, source) => setQrUser({ user, source }),
+        openQR: setQrUser,
         closeQR: () => setQrUser(null),
         deleteState,
         openDelete: (user) => setDeleteState({ user, open: true }),

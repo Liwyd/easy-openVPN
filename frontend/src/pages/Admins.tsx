@@ -4,7 +4,7 @@ import { FiShield } from "react-icons/fi";
 import { card } from "../theme-components";
 import { AdminProvider, useAdminContext } from "../contexts/AdminContext";
 import { useAdminsQuery, ADMINS_PER_PAGE_KEY } from "../hooks/useAdmins";
-import { useDebouncedValue, getStoredPerPage } from "../hooks/useUsers";
+import { useDebouncedValue, useStoredPerPage } from "../hooks/useCommon";
 import Filters from "../components/Filters";
 import AdminsTable from "../components/AdminsTable";
 import Pagination from "../components/Pagination";
@@ -15,7 +15,7 @@ function AdminsContent() {
   const { openCreate } = useAdminContext();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(getStoredPerPage());
+  const { perPage, setPerPage } = useStoredPerPage(ADMINS_PER_PAGE_KEY);
 
   const debouncedSearch = useDebouncedValue(search, 300);
 
@@ -38,7 +38,6 @@ function AdminsContent() {
 
   function handlePerPage(value: number) {
     setPerPage(value);
-    localStorage.setItem(ADMINS_PER_PAGE_KEY, String(value));
     setPage(1);
   }
 
