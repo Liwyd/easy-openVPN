@@ -1,19 +1,31 @@
 import { Badge } from "@chakra-ui/react";
+import { statusColors, statusIcons } from "../constants/UserSettings";
+import type { UserStatus } from "../types/User";
 
-type Status = "active" | "limited" | "expired" | "disabled";
-
-const STATUS_CONFIG: Record<Status, { label: string; colorPalette: string }> = {
-  active: { label: "Active", colorPalette: "green" },
-  limited: { label: "Limited", colorPalette: "orange" },
-  expired: { label: "Expired", colorPalette: "red" },
-  disabled: { label: "Disabled", colorPalette: "gray" },
+const STATUS_LABEL: Record<UserStatus, string> = {
+  active: "Active",
+  limited: "Limited",
+  expired: "Expired",
+  disabled: "Disabled",
 };
 
 export default function StatusBadge({ status }: { status: string }) {
-  const config = STATUS_CONFIG[status as Status] ?? STATUS_CONFIG.disabled;
+  const s = status as UserStatus;
+  const Icon = statusIcons[s] ?? statusIcons.disabled;
+  const label = STATUS_LABEL[s] ?? "Disabled";
   return (
-    <Badge colorPalette={config.colorPalette} borderRadius="full" px={2.5} py={0.5} fontSize="xs" fontWeight="semibold">
-      {config.label}
+    <Badge
+      colorPalette={statusColors[s] ?? "gray"}
+      borderRadius="full"
+      px={2.5}
+      py={1}
+      fontSize="xs"
+      fontWeight="semibold"
+      lineHeight="1"
+      title={label}
+    >
+      <Icon style={{ display: "inline-block", marginRight: 6 }} />
+      {label}
     </Badge>
   );
 }
