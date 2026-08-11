@@ -256,7 +256,8 @@ def _landing_page_html(
   <h1>Your VPN is Ready</h1>
   <p class="subtitle">Profile for <strong>{username}</strong></p>
 
-  {"<div class='banner'>⚠️ Server config has been updated. Download the latest config below.</div>" if config_updated else ""}
+  {"<div class='banner'>⚠️ Server config has been updated. "
+   "Download the latest config below.</div>" if config_updated else ""}
 
   <div class="qr-section">
     <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={download_url}&bgcolor=ffffff&color=000000"
@@ -403,7 +404,7 @@ def download_subscription_config(
 
     # Track download time so landing page can show "config updated" banner
     import datetime as _dt
-    user.subscription_updated_at = _dt.datetime.now(_dt.timezone.utc)
+    user.subscription_updated_at = _dt.datetime.now(_dt.UTC)
     db.commit()
 
     return Response(

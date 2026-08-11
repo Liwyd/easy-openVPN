@@ -208,6 +208,7 @@ def create_user(
         action="user_created",
         username=body.username,
         admin_username=current_admin.username,
+        belongs_to=current_admin.username,
         data_limit=body.data_limit,
         data_limit_str=_fmt_bytes(body.data_limit) if body.data_limit else None,
         expires=body.expire_at.isoformat() if body.expire_at else None,
@@ -350,6 +351,7 @@ def update_user(
         action=action,
         username=username,
         admin_username=current_admin.username,
+        belongs_to=user.admin.username if user.admin else None,
         data_limit=user.data_limit,
         data_limit_str=_fmt_bytes(user.data_limit) if user.data_limit else None,
     )
@@ -403,6 +405,7 @@ def disable_user(
         action="user_disabled_admin",
         username=username,
         admin_username=current_admin.username,
+        belongs_to=user.admin.username if user.admin else None,
     )
 
     return user
@@ -453,6 +456,7 @@ def enable_user(
         action="user_enabled",
         username=username,
         admin_username=current_admin.username,
+        belongs_to=user.admin.username if user.admin else None,
     )
 
     return user
@@ -521,6 +525,7 @@ def delete_user(
         action="user_deleted",
         username=username,
         admin_username=current_admin.username,
+        belongs_to=user.admin.username if user.admin else None,
     )
 
 

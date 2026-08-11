@@ -63,7 +63,7 @@ class TestBotDoesNotBreakEnforcement:
 
     def test_user_create_works_with_telegram_failure(self, sudo_client):
         """User CRUD must succeed even if Telegram send raises."""
-        with patch("app.bot.events.send_message", side_effect=Exception("Telegram down")), \
+        with patch("app.bot.client.send_message_plain", side_effect=Exception("Telegram down")), \
              patch("app.bot.events.is_configured", return_value=True), \
              patch("app.routers.users._create_client_cert", return_value=("serial", "cn")):
             resp = sudo_client.post(
@@ -83,7 +83,7 @@ class TestBotDoesNotBreakEnforcement:
             )
             assert resp.status_code == 201
 
-        with patch("app.bot.events.send_message", side_effect=Exception("Telegram down")), \
+        with patch("app.bot.client.send_message_plain", side_effect=Exception("Telegram down")), \
              patch("app.bot.events.is_configured", return_value=True), \
              patch("app.routers.users._revoke_client_cert"), \
              patch("app.routers.users._kill_client_session"):
@@ -91,7 +91,7 @@ class TestBotDoesNotBreakEnforcement:
             assert resp.status_code == 204
 
     def test_admin_create_works_with_telegram_failure(self, sudo_client):
-        with patch("app.bot.events.send_message", side_effect=Exception("Telegram down")), \
+        with patch("app.bot.client.send_message_plain", side_effect=Exception("Telegram down")), \
              patch("app.bot.events.is_configured", return_value=True):
             resp = sudo_client.post(
                 "/api/admins",
@@ -112,7 +112,7 @@ class TestBotDoesNotBreakEnforcement:
             )
             assert resp.status_code == 201
 
-        with patch("app.bot.events.send_message", side_effect=Exception("Telegram down")), \
+        with patch("app.bot.client.send_message_plain", side_effect=Exception("Telegram down")), \
              patch("app.bot.events.is_configured", return_value=True):
             resp = sudo_client.put(
                 "/api/users/upd_telegram_user",
@@ -122,7 +122,7 @@ class TestBotDoesNotBreakEnforcement:
 
     def test_sync_events_suppressed(self):
         """SYNC category events must never reach send_message."""
-        with patch("app.bot.events.send_message") as mock_send, \
+        with patch("app.bot.client.send_message_plain") as mock_send, \
              patch("app.bot.events.is_configured", return_value=True):
             emit(
                 category=EventCategory.SYNC,
@@ -132,7 +132,7 @@ class TestBotDoesNotBreakEnforcement:
 
     def test_enforcement_events_sent(self):
         """ENFORCEMENT events must reach send_message."""
-        with patch("app.bot.events.send_message") as mock_send, \
+        with patch("app.bot.client.send_message_plain") as mock_send, \
              patch("app.bot.events.is_configured", return_value=True):
             emit(
                 category=EventCategory.ENFORCEMENT,

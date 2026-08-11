@@ -15,7 +15,6 @@ from __future__ import annotations
 import enum
 import logging
 
-from app.bot.client import send_message
 from app.bot.config import is_configured
 from app.bot.formatter import format_event
 
@@ -35,6 +34,7 @@ def emit(
     action: str,
     username: str | None = None,
     admin_username: str | None = None,
+    belongs_to: str | None = None,
     detail: str | None = None,
     data_limit: int | None = None,
     data_used: int | None = None,
@@ -55,10 +55,13 @@ def emit(
         logger.debug("SYNC event %s — suppressed from Telegram", action)
         return
 
+    from app.bot.client import send_message_plain
+
     text = format_event(
         action=action,
         username=username,
         admin_username=admin_username,
+        belongs_to=belongs_to,
         detail=detail,
         data_limit=data_limit,
         data_used=data_used,
@@ -70,6 +73,6 @@ def emit(
         return
 
     try:
-        send_message(text)
+        send_message_plain(text)
     except Exception:
         logger.warning("Failed to send Telegram notification for %s", action, exc_info=True)

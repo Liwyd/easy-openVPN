@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Box,
   Heading,
@@ -16,7 +16,7 @@ import {
   createListCollection,
 } from "@chakra-ui/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { FiSend, FiKey } from "react-icons/fi";
+import { FiSend, FiKey, FiArchive, FiDownload, FiUpload, FiTrash2 } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import api from "../lib/api";
 import { toaster } from "../lib/toaster";
@@ -50,6 +50,22 @@ interface ApplyResult {
   requires_redownload: boolean;
   requires_redownload_fields: string[];
   message: string;
+}
+
+interface BackupConfig {
+  enabled: boolean;
+  schedule_hour: number;
+  schedule_minute: number;
+  send_to_telegram: boolean;
+  keep_count: number;
+  last_run_at: string | null;
+  last_backup_file: string;
+}
+
+interface BackupEntry {
+  name: string;
+  size_bytes: number;
+  created_at: string;
 }
 
 const DNS_SERVERS_MAP: Record<string, string[] | null> = {
@@ -97,6 +113,383 @@ const dnsCollection = createListCollection({
     { label: "Custom", value: "custom" },
   ],
 });
+
+const hourCollection = createListCollection({
+  items: Array.from({ length: 24 }, (_, h) => ({
+    label: String(h).padStart(2, "0"),
+    value: String(h),
+  })),
+});
+
+const minuteCollection = createListCollection({
+  items: Array.from({ length: 60 }, (_, m) => ({
+    label: String(m).padStart(2, "0"),
+    value: String(m),
+  })),
+});
+
+function formatSize(bytes: number): string {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let i = 0;
+  while (value >= 1024 && i < units.length - 1) {
+    value /= 1024;
+    i += 1;
+  }
+  return `${value.toFixed(1)} ${units[i]}`;
+}
+
+function BackupSection() {
+  const queryClient = useQueryClient();
+  const [sendToTelegram, setSendToTelegram] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [lastBackup, setLastBackup] = useState<{ filename: string; size_bytes: number } | null>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [showRestore, setShowRestore] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { data: config } = useQuery<BackupConfig>({
+    queryKey: ["backup-config"],
+    queryFn: async () => (await api.get("/backup/config")).data,
+  });
+
+  const { data: backups, isLoading: loadingBackups } = useQuery<BackupEntry[]>({
+    queryKey: ["backup-list"],
+    queryFn: async () => (await api.get("/backup/list")).data,
+  });
+
+  const saveConfig = useMutation({
+    mutationFn: async (values: Partial<BackupConfig>) => {
+      const { data } = await api.put<BackupConfig>("/backup/config", values);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["backup-config"] });
+      toaster.create({ title: "Backup schedule saved", type: "success" });
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Failed to save backup schedule";
+      toaster.create({ title: msg, type: "error" });
+    },
+  });
+
+  const createBackup = async () => {
+    setCreating(true);
+    try {
+      const { data } = await api.post("/backup/create", { send_to_telegram: sendToTelegram });
+      setLastBackup({ filename: data.filename, size_bytes: data.size_bytes });
+      queryClient.invalidateQueries({ queryKey: ["backup-list"] });
+      toaster.create({
+        title: `Backup created${sendToTelegram ? " and sent to Telegram" : ""}`,
+        type: "success",
+      });
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Failed to create backup";
+      toaster.create({ title: msg, type: "error" });
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const downloadBackup = async (name: string) => {
+    try {
+      const { data } = await api.get("/backup/download", { params: { name }, responseType: "blob" });
+      const url = URL.createObjectURL(data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toaster.create({ title: "Failed to download backup", type: "error" });
+    }
+  };
+
+  const deleteBackup = useMutation({
+    mutationFn: async (name: string) => {
+      await api.delete(`/backup/${name}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["backup-list"] });
+      toaster.create({ title: "Backup deleted", type: "success" });
+    },
+  });
+
+  const confirmRestore = async () => {
+    if (!file) return;
+    setShowRestore(false);
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      await api.post("/backup/restore", formData);
+      queryClient.invalidateQueries();
+      toaster.create({
+        title: "Panel restored from backup. Please sign in again.",
+        type: "success",
+      });
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Restore failed";
+      toaster.create({ title: msg, type: "error" });
+    } finally {
+      setFile(null);
+    }
+  };
+
+  return (
+    <SectionCard title="Backup & Restore">
+      <VStack align="stretch" gap={5}>
+        {/* Create */}
+        <Box>
+          <Text fontSize="sm" color="fg.muted" mb={2}>
+            Create a full backup of the panel: all users, admins, settings,
+            billing records, logs and the VPN certificates. Download it and keep
+            it safe — restoring it brings the panel back to exactly this state.
+          </Text>
+          <HStack>
+            <Button size="sm" onClick={createBackup} loading={creating} colorPalette="accent">
+              <FiArchive style={{ marginRight: 6 }} />
+              Create Backup Now
+            </Button>
+            <Switch.Root checked={sendToTelegram} onCheckedChange={(e) => setSendToTelegram(e.checked)}>
+              <Switch.Control>
+                <Switch.Thumb />
+              </Switch.Control>
+              <Switch.Label>Also send to Telegram</Switch.Label>
+            </Switch.Root>
+          </HStack>
+          {lastBackup && (
+            <Text fontSize="xs" color="fg.muted" mt={2}>
+              {lastBackup.size_bytes ? `Created ${lastBackup.filename} (${formatSize(lastBackup.size_bytes)}) ` : `Created ${lastBackup.filename} `}
+              <Text as="span" textDecoration="underline" cursor="pointer" onClick={() => downloadBackup(lastBackup.filename)}>
+                Download
+              </Text>
+            </Text>
+          )}
+        </Box>
+
+        {/* Restore */}
+        <Box>
+          <Text fontSize="sm" color="fg.muted" mb={2}>
+            Restore the panel from a backup file.{" "}
+            <Text as="span" color="red.400" fontWeight="semibold">
+              Warning: this completely replaces all current users, admins and
+              settings — only the backup's data remains.
+            </Text>
+          </Text>
+          <HStack gap={3}>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".tar.gz,.tar"
+              hidden
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+            <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
+              <FiUpload style={{ marginRight: 6 }} />
+              {file ? file.name : "Choose Backup File"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              colorPalette="red"
+              disabled={!file}
+              onClick={() => setShowRestore(true)}
+            >
+              <FiDownload style={{ marginRight: 6 }} />
+              Restore Panel
+            </Button>
+          </HStack>
+        </Box>
+
+        {/* Schedule */}
+        <Box borderTop="1px solid" borderColor="bg.muted" pt={4}>
+          <Heading size="xs" mb={2}>
+            Scheduled Backups
+          </Heading>
+          <Text fontSize="sm" color="fg.muted" mb={3}>
+            Run an automatic backup every day (UTC) and optionally deliver it to
+            the configured Telegram chat alongside the notifications.
+          </Text>
+          {config && (
+            <VStack align="stretch" gap={3}>
+              <HStack gap={4}>
+                <Switch.Root
+                  checked={config.enabled}
+                  onCheckedChange={(e) => saveConfig.mutate({ enabled: e.checked })}
+                >
+                  <Switch.Control>
+                    <Switch.Thumb />
+                  </Switch.Control>
+                  <Switch.Label>Enable scheduled backups</Switch.Label>
+                </Switch.Root>
+                <Switch.Root
+                  checked={config.send_to_telegram}
+                  onCheckedChange={(e) => saveConfig.mutate({ send_to_telegram: e.checked })}
+                >
+                  <Switch.Control>
+                    <Switch.Thumb />
+                  </Switch.Control>
+                  <Switch.Label>Send backups to Telegram</Switch.Label>
+                </Switch.Root>
+              </HStack>
+
+              <HStack gap={4} alignItems="flex-end">
+                <Field.Root>
+                  <Field.Label>Hour (UTC)</Field.Label>
+                  <Select.Root
+                    width="100px"
+                    value={[String(config.schedule_hour)]}
+                    collection={hourCollection}
+                    onValueChange={(d) => saveConfig.mutate({ schedule_hour: Number(d.value[0]) })}
+                  >
+                    <Select.Control>
+                      <Select.Trigger>
+                        <Select.ValueText />
+                      </Select.Trigger>
+                    </Select.Control>
+                    <Portal>
+                      <Select.Positioner>
+                        <Select.Content maxH="200px">
+                          {hourCollection.items.map((item) => (
+                            <Select.Item key={item.value} item={item}>
+                              <Select.ItemText>{item.label}</Select.ItemText>
+                            </Select.Item>
+                          ))}
+                        </Select.Content>
+                      </Select.Positioner>
+                    </Portal>
+                  </Select.Root>
+                </Field.Root>
+
+                <Field.Root>
+                  <Field.Label>Minute</Field.Label>
+                  <Select.Root
+                    width="100px"
+                    value={[String(config.schedule_minute)]}
+                    collection={minuteCollection}
+                    onValueChange={(d) => saveConfig.mutate({ schedule_minute: Number(d.value[0]) })}
+                  >
+                    <Select.Control>
+                      <Select.Trigger>
+                        <Select.ValueText />
+                      </Select.Trigger>
+                    </Select.Control>
+                    <Portal>
+                      <Select.Positioner>
+                        <Select.Content maxH="200px">
+                          {minuteCollection.items.map((item) => (
+                            <Select.Item key={item.value} item={item}>
+                              <Select.ItemText>{item.label}</Select.ItemText>
+                            </Select.Item>
+                          ))}
+                        </Select.Content>
+                      </Select.Positioner>
+                    </Portal>
+                  </Select.Root>
+                </Field.Root>
+
+                <Field.Root>
+                  <Field.Label>Keep (0 = keep all)</Field.Label>
+                  <Input
+                    type="number"
+                    width="110px"
+                    defaultValue={config.keep_count}
+                    onBlur={(e) => {
+                      const v = Number(e.target.value);
+                      if (!Number.isNaN(v) && v >= 0) saveConfig.mutate({ keep_count: v });
+                    }}
+                  />
+                </Field.Root>
+              </HStack>
+
+              {config.last_backup_file && (
+                <Text fontSize="xs" color="fg.muted">
+                  Last scheduled backup: {config.last_backup_file}
+                  {config.last_run_at ? ` — ${new Date(config.last_run_at).toLocaleString()}` : ""}
+                </Text>
+              )}
+            </VStack>
+          )}
+        </Box>
+
+        {/* Stored backups */}
+        <Box borderTop="1px solid" borderColor="bg.muted" pt={4}>
+          <Heading size="xs" mb={2}>
+            Stored Backups
+          </Heading>
+          {loadingBackups && <Text fontSize="sm" color="fg.muted">Loading…</Text>}
+          {!loadingBackups && backups && backups.length === 0 && (
+            <Text fontSize="sm" color="fg.muted">No backups stored yet.</Text>
+          )}
+          <VStack align="stretch" gap={2}>
+            {backups?.map((b) => (
+              <HStack key={b.name} justify="space-between" p={2} borderRadius="md" bg="bg.muted">
+                <VStack align="stretch" gap={0}>
+                  <Text fontSize="sm" fontWeight="medium">{b.name}</Text>
+                  <Text fontSize="xs" color="fg.muted">
+                    {formatSize(b.size_bytes)} · {new Date(b.created_at).toLocaleString()}
+                  </Text>
+                </VStack>
+                <HStack>
+                  <Button size="xs" variant="ghost" onClick={() => downloadBackup(b.name)}>
+                    <FiDownload />
+                    Download
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    colorPalette="red"
+                    loading={false}
+                    onClick={() => deleteBackup.mutate(b.name)}
+                  >
+                    <FiTrash2 />
+                    Delete
+                  </Button>
+                </HStack>
+              </HStack>
+            ))}
+          </VStack>
+        </Box>
+      </VStack>
+
+      <Dialog.Root open={showRestore} onOpenChange={(e) => setShowRestore(e.open)}>
+        <Portal>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>Restore Panel from Backup?</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <VStack align="stretch" gap={3}>
+                  <Text fontSize="sm">
+                    This will <strong>completely replace</strong> all current users, admins,
+                    settings and logs with the contents of{" "}
+                    <Text as="span" fontWeight="semibold">{file?.name}</Text>. If the backup
+                    contains VPN certificates, they will be re-imported and OpenVPN restarted.
+                  </Text>
+                  <Text fontSize="sm" color="fg.muted">
+                    You will need to sign in again afterwards. Continue?
+                  </Text>
+                </VStack>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Dialog.CloseTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Cancel
+                  </Button>
+                </Dialog.CloseTrigger>
+                <Button colorPalette="red" size="sm" onClick={confirmRestore}>
+                  Restore Panel
+                </Button>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Portal>
+      </Dialog.Root>
+    </SectionCard>
+  );
+}
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -615,6 +1008,7 @@ export default function Settings() {
         <>
           <ServerConfigSection />
           <TelegramSection />
+          <BackupSection />
         </>
       )}
     </VStack>

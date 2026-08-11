@@ -20,6 +20,7 @@ from app.config import (
 from app.logging_config import setup_logging
 from app.routers.admins import router as admins_router
 from app.routers.auth import router as auth_router
+from app.routers.backup import router as backup_router  # noqa: F401
 from app.routers.billing import router as billing_router
 from app.routers.health import router as health_router
 from app.routers.settings import router as settings_router
@@ -67,6 +68,7 @@ def create_app() -> FastAPI:
     application.include_router(settings_router)
     application.include_router(stats_router)
     application.include_router(billing_router)
+    application.include_router(backup_router)
     # Public subscription endpoint — mounted OUTSIDE /api prefix
     application.include_router(subscription_router)
 

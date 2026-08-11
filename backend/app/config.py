@@ -71,6 +71,11 @@ EASYRSA_DIR: str = config(
     default="/opt/eovpanel/vpn/easy-rsa",
 )
 
+# --- Backups ---
+# Directory where full-panel backup archives are stored.  Mounted read/write
+# from the host in docker-compose so backups survive container recreation.
+BACKUP_DIR: str = config("BACKUP_DIR", default="/opt/eovpanel/backups")
+
 # --- Telegram Bot ---
 TELEGRAM_ENABLED: bool = config("TELEGRAM_ENABLED", default=False, cast=bool)
 TELEGRAM_BOT_TOKEN: str = config("TELEGRAM_BOT_TOKEN", default="")

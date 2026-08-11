@@ -51,6 +51,8 @@ services:
       # Management socket for live client status and control commands.
       # Must be :rw because the backend sends management commands (kill, status).
       - /run/openvpn:/run/openvpn:rw
+      # Panel backup archives (persisted on the host, survive container recreate)
+      - /opt/eovpanel/backups:/opt/eovpanel/backups:rw
       # SQLite data persistence (named volume, ignored when using Postgres)
       - eovpanel_data:/app/data
     networks:

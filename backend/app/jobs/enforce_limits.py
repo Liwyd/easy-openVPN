@@ -25,6 +25,28 @@ from app.models.admin import Admin
 from app.models.user import User, UserStatus
 from app.services.vpn_bridge import disable_client, kill_client_session
 
+
+def _emit_enforcement(action: str, user: User, admin_username: str, **extra) -> None:
+    """Fire-and-forget Telegram notification for limit/expiry/activation events."""
+    try:
+        from app.bot.events import EventCategory, emit
+
+        emit(
+            category=EventCategory.ENFORCEMENT,
+            action=action,
+            username=user.username,
+            admin_username=admin_username,
+            belongs_to=admin_username,
+            data_limit=user.data_limit,
+            data_used=user.data_used,
+            data_limit_str=(
+                f"{user.data_limit / (1024 ** 3):.1f} GB" if user.data_limit else None
+            ),
+            extra=extra.get("extra"),
+        )
+    except Exception:  # Telegram must never break enforcement.
+        logger.warning("Failed to emit Telegram notification for %s", action, exc_info=True)
+
 logger = logging.getLogger(__name__)
 
 # Defense-in-depth mutex
@@ -97,6 +119,7 @@ def _enforce_limits_job_inner() -> None:
                         admin_username=admin_username,
                         reason="data_limit",
                     )
+                    _emit_enforcement("user_limited", user, admin_username)
                     logger.info(
                         "User '%s' disabled: data_used (%d) >= data_limit (%d)",
                         user.username, user.data_used, user.data_limit,
@@ -122,6 +145,7 @@ def _enforce_limits_job_inner() -> None:
                             admin_username=admin_username,
                             reason="expire_at",
                         )
+                        _emit_enforcement("user_expired", user, admin_username)
                         logger.info(
                             "User '%s' expired: now=%s > expire_at=%s",
                             user.username, now.isoformat(), expire.isoformat(),

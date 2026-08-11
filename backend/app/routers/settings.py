@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.bot.client import send_message
+from app.bot.client import send_message_plain
 from app.bot.config import is_configured
 from app.bot.formatter import EMOJI_SYSTEM
 from app.db import get_db
@@ -241,11 +241,11 @@ def _notify_users_redownload(db: Session, changed_fields: list[str]) -> None:
 
         fields_str = ", ".join(changed_fields)
         text = (
-            f"{EMOJI_SYSTEM} *Server Configuration Updated*\n"
-            f"  Changed: `{fields_str}`\n"
-            f"  Please redownload your VPN config from your subscription link."
+            f"{EMOJI_SYSTEM} #Config Updated\n"
+            f"Changed fields : {fields_str}\n"
+            f"Please redownload your VPN config from your subscription link."
         )
-        send_message(text)
+        send_message_plain(text)
         logger.info("Notified %d active users about config change via Telegram.", len(users))
     except Exception as exc:
         logger.warning("Failed to send Telegram redownload notification: %s", exc)
@@ -275,13 +275,13 @@ def send_telegram_test_message(
         )
 
     text = (
-        f"{EMOJI_SYSTEM} *Test message*\n"
-        f"  Sent by admin `{current_admin.username}`\n"
-        f"  eovpanel Telegram integration is working"
+        f"{EMOJI_SYSTEM} #Test Message\n"
+        f"Admin : {current_admin.username}\n"
+        f"eovpanel Telegram integration is working"
     )
 
     try:
-        send_message(text)
+        send_message_plain(text)
     except Exception as exc:
         logger.error("Telegram test send failed: %s", exc)
         raise HTTPException(

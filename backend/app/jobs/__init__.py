@@ -34,6 +34,7 @@ def register_jobs() -> None:
     Called once at application startup.  Each job module is imported
     for its side-effect of adding jobs to the scheduler.
     """
+    from app.jobs.backup import backup_job
     from app.jobs.billing import billing_job
     from app.jobs.enforce_limits import enforce_limits_job
     from app.jobs.reset_periodic_limits import reset_periodic_limits_job
@@ -68,6 +69,15 @@ def register_jobs() -> None:
     )
 
     scheduler.add_job(
+        backup_job,
+        "interval",
+        seconds=60,
+        id="backup",
+        name="Scheduled panel backup (per BackupConfig settings)",
+        replace_existing=True,
+    )
+
+    scheduler.add_job(
         billing_job,
         "cron",
         hour=1,
@@ -77,4 +87,6 @@ def register_jobs() -> None:
         replace_existing=True,
     )
 
-    logger.info("Background jobs registered: sync_usage, enforce_limits, reset_periodic_limits, billing")
+    logger.info(
+        "Background jobs registered: sync_usage, enforce_limits, reset_periodic_limits, billing, backup"
+    )

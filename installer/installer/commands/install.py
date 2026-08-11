@@ -230,6 +230,13 @@ def cmd_install(args) -> None:
     env.setdefault("OPENVPN_MANAGEMENT_SOCKET", "/run/openvpn/management.sock")
     env.setdefault("OPENVPN_STATUS_LOG", "/opt/eovpanel/vpn/status.log")
     env.setdefault("EASYRSA_DIR", "/opt/eovpanel/vpn/easy-rsa")
+    # Panel backups live on the host so they survive container recreation.
+    backup_dir = "/opt/eovpanel/backups"
+    try:
+        os.makedirs(backup_dir, exist_ok=True)
+    except OSError:
+        backup_dir = "./backups"
+    env["BACKUP_DIR"] = backup_dir
     if public_ip:
         env["PUBLIC_HOST"] = public_ip
 
