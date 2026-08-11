@@ -4,61 +4,62 @@ export const buttonSolid: SystemStyleObject = {
   bg: "accent",
   color: "accent.fg",
   _hover: { bg: "accent.hover" },
-  _active: { bg: "brand.700" },
+  _active: { bg: "primary.700" },
 };
 
 export const buttonOutline: SystemStyleObject = {
   borderColor: "border.strong",
-  color: "accent",
-  _hover: { bg: "accent.subtle", borderColor: "accent" },
+  color: "fg",
+  _hover: { bg: "bg.muted", borderColor: "border.strong" },
 };
 
 export const card: SystemStyleObject = {
   border: "1px solid",
   borderColor: "border.strong",
-  borderRadius: "lg",
-  bg: "bg",
+  borderRadius: "12px",
+  bg: "bg.subtle",
 };
 
 export const tableRoot: SystemStyleObject = {
   border: "1px solid",
   borderColor: "border.strong",
-  borderRadius: "lg",
+  borderRadius: "8px",
   overflow: "hidden",
+  bg: "bg",
 };
 
 export const badgeActive: SystemStyleObject = {
   colorPalette: "green",
   borderRadius: "full",
-  px: 2.5,
-  py: 0.5,
+  px: 3,
+  py: 1,
   fontSize: "xs",
-  fontWeight: "semibold",
+  fontWeight: "medium",
 };
 
 export const badgeLimited: SystemStyleObject = {
-  colorPalette: "orange",
+  colorPalette: "red",
   borderRadius: "full",
-  px: 2.5,
-  py: 0.5,
+  px: 3,
+  py: 1,
   fontSize: "xs",
-  fontWeight: "semibold",
+  fontWeight: "medium",
 };
 
 export const badgeExpired: SystemStyleObject = {
-  colorPalette: "red",
+  colorPalette: "orange",
   borderRadius: "full",
-  px: 2.5,
-  py: 0.5,
+  px: 3,
+  py: 1,
   fontSize: "xs",
-  fontWeight: "semibold",
+  fontWeight: "medium",
 };
 
 export const badgeDisabled: SystemStyleObject = {
   colorPalette: "gray",
   borderRadius: "full",
-  px: 2.5,
-  py: 0.5,
+  px: 3,
+  py: 1,
   fontSize: "xs",
-  fontWeight: "semibold",
+  fontWeight: "medium",
 };

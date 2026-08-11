@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  Alert,
   Box,
   Button,
   Field,
@@ -7,7 +8,6 @@ import {
   IconButton,
   Input,
   InputGroup,
-  Stack,
   Text,
   VStack,
 } from "@chakra-ui/react";
@@ -15,6 +15,7 @@ import { HiOutlineEye, HiOutlineEyeOff } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { HOME_PATH } from "../lib/base";
+import Footer from "../components/Footer";
 
 export default function Login() {
   const [username, setUsername] = useState("");
@@ -43,74 +44,71 @@ export default function Login() {
   };
 
   return (
-    <Box minH="100vh" bg="bg" display="flex" alignItems="center" justifyContent="center">
-      <VStack
-        w="100%"
-        maxW="400px"
-        p={8}
-        gap={8}
-        border="1px solid"
-        borderColor="border.strong"
-        borderRadius="lg"
-        bg="bg"
-        mx={4}
-      >
-        <VStack gap={2}>
-          <img src="/favicon.svg" alt="" width={32} height={32} />
-          <Heading size="lg" color="accent">
-            eovpanel
-          </Heading>
-          <Text color="fg.muted" fontSize="sm">
-            Sign in to your account
-          </Text>
-        </VStack>
-
-        <Box as="form" onSubmit={handleSubmit} w="100%">
-          <Stack gap={4}>
-            <Field.Root required>
-              <Field.Label>Username</Field.Label>
-              <Input
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="admin"
-                autoComplete="username"
-              />
-            </Field.Root>
-
-            <Field.Root required>
-              <Field.Label>Password</Field.Label>
-              <InputGroup endElement={
-                <IconButton
-                  variant="ghost"
-                  size="xs"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <HiOutlineEyeOff /> : <HiOutlineEye />}
-                </IconButton>
-              }>
-                <Input
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
-                  autoComplete="current-password"
-                />
-              </InputGroup>
-            </Field.Root>
-
-            {error && (
-              <Text color="fg" fontSize="sm" bg="bg.subtle" p={2} borderRadius="md">
-                {error}
+    <VStack justifyContent="space-between" minH="100vh" p="6" w="full">
+      <Box w="full" flex="1">
+        <VStack w="full" justifyContent="center" alignItems="center" h="full">
+          <Box w="full" maxW="340px">
+            <VStack alignItems="center" w="full">
+              <img src="/favicon.svg" alt="" width={48} height={48} />
+              <Heading as="h2" fontSize="2xl" fontWeight="semibold" textAlign="center">
+                Login your account
+              </Heading>
+              <Text color="fg.muted" fontSize="sm">
+                Welcome back, please login to your account.
               </Text>
-            )}
+            </VStack>
+            <Box as="form" onSubmit={handleSubmit} w="full" maxW="300px" m="auto" pt="4">
+              <VStack mt={4} gap={2}>
+                <Field.Root>
+                  <Input
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Username"
+                    autoComplete="username"
+                  />
+                </Field.Root>
 
-            <Button type="submit" loading={loading} w="100%">
-              Sign In
-            </Button>
-          </Stack>
-        </Box>
-      </VStack>
-    </Box>
+                <Field.Root>
+                  <InputGroup endElement={
+                    <IconButton
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <HiOutlineEyeOff /> : <HiOutlineEye />}
+                    </IconButton>
+                  }>
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Password"
+                      autoComplete="current-password"
+                    />
+                  </InputGroup>
+                </Field.Root>
+
+                {error && (
+                  <Alert.Root status="error" rounded="md">
+                    <Alert.Description>{error}</Alert.Description>
+                  </Alert.Root>
+                )}
+
+                <Button
+                  type="submit"
+                  loading={loading}
+                  w="full"
+                  colorPalette="accent"
+                >
+                  Login
+                </Button>
+              </VStack>
+            </Box>
+          </Box>
+        </VStack>
+      </Box>
+      <Footer />
+    </VStack>
   );
 }
