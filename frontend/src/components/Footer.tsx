@@ -9,7 +9,7 @@ export default function Footer() {
         <Link color="accent" href={REPO_URL}>
           eovpanel
         </Link>
-        , Made with ❤️ for OpenVPN admins
+        , made with love for OpenVPN admins
       </Text>
     </Flex>
   );

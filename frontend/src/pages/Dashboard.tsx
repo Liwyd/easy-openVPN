@@ -1,6 +1,5 @@
 import {
   Box,
-  Heading,
   Text,
   VStack,
   Progress,
@@ -243,8 +242,6 @@ export default function Dashboard() {
 
   return (
     <VStack align="stretch" gap={6}>
-      <Heading size="lg">Dashboard</Heading>
-
       <SimpleGrid columns={{ base: 1, md: isSudo ? 3 : 2 }} gap={4}>
         <StatCard
           label={isSudo ? "Total Users" : "My Users"}

@@ -6,7 +6,6 @@ import {
 } from "@tanstack/react-query";
 import {
   Box,
-  Heading,
   Text,
   VStack,
   HStack,
@@ -144,8 +143,6 @@ export default function Billing() {
 
   return (
     <VStack align="stretch" gap={6}>
-      <Heading size="lg">Billing</Heading>
-
       <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
         <StatCard
           label="Total Debt"
