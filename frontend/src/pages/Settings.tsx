@@ -13,10 +13,11 @@ import {
   SimpleGrid,
   Portal,
   Dialog,
+  Tabs,
   createListCollection,
 } from "@chakra-ui/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { FiSend, FiKey, FiArchive, FiDownload, FiUpload, FiTrash2 } from "react-icons/fi";
+import { FiSend, FiKey, FiArchive, FiDownload, FiUpload, FiTrash2, FiLock, FiServer } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import api from "../lib/api";
 import { toaster } from "../lib/toaster";
@@ -997,20 +998,57 @@ function ChangePasswordSection() {
 
 export default function Settings() {
   const { admin } = useAuth();
+  const isSudo = admin?.is_sudo;
 
   return (
     <VStack align="stretch" gap={6}>
-      <Heading size="lg">Settings</Heading>
+      <Tabs.Root defaultValue={isSudo ? "server" : "account"} variant="line">
+        <Tabs.List>
+          <Tabs.Trigger value="account">
+            <FiLock />
+            Account
+          </Tabs.Trigger>
+          {isSudo && (
+            <Tabs.Trigger value="server">
+              <FiServer />
+              Server
+            </Tabs.Trigger>
+          )}
+          {isSudo && (
+            <Tabs.Trigger value="telegram">
+              <FiSend />
+              Telegram
+            </Tabs.Trigger>
+          )}
+          {isSudo && (
+            <Tabs.Trigger value="backup">
+              <FiArchive />
+              Backup
+            </Tabs.Trigger>
+          )}
+          <Tabs.Indicator />
+        </Tabs.List>
 
-      <ChangePasswordSection />
+        <Tabs.Content value="account">
+          <ChangePasswordSection />
+        </Tabs.Content>
 
-      {admin?.is_sudo && (
-        <>
-          <ServerConfigSection />
-          <TelegramSection />
-          <BackupSection />
-        </>
-      )}
+        {isSudo && (
+          <Tabs.Content value="server">
+            <ServerConfigSection />
+          </Tabs.Content>
+        )}
+        {isSudo && (
+          <Tabs.Content value="telegram">
+            <TelegramSection />
+          </Tabs.Content>
+        )}
+        {isSudo && (
+          <Tabs.Content value="backup">
+            <BackupSection />
+          </Tabs.Content>
+        )}
+      </Tabs.Root>
     </VStack>
   );
 }
