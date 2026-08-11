@@ -242,6 +242,7 @@ function BackupSection() {
               Create Backup Now
             </Button>
             <Switch.Root checked={sendToTelegram} onCheckedChange={(e) => setSendToTelegram(e.checked)}>
+              <Switch.HiddenInput />
               <Switch.Control>
                 <Switch.Thumb />
               </Switch.Control>
@@ -308,6 +309,7 @@ function BackupSection() {
                   checked={config.enabled}
                   onCheckedChange={(e) => saveConfig.mutate({ enabled: e.checked })}
                 >
+                  <Switch.HiddenInput />
                   <Switch.Control>
                     <Switch.Thumb />
                   </Switch.Control>
@@ -317,6 +319,7 @@ function BackupSection() {
                   checked={config.send_to_telegram}
                   onCheckedChange={(e) => saveConfig.mutate({ send_to_telegram: e.checked })}
                 >
+                  <Switch.HiddenInput />
                   <Switch.Control>
                     <Switch.Thumb />
                   </Switch.Control>
@@ -806,6 +809,7 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
                 checked={clientToClient}
                 onCheckedChange={(e) => setClientToClient(e.checked)}
               >
+                <Switch.HiddenInput />
                 <Switch.Control>
                   <Switch.Thumb />
                 </Switch.Control>
@@ -816,6 +820,7 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
                 checked={redirectGateway}
                 onCheckedChange={(e) => setRedirectGateway(e.checked)}
               >
+                <Switch.HiddenInput />
                 <Switch.Control>
                   <Switch.Thumb />
                 </Switch.Control>

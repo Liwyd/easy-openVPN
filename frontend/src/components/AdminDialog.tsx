@@ -189,6 +189,7 @@ export default function AdminDialog() {
                       checked={form.isSudo}
                       onCheckedChange={(e) => set({ isSudo: !!e.checked })}
                     >
+                      <Switch.HiddenInput />
                       <Switch.Control />
                       <Switch.Label>
                         {form.isSudo
@@ -268,6 +269,7 @@ export default function AdminDialog() {
                       checked={!form.disabled}
                       onCheckedChange={(e) => set({ disabled: !e.checked })}
                     >
+                      <Switch.HiddenInput />
                       <Switch.Control />
                       <Switch.Label>
                         {form.disabled ? "Disabled" : "Active"}
