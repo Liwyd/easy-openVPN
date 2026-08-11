@@ -4,6 +4,7 @@ import { FiCopy, FiCheck } from "react-icons/fi";
 import { useState, useEffect } from "react";
 import api from "../lib/api";
 import { toaster } from "../lib/toaster";
+import { copyToClipboard } from "../utils/copyToClipboard";
 import { buttonOutline } from "../theme-components";
 import { useUserContext } from "../contexts/UserContext";
 
@@ -40,7 +41,7 @@ export default function QRCodeDialog() {
   async function handleCopy() {
     if (!link) return;
     try {
-      await navigator.clipboard.writeText(link);
+      await copyToClipboard(link);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {

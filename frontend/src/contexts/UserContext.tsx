@@ -8,6 +8,7 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/api";
 import { toaster } from "../lib/toaster";
+import { copyToClipboard } from "../utils/copyToClipboard";
 import type { User } from "../types/User";
 
 interface ConfirmState {
@@ -166,19 +167,7 @@ export function UserProvider({
   const copyLink = useCallback(async (user: User) => {
     try {
       const { data } = await api.get(`/users/${user.username}/subscription-url`);
-      const text: string = data.subscription_url;
-      if (window.isSecureContext && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(text);
-      } else {
-        const textarea = document.createElement("textarea");
-        textarea.value = text;
-        textarea.style.position = "fixed";
-        textarea.style.opacity = "0";
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-      }
+      await copyToClipboard(data.subscription_url as string);
       toaster.create({ title: "Subscription link copied", type: "success" });
     } catch {
       toaster.create({ title: "Failed to copy link", type: "error" });
