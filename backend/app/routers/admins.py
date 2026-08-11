@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -93,6 +94,7 @@ def create_admin(
 
 @router.get("", response_model=list[AdminWithStatsResponse])
 def list_admins(
+    response: Response,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     username: str | None = Query(default=None),
@@ -108,6 +110,10 @@ def list_admins(
         q = q.filter(Admin.parent_admin_id == parent_admin_id)
     else:
         q = q.filter(Admin.parent_admin_id == current_admin.id)
+
+    total = q.count()
+    response.headers["X-Total-Count"] = str(total)
+
     admins_list = q.order_by(Admin.id).offset(offset).limit(limit).all()
 
     result = []

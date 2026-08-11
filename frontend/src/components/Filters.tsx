@@ -1,13 +1,16 @@
 import { Flex, Input, Box, IconButton, Button } from "@chakra-ui/react";
 import { FiSearch, FiRefreshCw, FiPlus } from "react-icons/fi";
 import { buttonSolid, buttonOutline } from "../theme-components";
-import { useUserContext } from "../contexts/UserContext";
 
 interface FiltersProps {
   search: string;
   onSearchChange: (value: string) => void;
   onRefresh: () => void;
   isRefreshing: boolean;
+  createLabel?: string;
+  onCreate?: () => void;
+  searchPlaceholder?: string;
+  testId?: string;
 }
 
 export default function Filters({
@@ -15,9 +18,11 @@ export default function Filters({
   onSearchChange,
   onRefresh,
   isRefreshing,
+  createLabel = "Create User",
+  onCreate,
+  searchPlaceholder = "Search...",
+  testId = "users-search",
 }: FiltersProps) {
-  const { openCreate } = useUserContext();
-
   return (
     <Flex
       position="sticky"
@@ -31,11 +36,11 @@ export default function Filters({
     >
       <Box position="relative" flex="1" maxW="320px" minW="200px">
         <Input
-          placeholder="Search by username..."
+          placeholder={searchPlaceholder}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           pe="36px"
-          data-testid="users-search"
+          data-testid={testId}
         />
         <Box
           position="absolute"
@@ -52,20 +57,22 @@ export default function Filters({
       <Box flex="1" />
 
       <IconButton
-        aria-label="Refresh users list"
+        aria-label="Refresh"
         variant="outline"
         css={buttonOutline}
         onClick={onRefresh}
         disabled={isRefreshing}
-        title="Refresh users list"
+        title="Refresh"
       >
         <FiRefreshCw />
       </IconButton>
 
-      <Button css={buttonSolid} onClick={openCreate} data-testid="create-user-btn">
-        <FiPlus />
-        Create User
-      </Button>
+      {onCreate && (
+        <Button css={buttonSolid} onClick={onCreate}>
+          <FiPlus />
+          {createLabel}
+        </Button>
+      )}
     </Flex>
   );
 }

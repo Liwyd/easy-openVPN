@@ -2,7 +2,7 @@ import { useState } from "react";
 import { VStack, Text, Spinner, Flex, Alert, Box } from "@chakra-ui/react";
 import { FiUsers } from "react-icons/fi";
 import { card } from "../theme-components";
-import { UserProvider } from "../contexts/UserContext";
+import { UserProvider, useUserContext } from "../contexts/UserContext";
 import {
   useUsersQuery,
   getStoredPerPage,
@@ -20,6 +20,7 @@ function UsersContent() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(getStoredPerPage());
+  const { openCreate } = useUserContext();
 
   const debouncedSearch = useDebouncedValue(search, 300);
 
@@ -57,6 +58,7 @@ function UsersContent() {
         onSearchChange={handleSearch}
         onRefresh={() => refetch()}
         isRefreshing={isFetching}
+        onCreate={openCreate}
       />
 
       {isLoading && (
