@@ -28,15 +28,15 @@ import {
   FiArrowUp,
   FiCheck,
   FiEye,
+  FiUsers,
+  FiShield,
 } from "react-icons/fi";
 import api from "../lib/api";
 import { toaster } from "../lib/toaster";
-import {
-  card,
-  tableRoot,
-  buttonSolid,
-  buttonOutline,
-} from "../theme-components";
+import { card, tableRoot, buttonSolid, buttonOutline } from "../theme-components";
+import StatCard from "../components/StatCard";
+import { formatBytes } from "../utils/formatByte";
+import { formatDate } from "../utils/dateFormatter";
 
 interface BillingAdmin {
   admin_id: number;
@@ -59,13 +59,6 @@ interface BillingRecord {
   amount: number;
   description: string;
   created_at: string;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / 1024 ** i).toFixed(1)} ${units[i]}`;
 }
 
 function fmtDebt(v: number): string {
@@ -153,39 +146,25 @@ export default function Billing() {
       <Heading size="lg">Billing</Heading>
 
       <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
-        <Box {...card} p={5}>
-          <Flex align="center" gap={3}>
-            <Box color="red.400" p={2} borderRadius="md" bg="red.400/10">
-              <FiDollarSign size={20} />
-            </Box>
-            <Box>
-              <Text fontSize="xs" color="fg.muted" textTransform="uppercase">Total Debt</Text>
-              <Text fontSize="2xl" fontWeight="bold" color="red.400">{fmtDebt(totalDebt)}</Text>
-            </Box>
-          </Flex>
-        </Box>
-        <Box {...card} p={5}>
-          <Flex align="center" gap={3}>
-            <Box color="blue.400" p={2} borderRadius="md" bg="blue.400/10">
-              <FiArrowUp size={20} />
-            </Box>
-            <Box>
-              <Text fontSize="xs" color="fg.muted" textTransform="uppercase">Sub-Admins</Text>
-              <Text fontSize="2xl" fontWeight="bold">{admins?.length ?? 0}</Text>
-            </Box>
-          </Flex>
-        </Box>
-        <Box {...card} p={5}>
-          <Flex align="center" gap={3}>
-            <Box color="green.400" p={2} borderRadius="md" bg="green.400/10">
-              <FiCheck size={20} />
-            </Box>
-            <Box>
-              <Text fontSize="xs" color="fg.muted" textTransform="uppercase">Total Users</Text>
-              <Text fontSize="2xl" fontWeight="bold">{totalUsers}</Text>
-            </Box>
-          </Flex>
-        </Box>
+        <StatCard
+          label="Total Debt"
+          value={fmtDebt(totalDebt)}
+          icon={<FiDollarSign size={20} />}
+          color="red.400"
+          valueColor="red.400"
+        />
+        <StatCard
+          label="Sub-Admins"
+          value={admins?.length ?? 0}
+          icon={<FiShield size={20} />}
+          color="blue.400"
+        />
+        <StatCard
+          label="Total Users"
+          value={totalUsers}
+          icon={<FiUsers size={20} />}
+          color="green.400"
+        />
       </SimpleGrid>
 
       {isLoading ? (
@@ -457,7 +436,7 @@ export default function Billing() {
                       <Table.Body>
                         {records.map((r) => (
                           <Table.Row key={r.id}>
-                            <Table.Cell fontSize="xs">{new Date(r.created_at).toLocaleDateString()}</Table.Cell>
+                            <Table.Cell fontSize="xs">{formatDate(r.created_at)}</Table.Cell>
                             <Table.Cell>
                               <Badge
                                 colorPalette={

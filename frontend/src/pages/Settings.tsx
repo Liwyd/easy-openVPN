@@ -12,7 +12,6 @@ import {
   Switch,
   SimpleGrid,
   Portal,
-  Dialog,
   Tabs,
   createListCollection,
 } from "@chakra-ui/react";
@@ -23,7 +22,9 @@ import api from "../lib/api";
 import { toaster } from "../lib/toaster";
 import LoadingState from "../components/LoadingState";
 import ErrorState from "../components/ErrorState";
-import { card } from "../theme-components";
+import SectionCard from "../components/SectionCard";
+import ConfirmDialog from "../components/ConfirmDialog";
+import { formatBytes } from "../utils/formatByte";
 
 interface ServerConfig {
   id: number;
@@ -128,17 +129,6 @@ const minuteCollection = createListCollection({
     value: String(m),
   })),
 });
-
-function formatSize(bytes: number): string {
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let value = bytes;
-  let i = 0;
-  while (value >= 1024 && i < units.length - 1) {
-    value /= 1024;
-    i += 1;
-  }
-  return `${value.toFixed(1)} ${units[i]}`;
-}
 
 function BackupSection() {
   const queryClient = useQueryClient();
@@ -260,7 +250,7 @@ function BackupSection() {
           </HStack>
           {lastBackup && (
             <Text fontSize="xs" color="fg.muted" mt={2}>
-              {lastBackup.size_bytes ? `Created ${lastBackup.filename} (${formatSize(lastBackup.size_bytes)}) ` : `Created ${lastBackup.filename} `}
+              {lastBackup.size_bytes ? `Created ${lastBackup.filename} (${formatBytes(lastBackup.size_bytes)}) ` : `Created ${lastBackup.filename} `}
               <Text as="span" textDecoration="underline" cursor="pointer" onClick={() => downloadBackup(lastBackup.filename)}>
                 Download
               </Text>
@@ -428,7 +418,7 @@ function BackupSection() {
                 <VStack align="stretch" gap={0}>
                   <Text fontSize="sm" fontWeight="medium">{b.name}</Text>
                   <Text fontSize="xs" color="fg.muted">
-                    {formatSize(b.size_bytes)} · {new Date(b.created_at).toLocaleString()}
+                    {formatBytes(b.size_bytes)} · {new Date(b.created_at).toLocaleString()}
                   </Text>
                 </VStack>
                 <HStack>
@@ -453,53 +443,28 @@ function BackupSection() {
         </Box>
       </VStack>
 
-      <Dialog.Root open={showRestore} onOpenChange={(e) => setShowRestore(e.open)}>
-        <Portal>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>Restore Panel from Backup?</Dialog.Title>
-              </Dialog.Header>
-              <Dialog.Body>
-                <VStack align="stretch" gap={3}>
-                  <Text fontSize="sm">
-                    This will <strong>completely replace</strong> all current users, admins,
-                    settings and logs with the contents of{" "}
-                    <Text as="span" fontWeight="semibold">{file?.name}</Text>. If the backup
-                    contains VPN certificates, they will be re-imported and OpenVPN restarted.
-                  </Text>
-                  <Text fontSize="sm" color="fg.muted">
-                    You will need to sign in again afterwards. Continue?
-                  </Text>
-                </VStack>
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Dialog.CloseTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    Cancel
-                  </Button>
-                </Dialog.CloseTrigger>
-                <Button colorPalette="red" size="sm" onClick={confirmRestore}>
-                  Restore Panel
-                </Button>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Portal>
-      </Dialog.Root>
+      <ConfirmDialog
+        open={showRestore}
+        onClose={() => setShowRestore(false)}
+        title="Restore Panel from Backup?"
+        confirmLabel="Restore Panel"
+        confirmColorPalette="red"
+        onConfirm={confirmRestore}
+        body={
+          <VStack align="stretch" gap={3}>
+            <Text fontSize="sm">
+              This will <strong>completely replace</strong> all current users, admins,
+              settings and logs with the contents of{" "}
+              <Text as="span" fontWeight="semibold">{file?.name}</Text>. If the backup
+              contains VPN certificates, they will be re-imported and OpenVPN restarted.
+            </Text>
+            <Text fontSize="sm" color="fg.muted">
+              You will need to sign in again afterwards. Continue?
+            </Text>
+          </VStack>
+        }
+      />
     </SectionCard>
-  );
-}
-
-function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <Box {...card} p={6}>
-      <Heading size="sm" mb={4}>
-        {title}
-      </Heading>
-      {children}
-    </Box>
   );
 }
 
@@ -881,42 +846,32 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
         </form>
       </SectionCard>
 
-      <Dialog.Root open={showConfirm} onOpenChange={(e) => setShowConfirm(e.open)}>
-        <Portal>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>Apply Server Configuration?</Dialog.Title>
-              </Dialog.Header>
-              <Dialog.Body>
-                <VStack align="stretch" gap={3}>
-                  <Text fontSize="sm">
-                    This will restart your OpenVPN server and may require existing clients to
-                    redownload their config file. Continue?
-                  </Text>
-                  {pendingValues && (
-                    <Box bg="bg.muted" p={3} borderRadius="md" fontSize="xs" color="fg.muted">
-                      Changes will be applied to: protocol, port, cipher, auth, TLS, DNS, keepalive,
-                      and other modified fields.
-                    </Box>
-                  )}
-                </VStack>
-              </Dialog.Body>
-              <Dialog.Footer>
-                <Dialog.CloseTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    Cancel
-                  </Button>
-                </Dialog.CloseTrigger>
-                <Button colorPalette="red" size="sm" onClick={confirmApply} loading={applyMutation.isPending}>
-                  Apply & Restart
-                </Button>
-              </Dialog.Footer>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Portal>
-      </Dialog.Root>
+      <ConfirmDialog
+        open={showConfirm}
+        onClose={() => {
+          setShowConfirm(false);
+          setPendingValues(null);
+        }}
+        title="Apply Server Configuration?"
+        confirmLabel="Apply & Restart"
+        confirmColorPalette="red"
+        onConfirm={confirmApply}
+        isLoading={applyMutation.isPending}
+        body={
+          <VStack align="stretch" gap={3}>
+            <Text fontSize="sm">
+              This will restart your OpenVPN server and may require existing clients to
+              redownload their config file. Continue?
+            </Text>
+            {pendingValues && (
+              <Box bg="bg.muted" p={3} borderRadius="md" fontSize="xs" color="fg.muted">
+                Changes will be applied to: protocol, port, cipher, auth, TLS, DNS, keepalive,
+                and other modified fields.
+              </Box>
+            )}
+          </VStack>
+        }
+      />
     </>
   );
 }

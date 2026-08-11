@@ -7,7 +7,7 @@ import {
   Flex,
   SimpleGrid,
   Table,
-  Badge,
+  HStack,
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -17,6 +17,9 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
 } from "recharts";
 import { FiUsers, FiShield, FiActivity, FiCpu, FiDatabase, FiServer } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
@@ -24,7 +27,9 @@ import api from "../lib/api";
 import StatusBadge from "../components/StatusBadge";
 import LoadingState from "../components/LoadingState";
 import ErrorState from "../components/ErrorState";
-import { card } from "../theme-components";
+import StatCard from "../components/StatCard";
+import SectionCard from "../components/SectionCard";
+import { formatBytes } from "../utils/formatByte";
 
 interface UsageData {
   admin_id: number;
@@ -79,83 +84,71 @@ interface BillingMe {
   estimated_monthly_traffic_cost: number;
 }
 
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  return `${(bytes / 1024 ** i).toFixed(1)} ${units[i]}`;
-}
-
-function StatCard({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-}) {
-  return (
-    <Box {...card} p={5}>
-      <Flex align="center" gap={3}>
-        <Box color="accent" p={2} borderRadius="md" bg="accent.subtle">
-          {icon}
-        </Box>
-        <Box>
-          <Text fontSize="xs" color="fg.muted" textTransform="uppercase" fontWeight="medium">
-            {label}
-          </Text>
-          <Text fontSize="2xl" fontWeight="bold">
-            {value}
-          </Text>
-        </Box>
-      </Flex>
-    </Box>
-  );
-}
-
 function StatusDonut({ data }: { data: StatusBreakdown }) {
   const total = data.active + data.limited + data.expired + data.disabled;
-  const segments = [
-    { key: "active", label: "Active", color: "green", count: data.active },
-    { key: "limited", label: "Limited", color: "orange", count: data.limited },
-    { key: "expired", label: "Expired", color: "red", count: data.expired },
-    { key: "disabled", label: "Disabled", color: "gray", count: data.disabled },
-  ];
+  const chartData = [
+    { key: "active", label: "Active", color: "#38A169", count: data.active },
+    { key: "limited", label: "Limited", color: "#ED8936", count: data.limited },
+    { key: "expired", label: "Expired", color: "#E53E3E", count: data.expired },
+    { key: "disabled", label: "Disabled", color: "#A0AEC0", count: data.disabled },
+  ].filter((seg) => seg.count > 0);
 
   return (
-    <Box {...card} p={5}>
-      <Heading size="sm" mb={4}>
-        User Status
-      </Heading>
+    <SectionCard title="User Status">
       {total === 0 ? (
         <Text color="fg.muted" fontSize="sm">
           No users yet
         </Text>
       ) : (
-        <VStack align="stretch" gap={2}>
-          {segments.map((seg) => (
-            <Flex key={seg.key} align="center" gap={3}>
-              <Badge colorPalette={seg.color} fontSize="xs" minW="60px" justifyContent="center">
-                {seg.label}
-              </Badge>
-              <Box flex="1" h={2} bg="bg.muted" borderRadius="full" overflow="hidden">
-                <Box
-                  h="full"
-                  bg={`${seg.color}.500`}
-                  borderRadius="full"
-                  w={`${total > 0 ? (seg.count / total) * 100 : 0}%`}
-                  transition="width 0.3s"
+        <HStack gap={6} align="center" wrap="wrap">
+          <Box width="160px" height="160px">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={chartData}
+                  dataKey="count"
+                  nameKey="label"
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={48}
+                  outerRadius={72}
+                  paddingAngle={2}
+                  stroke="none"
+                >
+                  {chartData.map((seg) => (
+                    <Cell key={seg.key} fill={seg.color} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    background: "#1a1a1a",
+                    border: "1px solid #262626",
+                    borderRadius: 8,
+                    fontSize: 12,
+                    color: "#ededed",
+                  }}
                 />
-              </Box>
-              <Text fontSize="sm" color="fg.muted" minW="30px" textAlign="right">
-                {seg.count}
-              </Text>
-            </Flex>
-          ))}
-        </VStack>
+              </PieChart>
+            </ResponsiveContainer>
+          </Box>
+          <VStack align="stretch" gap={1.5} flex="1" minW="160px">
+            {chartData.map((seg) => (
+              <Flex key={seg.key} align="center" gap={2} fontSize="sm">
+                <Box w={3} h={3} borderRadius="full" bg={seg.color} flexShrink={0} />
+                <Text color="fg.muted" textTransform="capitalize" minW="70px">
+                  {seg.label}
+                </Text>
+                <Box flex="1" />
+                <Text fontWeight="medium">{seg.count}</Text>
+                <Text color="fg.muted" w="42px" textAlign="right">
+                  {total > 0 ? `${Math.round((seg.count / total) * 100)}%` : "0%"}
+                </Text>
+              </Flex>
+            ))}
+          </VStack>
+        </HStack>
       )}
-    </Box>
+    </SectionCard>
   );
 }
 
@@ -274,9 +267,8 @@ export default function Dashboard() {
       </SimpleGrid>
 
       {limit ? (
-        <Box {...card} p={5}>
+        <SectionCard title="Quota Usage">
           <VStack align="stretch" gap={3}>
-            <Heading size="sm">Quota Usage</Heading>
             <Flex justify="space-between" fontSize="sm" color="fg.muted">
               <Text>{formatBytes(used)} used</Text>
               <Text>{formatBytes(limit)} total</Text>
@@ -303,18 +295,16 @@ export default function Dashboard() {
               </Box>
             )}
           </VStack>
-        </Box>
+        </SectionCard>
       ) : (
-        <Box {...card} p={5}>
-          <Heading size="sm" mb={2}>Quota Usage</Heading>
+        <SectionCard title="Quota Usage">
           <Text color="fg.muted" fontSize="sm">No quota limit set. Usage: {formatBytes(used)}</Text>
-        </Box>
+        </SectionCard>
       )}
 
       {!isSudo && billingMe && (
-        <Box {...card} p={5}>
+        <SectionCard title="Billing">
           <VStack align="stretch" gap={3}>
-            <Heading size="sm">Billing</Heading>
             <Flex justify="space-between" align="center">
               <Text fontSize="sm" color="fg.muted">Current debt</Text>
               <Text fontSize="xl" fontWeight="bold" color={billingMe.debt > 0 ? "red.400" : "fg"}>
@@ -338,52 +328,31 @@ export default function Dashboard() {
               </VStack>
             </SimpleGrid>
           </VStack>
-        </Box>
+        </SectionCard>
       )}
 
       {systemMetrics && (
         <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
-          <Box {...card} p={5}>
-            <VStack align="stretch" gap={3}>
-              <Flex align="center" gap={2}>
-                <FiCpu />
-                <Heading size="sm">CPU</Heading>
-              </Flex>
-              <GaugeBar label="Usage" percent={systemMetrics.cpu_percent} color="blue" />
-            </VStack>
-          </Box>
-          <Box {...card} p={5}>
-            <VStack align="stretch" gap={3}>
-              <Flex align="center" gap={2}>
-                <FiServer />
-                <Heading size="sm">RAM</Heading>
-              </Flex>
-              <GaugeBar label="Usage" percent={systemMetrics.ram.percent} color="purple" />
-              <Text fontSize="xs" color="fg.muted">
-                {formatBytes(systemMetrics.ram.used_bytes)} / {formatBytes(systemMetrics.ram.total_bytes)}
-              </Text>
-            </VStack>
-          </Box>
-          <Box {...card} p={5}>
-            <VStack align="stretch" gap={3}>
-              <Flex align="center" gap={2}>
-                <FiDatabase />
-                <Heading size="sm">Disk</Heading>
-              </Flex>
-              <GaugeBar label="Usage" percent={systemMetrics.disk.percent} color="teal" />
-              <Text fontSize="xs" color="fg.muted">
-                {formatBytes(systemMetrics.disk.used_bytes)} / {formatBytes(systemMetrics.disk.total_bytes)}
-              </Text>
-            </VStack>
-          </Box>
+          <SectionCard title={<Flex align="center" gap={2}><FiCpu /> CPU</Flex>}>
+            <GaugeBar label="Usage" percent={systemMetrics.cpu_percent} color="blue" />
+          </SectionCard>
+          <SectionCard title={<Flex align="center" gap={2}><FiServer /> RAM</Flex>}>
+            <GaugeBar label="Usage" percent={systemMetrics.ram.percent} color="purple" />
+            <Text fontSize="xs" color="fg.muted" mt={2}>
+              {formatBytes(systemMetrics.ram.used_bytes)} / {formatBytes(systemMetrics.ram.total_bytes)}
+            </Text>
+          </SectionCard>
+          <SectionCard title={<Flex align="center" gap={2}><FiDatabase /> Disk</Flex>}>
+            <GaugeBar label="Usage" percent={systemMetrics.disk.percent} color="teal" />
+            <Text fontSize="xs" color="fg.muted" mt={2}>
+              {formatBytes(systemMetrics.disk.used_bytes)} / {formatBytes(systemMetrics.disk.total_bytes)}
+            </Text>
+          </SectionCard>
         </SimpleGrid>
       )}
 
       <SimpleGrid columns={{ base: 1, lg: 2 }} gap={4}>
-        <Box {...card} p={5}>
-          <Heading size="sm" mb={4}>
-            Traffic Over Time (30 days)
-          </Heading>
+        <SectionCard title="Traffic Over Time (30 days)">
           {chartData.length === 0 ? (
             <Text color="fg.muted" fontSize="sm" py={8} textAlign="center">
               No traffic data yet
@@ -430,16 +399,13 @@ export default function Dashboard() {
               </ResponsiveContainer>
             </Box>
           )}
-        </Box>
+        </SectionCard>
 
         {statusBreakdown && <StatusDonut data={statusBreakdown} />}
       </SimpleGrid>
 
       {topUsers && topUsers.length > 0 && (
-        <Box {...card} p={5}>
-          <Heading size="sm" mb={4}>
-            Top Users by Usage
-          </Heading>
+        <SectionCard title="Top Users by Usage">
           <Table.Root size="sm">
             <Table.Header>
               <Table.Row>
@@ -462,7 +428,7 @@ export default function Dashboard() {
               ))}
             </Table.Body>
           </Table.Root>
-        </Box>
+        </SectionCard>
       )}
     </VStack>
   );
