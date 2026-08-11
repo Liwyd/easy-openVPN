@@ -223,6 +223,7 @@ def create_user(
 
 @router.get("", response_model=list[UserResponse])
 def list_users(
+    response: Response,
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
     username: str | None = Query(default=None),
@@ -237,6 +238,10 @@ def list_users(
         q = q.filter(User.username.ilike(f"%{username}%"))
     if not current_admin.is_sudo:
         q = q.filter(User.admin_id == current_admin.id)
+
+    total = q.count()
+    response.headers["X-Total-Count"] = str(total)
+
     return q.order_by(User.id).offset(offset).limit(limit).all()
 
 
