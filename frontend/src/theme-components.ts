@@ -27,39 +27,3 @@ export const tableRoot: SystemStyleObject = {
   overflow: "hidden",
   bg: "bg",
 };
-
-export const badgeActive: SystemStyleObject = {
-  colorPalette: "green",
-  borderRadius: "full",
-  px: 3,
-  py: 1,
-  fontSize: "xs",
-  fontWeight: "medium",
-};
-
-export const badgeLimited: SystemStyleObject = {
-  colorPalette: "red",
-  borderRadius: "full",
-  px: 3,
-  py: 1,
-  fontSize: "xs",
-  fontWeight: "medium",
-};
-
-export const badgeExpired: SystemStyleObject = {
-  colorPalette: "orange",
-  borderRadius: "full",
-  px: 3,
-  py: 1,
-  fontSize: "xs",
-  fontWeight: "medium",
-};
-
-export const badgeDisabled: SystemStyleObject = {
-  colorPalette: "gray",
-  borderRadius: "full",
-  px: 3,
-  py: 1,
-  fontSize: "xs",
-  fontWeight: "medium",
-};
