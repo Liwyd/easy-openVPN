@@ -1,8 +1,10 @@
 import { Text } from "@chakra-ui/react";
 import ConfirmDialog from "./ConfirmDialog";
 import { useUserContext } from "../contexts/UserContext";
+import { Trans, useTranslation } from "react-i18next";
 
 export default function UserModals() {
+  const { t } = useTranslation();
   const {
     deleteState,
     closeDelete,
@@ -23,8 +25,8 @@ export default function UserModals() {
       <ConfirmDialog
         open={deleteState.open}
         onClose={closeDelete}
-        title={isDelete ? "Delete User" : "Disable User"}
-        confirmLabel={isDelete ? "Delete" : "Disable"}
+        title={isDelete ? t("confirm.deleteUser") : t("confirm.disableUser")}
+        confirmLabel={isDelete ? t("confirm.delete") : t("confirm.disable")}
         confirmColorPalette={isDelete ? "red" : "orange"}
         onConfirm={() => {
           if (!deleteState.user) return;
@@ -36,14 +38,17 @@ export default function UserModals() {
         body={
           isDelete ? (
             <Text>
-              Are you sure you want to delete{" "}
-              <strong>{deleteState.user?.username}</strong>? This will revoke
-              their certificate permanently.
+              <Trans
+                i18nKey="confirm.deletePrompt"
+                values={{ username: deleteState.user?.username ?? "" }}
+              />
             </Text>
           ) : (
             <Text>
-              Disable <strong>{deleteState.user?.username}</strong>? They will
-              lose access immediately.
+              <Trans
+                i18nKey="confirm.disablePrompt"
+                values={{ username: deleteState.user?.username ?? "" }}
+              />
             </Text>
           )
         }
@@ -52,16 +57,18 @@ export default function UserModals() {
       <ConfirmDialog
         open={resetState.open}
         onClose={closeReset}
-        title="Reset Usage"
-        confirmLabel="Reset"
+        title={t("confirm.resetUsage")}
+        confirmLabel={t("confirm.reset")}
         onConfirm={() =>
           resetState.user && resetMutation.mutate(resetState.user.username)
         }
         isLoading={resetMutation.isPending}
         body={
           <Text>
-            Reset data usage for{" "}
-            <strong>{resetState.user?.username}</strong> to zero?
+            <Trans
+              i18nKey="confirm.resetPrompt"
+              values={{ username: resetState.user?.username ?? "" }}
+            />
           </Text>
         }
       />
@@ -69,8 +76,8 @@ export default function UserModals() {
       <ConfirmDialog
         open={regenerateState.open}
         onClose={closeRegenerate}
-        title="Regenerate Subscription Link"
-        confirmLabel="Regenerate"
+        title={t("confirm.regenerateLink")}
+        confirmLabel={t("confirm.regenerate")}
         confirmColorPalette="orange"
         onConfirm={() =>
           regenerateState.user &&
@@ -79,9 +86,10 @@ export default function UserModals() {
         isLoading={revokeMutation.isPending}
         body={
           <Text>
-            This will invalidate the current subscription link for{" "}
-            <strong>{regenerateState.user?.username}</strong>. A new link will
-            be generated.
+            <Trans
+              i18nKey="confirm.regeneratePrompt"
+              values={{ username: regenerateState.user?.username ?? "" }}
+            />
           </Text>
         }
       />

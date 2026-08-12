@@ -12,8 +12,10 @@ import Pagination from "../components/Pagination";
 import UserDialog from "../components/UserDialog";
 import UserModals from "../components/UserModals";
 import QRCodeDialog from "../components/QRCodeDialog";
+import { useTranslation } from "react-i18next";
 
 function UsersContent() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const { perPage, setPerPage } = useStoredPerPage(USERS_PER_PAGE_KEY);
@@ -66,9 +68,9 @@ function UsersContent() {
 
       {error && (
         <Alert.Root status="error" borderRadius="lg">
-          <Alert.Title>Failed to load users</Alert.Title>
+          <Alert.Title>{t("users.failedToLoad")}</Alert.Title>
           <Alert.Description>
-            {(error as Error).message || "An unexpected error occurred."}
+            {(error as Error).message || t("users.unexpectedError")}
           </Alert.Description>
         </Alert.Root>
       )}
@@ -77,9 +79,7 @@ function UsersContent() {
         <Box css={card} p={12} textAlign="center">
           <FiUsers size={40} style={{ margin: "0 auto 16px", opacity: 0.3 }} />
           <Text color="fg.muted">
-            {search
-              ? "No users match your search."
-              : "No users yet. Create your first user to get started."}
+            {search ? t("users.emptySearch") : t("users.empty")}
           </Text>
         </Box>
       )}

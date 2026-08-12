@@ -32,6 +32,7 @@ import {
 } from "react-icons/fi";
 import api from "../lib/api";
 import { toaster } from "../lib/toaster";
+import { useTranslation } from "react-i18next";
 import { card, tableRoot, buttonSolid, buttonOutline } from "../theme-components";
 import StatCard from "../components/StatCard";
 import EmptyState from "../components/EmptyState";
@@ -66,6 +67,7 @@ function fmtDebt(v: number): string {
 }
 
 export default function Billing() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   const { data: admins, isLoading, error } = useQuery<BillingAdmin[]>({
@@ -104,10 +106,10 @@ export default function Billing() {
       queryClient.invalidateQueries({ queryKey: ["billing-records"] });
       setSettleTarget(null);
       setSettleAmount("");
-      toaster.create({ title: "Debt settled", type: "success" });
+      toaster.create({ title: t("billing.debtSettled"), type: "success" });
     },
     onError: (err: any) => {
-      toaster.create({ title: err?.response?.data?.detail || "Settlement failed", type: "error" });
+      toaster.create({ title: err?.response?.data?.detail || t("billing.settlementFailed"), type: "error" });
     },
   });
 
@@ -118,10 +120,10 @@ export default function Billing() {
       queryClient.invalidateQueries({ queryKey: ["billing-summary"] });
       setTopupTarget(null);
       setTopupGB("");
-      toaster.create({ title: "Capacity topped up", type: "success" });
+      toaster.create({ title: t("billing.capacityToppedUp"), type: "success" });
     },
     onError: (err: any) => {
-      toaster.create({ title: err?.response?.data?.detail || "Top-up failed", type: "error" });
+      toaster.create({ title: err?.response?.data?.detail || t("billing.topupFailed"), type: "error" });
     },
   });
 
@@ -131,10 +133,10 @@ export default function Billing() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["billing-summary"] });
       setPricingTarget(null);
-      toaster.create({ title: "Pricing updated", type: "success" });
+      toaster.create({ title: t("billing.pricingUpdated"), type: "success" });
     },
     onError: (err: any) => {
-      toaster.create({ title: err?.response?.data?.detail || "Failed to update pricing", type: "error" });
+      toaster.create({ title: err?.response?.data?.detail || t("billing.pricingFailed"), type: "error" });
     },
   });
 
@@ -145,20 +147,20 @@ export default function Billing() {
     <VStack align="stretch" gap={6}>
       <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
         <StatCard
-          label="Total Debt"
+          label={t("billing.totalDebt")}
           value={fmtDebt(totalDebt)}
           icon={<FiDollarSign size={20} />}
           color="red.400"
           valueColor="red.400"
         />
         <StatCard
-          label="Sub-Admins"
+          label={t("billing.subAdmins")}
           value={admins?.length ?? 0}
           icon={<FiShield size={20} />}
           color="blue.400"
         />
         <StatCard
-          label="Total Users"
+          label={t("billing.totalUsers")}
           value={totalUsers}
           icon={<FiUsers size={20} />}
           color="green.400"
@@ -169,16 +171,16 @@ export default function Billing() {
         <Flex py={20} justify="center"><Spinner size="lg" color="accent" /></Flex>
       ) : error ? (
         <Alert.Root status="error" borderRadius="lg">
-          <Alert.Title>Failed to load billing summary</Alert.Title>
+          <Alert.Title>{t("billing.failedToLoad")}</Alert.Title>
           <Alert.Description>
-            {(error as Error).message || "An unexpected error occurred."}
+            {(error as Error).message || t("billing.unexpectedError")}
           </Alert.Description>
         </Alert.Root>
       ) : !admins || admins.length === 0 ? (
         <Box css={card} p={6}>
           <EmptyState
             icon={<FiUsers size={40} style={{ margin: "0 auto 16px", opacity: 0.3 }} />}
-            message="No sub-admins yet."
+            message={t("billing.empty")}
           />
         </Box>
       ) : (
@@ -186,15 +188,15 @@ export default function Billing() {
           <Table.Root size="sm" variant="outline">
             <Table.Header>
               <Table.Row>
-                <Table.ColumnHeader>Admin</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="center">Users</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="center">Unlimited</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="center">User-Mo</Table.ColumnHeader>
-                <Table.ColumnHeader>Capacity</Table.ColumnHeader>
-                <Table.ColumnHeader>$/User</Table.ColumnHeader>
-                <Table.ColumnHeader>$/GB</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="right">Debt</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="right">Actions</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("billing.admin")}</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="center">{t("billing.users")}</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="center">{t("billing.unlimited")}</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="center">{t("billing.userMonths")}</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("billing.capacity")}</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("billing.pricePerUser")}</Table.ColumnHeader>
+                <Table.ColumnHeader>{t("billing.pricePerGB")}</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right">{t("billing.debt")}</Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right">{t("billing.actions")}</Table.ColumnHeader>
               </Table.Row>
             </Table.Header>
             <Table.Body>
@@ -217,7 +219,7 @@ export default function Billing() {
                     </Table.Cell>
                     <Table.Cell>
                       <Text fontSize="xs" color="fg.muted">
-                        {adm.data_limit ? `${formatBytes(adm.data_used)} / ${formatBytes(adm.data_limit)}` : "Unlimited"}
+                        {adm.data_limit ? `${formatBytes(adm.data_used)} / ${formatBytes(adm.data_limit)}` : t("billing.unlimited")}
                       </Text>
                     </Table.Cell>
                     <Table.Cell>
@@ -233,20 +235,20 @@ export default function Billing() {
                     </Table.Cell>
                     <Table.Cell textAlign="right">
                       <HStack gap={1} justify="flex-end">
-                        <Button size="xs" variant="ghost" onClick={() => {
+                        <Button size="xs" variant="ghost" title={t("billing.pricing")} onClick={() => {
                           setPricingTarget(adm);
                           setPricingUser(adm.price_per_user?.toString() ?? "");
                           setPricingGB(adm.price_per_gb?.toString() ?? "");
                         }}>
                           $
                         </Button>
-                        <Button size="xs" variant="ghost" colorPalette="green" onClick={() => setTopupTarget(adm)}>
+                        <Button size="xs" variant="ghost" colorPalette="green" title={t("billing.topUp")} onClick={() => setTopupTarget(adm)}>
                           <FiArrowUp />
                         </Button>
-                        <Button size="xs" variant="ghost" colorPalette="blue" onClick={() => setSettleTarget(adm)}>
+                        <Button size="xs" variant="ghost" colorPalette="blue" title={t("billing.settle")} onClick={() => setSettleTarget(adm)}>
                           <FiCheck />
                         </Button>
-                        <Button size="xs" variant="ghost" onClick={() => setRecordsTarget(adm)}>
+                        <Button size="xs" variant="ghost" title={t("billing.records")} onClick={() => setRecordsTarget(adm)}>
                           <FiEye />
                         </Button>
                       </HStack>
@@ -265,12 +267,12 @@ export default function Billing() {
           <Dialog.Backdrop />
           <Dialog.Positioner>
             <Dialog.Content maxW="sm">
-              <Dialog.Header><Dialog.Title>Settle: {settleTarget?.username}</Dialog.Title></Dialog.Header>
+              <Dialog.Header><Dialog.Title>{t("billing.settleTitle", { username: settleTarget?.username })}</Dialog.Title></Dialog.Header>
               <Dialog.Body>
                 <VStack gap={3} align="stretch">
-                  <Text fontSize="sm" color="fg.muted">Current debt: {fmtDebt(settleTarget?.debt ?? 0)}</Text>
+                  <Text fontSize="sm" color="fg.muted">{t("billing.currentDebt", { amount: fmtDebt(settleTarget?.debt ?? 0) })}</Text>
                   <Field.Root>
-                    <Field.Label>Settlement amount ($)</Field.Label>
+                    <Field.Label>{t("billing.settlementAmount")}</Field.Label>
                     <Input
                       type="number"
                       value={settleAmount}
@@ -284,7 +286,7 @@ export default function Billing() {
               </Dialog.Body>
               <Dialog.Footer>
                 <Dialog.CloseTrigger asChild>
-                  <Button variant="outline" css={buttonOutline}>Cancel</Button>
+                  <Button variant="outline" css={buttonOutline}>{t("billing.cancel")}</Button>
                 </Dialog.CloseTrigger>
                 <Button
                   css={buttonSolid}
@@ -296,7 +298,7 @@ export default function Billing() {
                   }}
                   loading={settleMutation.isPending}
                 >
-                  Settle
+                  {t("billing.settle")}
                 </Button>
               </Dialog.Footer>
             </Dialog.Content>
@@ -310,19 +312,19 @@ export default function Billing() {
           <Dialog.Backdrop />
           <Dialog.Positioner>
             <Dialog.Content maxW="sm">
-              <Dialog.Header><Dialog.Title>Top Up: {topupTarget?.username}</Dialog.Title></Dialog.Header>
+              <Dialog.Header><Dialog.Title>{t("billing.topUpTitle", { username: topupTarget?.username })}</Dialog.Title></Dialog.Header>
               <Dialog.Body>
                 <VStack gap={3} align="stretch">
                   <Text fontSize="sm" color="fg.muted">
-                    Current capacity: {topupTarget?.data_limit ? formatBytes(topupTarget.data_limit) : "None"}
+                    {t("billing.currentCapacity", { capacity: topupTarget?.data_limit ? formatBytes(topupTarget.data_limit) : t("billing.capacityNone") })}
                   </Text>
                   <Field.Root>
-                    <Field.Label>Add capacity (GB)</Field.Label>
+                    <Field.Label>{t("billing.addCapacity")}</Field.Label>
                     <Input
                       type="number"
                       value={topupGB}
                       onChange={(e) => setTopupGB(e.target.value)}
-                      placeholder="e.g. 50"
+                      placeholder={t("billing.capacityPlaceholder")}
                       min="0"
                     />
                   </Field.Root>
@@ -330,7 +332,7 @@ export default function Billing() {
               </Dialog.Body>
               <Dialog.Footer>
                 <Dialog.CloseTrigger asChild>
-                  <Button variant="outline" css={buttonOutline}>Cancel</Button>
+                  <Button variant="outline" css={buttonOutline}>{t("billing.cancel")}</Button>
                 </Dialog.CloseTrigger>
                 <Button
                   css={buttonSolid}
@@ -343,7 +345,7 @@ export default function Billing() {
                   }}
                   loading={topupMutation.isPending}
                 >
-                  Top Up
+                  {t("billing.topUp")}
                 </Button>
               </Dialog.Footer>
             </Dialog.Content>
@@ -357,11 +359,11 @@ export default function Billing() {
           <Dialog.Backdrop />
           <Dialog.Positioner>
             <Dialog.Content maxW="sm">
-              <Dialog.Header><Dialog.Title>Pricing: {pricingTarget?.username}</Dialog.Title></Dialog.Header>
+              <Dialog.Header><Dialog.Title>{t("billing.pricingTitle", { username: pricingTarget?.username })}</Dialog.Title></Dialog.Header>
               <Dialog.Body>
                 <VStack gap={3} align="stretch">
                   <Field.Root>
-                    <Field.Label>Price per unlimited user ($)</Field.Label>
+                    <Field.Label>{t("billing.pricePerUnlimitedUser")}</Field.Label>
                     <Input
                       type="number"
                       value={pricingUser}
@@ -372,7 +374,7 @@ export default function Billing() {
                     />
                   </Field.Root>
                   <Field.Root>
-                    <Field.Label>Price per GB ($)</Field.Label>
+                    <Field.Label>{t("billing.pricePerGBLabel")}</Field.Label>
                     <Input
                       type="number"
                       value={pricingGB}
@@ -386,7 +388,7 @@ export default function Billing() {
               </Dialog.Body>
               <Dialog.Footer>
                 <Dialog.CloseTrigger asChild>
-                  <Button variant="outline" css={buttonOutline}>Cancel</Button>
+                  <Button variant="outline" css={buttonOutline}>{t("billing.cancel")}</Button>
                 </Dialog.CloseTrigger>
                 <Button
                   css={buttonSolid}
@@ -401,7 +403,7 @@ export default function Billing() {
                   }}
                   loading={pricingMutation.isPending}
                 >
-                  Save Pricing
+                  {t("billing.savePricing")}
                 </Button>
               </Dialog.Footer>
             </Dialog.Content>
@@ -416,22 +418,22 @@ export default function Billing() {
           <Dialog.Positioner>
             <Dialog.Content maxW="lg">
               <Dialog.Header>
-                <Dialog.Title>Billing Records: {recordsTarget?.username}</Dialog.Title>
+                <Dialog.Title>{t("billing.recordsTitle", { username: recordsTarget?.username })}</Dialog.Title>
               </Dialog.Header>
               <Dialog.Body>
                 {recordsLoading ? (
                   <Flex py={8} justify="center"><Spinner size="sm" /></Flex>
                 ) : !records || records.length === 0 ? (
-                  <Text color="fg.muted" fontSize="sm" py={4}>No records yet.</Text>
+                  <Text color="fg.muted" fontSize="sm" py={4}>{t("billing.noRecords")}</Text>
                 ) : (
                   <Box maxH="400px" overflowY="auto">
                     <Table.Root size="sm">
                       <Table.Header>
                         <Table.Row>
-                          <Table.ColumnHeader>Date</Table.ColumnHeader>
-                          <Table.ColumnHeader>Type</Table.ColumnHeader>
-                          <Table.ColumnHeader>Description</Table.ColumnHeader>
-                          <Table.ColumnHeader textAlign="right">Amount</Table.ColumnHeader>
+                          <Table.ColumnHeader>{t("billing.date")}</Table.ColumnHeader>
+                          <Table.ColumnHeader>{t("billing.type")}</Table.ColumnHeader>
+                          <Table.ColumnHeader>{t("billing.description")}</Table.ColumnHeader>
+                          <Table.ColumnHeader textAlign="right">{t("billing.amount")}</Table.ColumnHeader>
                         </Table.Row>
                       </Table.Header>
                       <Table.Body>
@@ -447,8 +449,8 @@ export default function Billing() {
                                 variant="subtle"
                                 fontSize="xs"
                               >
-                                {r.type === "user_charge" ? "users" :
-                                 r.type === "traffic_charge" ? "traffic" : "settlement"}
+                                {r.type === "user_charge" ? t("billing.typeUsers") :
+                                 r.type === "traffic_charge" ? t("billing.typeTraffic") : t("billing.typeSettlement")}
                               </Badge>
                             </Table.Cell>
                             <Table.Cell fontSize="xs">{r.description}</Table.Cell>
@@ -464,7 +466,7 @@ export default function Billing() {
               </Dialog.Body>
               <Dialog.Footer>
                 <Dialog.CloseTrigger asChild>
-                  <Button variant="outline" css={buttonOutline}>Close</Button>
+                  <Button variant="outline" css={buttonOutline}>{t("billing.close")}</Button>
                 </Dialog.CloseTrigger>
               </Dialog.Footer>
             </Dialog.Content>

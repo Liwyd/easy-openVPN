@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { VStack, Text, Spinner, Flex, Alert, Box } from "@chakra-ui/react";
 import { FiShield } from "react-icons/fi";
+import { useTranslation } from "react-i18next";
 import { card } from "../theme-components";
 import { AdminProvider, useAdminContext } from "../contexts/AdminContext";
 import { useAdminsQuery, ADMINS_PER_PAGE_KEY } from "../hooks/useAdmins";
@@ -12,6 +13,7 @@ import AdminDialog from "../components/AdminDialog";
 import AdminModals from "../components/AdminModals";
 
 function AdminsContent() {
+  const { t } = useTranslation();
   const { openCreate } = useAdminContext();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -48,9 +50,9 @@ function AdminsContent() {
         onSearchChange={handleSearch}
         onRefresh={() => refetch()}
         isRefreshing={isFetching}
-        createLabel="New Admin"
+        createLabel={t("admins.create")}
         onCreate={openCreate}
-        searchPlaceholder="Search by username..."
+        searchPlaceholder={t("admins.search")}
         testId="admins-search"
       />
 
@@ -62,9 +64,9 @@ function AdminsContent() {
 
       {error && (
         <Alert.Root status="error" borderRadius="lg">
-          <Alert.Title>Failed to load admins</Alert.Title>
+          <Alert.Title>{t("admins.failedToLoad")}</Alert.Title>
           <Alert.Description>
-            {(error as Error).message || "An unexpected error occurred."}
+            {(error as Error).message || t("admins.unexpectedError")}
           </Alert.Description>
         </Alert.Root>
       )}
@@ -74,8 +76,8 @@ function AdminsContent() {
           <FiShield size={40} style={{ margin: "0 auto 16px", opacity: 0.3 }} />
           <Text color="fg.muted">
             {search
-              ? "No admins match your search."
-              : "No admins yet. Create your first admin to get started."}
+              ? t("admins.emptySearch")
+              : t("admins.empty")}
           </Text>
         </Box>
       )}

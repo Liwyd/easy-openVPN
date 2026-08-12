@@ -33,6 +33,10 @@ import { formatBytes } from "../utils/formatByte";
 import type { User } from "../types/User";
 import StatusBadge from "./StatusBadge";
 import { useUserContext } from "../contexts/UserContext";
+import { useTranslation } from "react-i18next";
+import ReactDatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import "./datepicker.css";
 
 const RANDOM_CHARS =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -142,6 +146,7 @@ function HeaderIcon({ children }: { children: React.ReactNode }) {
 }
 
 export default function UserDialog() {
+  const { t, i18n } = useTranslation();
   const queryClient = useQueryClient();
   const {
     editUser,
@@ -189,11 +194,11 @@ export default function UserDialog() {
     onSuccess: () => {
       invalidate();
       closeCreate();
-      toaster.create({ title: "User created", type: "success" });
+      toaster.create({ title: t("userDialog.created"), type: "success" });
     },
     onError: (err: any) => {
       toaster.create({
-        title: err?.response?.data?.detail || "Failed to create user",
+        title: err?.response?.data?.detail || t("userDialog.createFailed"),
         type: "error",
       });
     },
@@ -224,11 +229,11 @@ export default function UserDialog() {
     onSuccess: () => {
       invalidate();
       closeEdit();
-      toaster.create({ title: "User updated", type: "success" });
+      toaster.create({ title: t("userDialog.updated"), type: "success" });
     },
     onError: (err: any) => {
       toaster.create({
-        title: err?.response?.data?.detail || "Failed to update user",
+        title: err?.response?.data?.detail || t("userDialog.updateFailed"),
         type: "error",
       });
     },
@@ -237,15 +242,15 @@ export default function UserDialog() {
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (isCreate) {
-      if (!form.username.trim()) e.username = "Required";
+      if (!form.username.trim()) e.username = t("validate.required");
       else if (!/^[a-zA-Z0-9_-]+$/.test(form.username.trim()))
-        e.username = "Only letters, numbers, hyphens and underscores allowed";
+        e.username = t("validate.usernameChars");
     }
     if (
       form.dataLimit &&
       (isNaN(parseFloat(form.dataLimit)) || parseFloat(form.dataLimit) <= 0)
     ) {
-      e.dataLimit = "Must be a positive number";
+      e.dataLimit = t("validate.positiveNumber");
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -299,7 +304,9 @@ export default function UserDialog() {
                   )}
                 </HeaderIcon>
                 <Text fontWeight="semibold" fontSize="lg">
-                  {isCreate ? "Create New User" : "Edit User"}
+                  {isCreate
+                    ? t("userDialog.createTitle")
+                    : t("userDialog.editTitle")}
                 </Text>
               </HStack>
             </Dialog.Header>
@@ -317,9 +324,9 @@ export default function UserDialog() {
                         <Field.Root invalid={!!errors.username} mb="10px">
                           <Field.Label>
                             <HStack gap={1.5} align="center">
-                              Username
+                              {t("userDialog.username")}
                               <IconButton
-                                aria-label="Random username"
+                                aria-label={t("userDialog.random")}
                                 size="2xs"
                                 variant="ghost"
                                 onClick={() => {
@@ -350,7 +357,7 @@ export default function UserDialog() {
                               borderRadius="6px"
                               value={form.username}
                               onChange={(e) => set({ username: e.target.value })}
-                              placeholder="Username"
+                              placeholder={t("userDialog.username")}
                             />
                           </HStack>
                           {errors.username && (
@@ -383,16 +390,17 @@ export default function UserDialog() {
                             </HStack>
                           </Field.Label>
                           <Text fontSize="sm" color="fg.muted">
-                            {formatBytes(editUser.data_used)} used of{" "}
+                            {formatBytes(editUser.data_used)}{" "}
+                            {t("userDialog.usedOf")}{" "}
                             {editUser.data_limit
                               ? formatBytes(editUser.data_limit)
-                              : "unlimited"}
+                              : t("userDialog.unlimited")}
                           </Text>
                         </Field.Root>
                       )}
 
                       <Field.Root invalid={!!errors.dataLimit} mb="10px">
-                        <Field.Label>Data Limit (GB)</Field.Label>
+                        <Field.Label>{t("userDialog.dataLimit")}</Field.Label>
                         <Input
                           size="sm"
                           borderRadius="6px"
@@ -400,7 +408,7 @@ export default function UserDialog() {
                           min="0"
                           value={form.dataLimit}
                           onChange={(e) => set({ dataLimit: e.target.value })}
-                          placeholder="Unlimited"
+                          placeholder={t("userDialog.unlimited")}
                         />
                         {errors.dataLimit && (
                           <Field.ErrorText>{errors.dataLimit}</Field.ErrorText>
@@ -408,21 +416,33 @@ export default function UserDialog() {
                       </Field.Root>
 
                       <Field.Root mb="10px">
-                        <Field.Label>Expiry Date</Field.Label>
-                        <Input
-                          size="sm"
-                          borderRadius="6px"
-                          type="date"
-                          value={form.expireAt}
-                          onChange={(e) => set({ expireAt: e.target.value })}
+                        <Field.Label>{t("userDialog.expiryDate")}</Field.Label>
+                        <ReactDatePicker
+                          selected={
+                            form.expireAt ? new Date(`${form.expireAt}T00:00:00`) : null
+                          }
+                          onChange={(date: Date | null) => {
+                            set({
+                              expireAt: date
+                                ? date.toISOString().slice(0, 10)
+                                : "",
+                            });
+                          }}
+                          locale={i18n.language === "fa" ? "fa" : "en"}
+                          dateFormat={i18n.language === "fa" ? "yyyy/MM/dd" : "MMMM d, yyyy"}
+                          isClearable
+                          minDate={new Date()}
+                          customInput={
+                            <Input size="sm" borderRadius="6px" data-testid="expiry-date" />
+                          }
                         />
                       </Field.Root>
 
                       <Field.Root mb="10px">
                         <Field.Label>
-                          Time Window{" "}
+                          {t("userDialog.timeWindow")}{" "}
                           <Badge size="sm" colorPalette="gray">
-                            Optional
+                            {t("userDialog.optional")}
                           </Badge>
                         </Field.Label>
                         <HStack gap={2} w="full">
@@ -452,14 +472,14 @@ export default function UserDialog() {
                       </Field.Root>
 
                       <Field.Root mb="10px">
-                        <Field.Label>Note</Field.Label>
+                        <Field.Label>{t("userDialog.note")}</Field.Label>
                         <Textarea
                           rows={2}
                           size="sm"
                           borderRadius="6px"
                           value={form.note}
                           onChange={(e) => set({ note: e.target.value })}
-                          placeholder="Internal note..."
+                          placeholder="..."
                         />
                       </Field.Root>
                     </VStack>
@@ -593,7 +613,7 @@ export default function UserDialog() {
                     size="sm"
                     onClick={closeDialog}
                   >
-                    Cancel
+                    {t("userDialog.cancel")}
                   </Button>
                   <Button
                     css={buttonSolid}
@@ -602,7 +622,9 @@ export default function UserDialog() {
                     onClick={handleSubmit}
                     loading={createMutation.isPending || updateMutation.isPending}
                   >
-                    {isCreate ? "Create User" : "Edit User"}
+                    {isCreate
+                      ? t("userDialog.createTitle")
+                      : t("userDialog.editTitle")}
                   </Button>
                 </HStack>
               </HStack>

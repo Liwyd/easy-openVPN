@@ -16,8 +16,10 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { HOME_PATH } from "../lib/base";
 import Footer from "../components/Footer";
+import { useTranslation } from "react-i18next";
 
 export default function Login() {
+  const { t } = useTranslation();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -36,7 +38,7 @@ export default function Login() {
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { detail?: string } } })?.response?.data
-          ?.detail || "Login failed";
+          ?.detail || t("login.title");
       setError(msg);
     } finally {
       setLoading(false);
@@ -51,10 +53,10 @@ export default function Login() {
             <VStack alignItems="center" w="full">
               <img src="/favicon.svg" alt="" width={48} height={48} />
               <Heading as="h2" fontSize="2xl" fontWeight="semibold" textAlign="center">
-                Login your account
+                {t("login.title")}
               </Heading>
               <Text color="fg.muted" fontSize="sm">
-                Welcome back, please login to your account.
+                {t("login.welcome")}
               </Text>
             </VStack>
             <Box as="form" onSubmit={handleSubmit} w="full" maxW="300px" m="auto" pt="4">
@@ -63,7 +65,7 @@ export default function Login() {
                   <Input
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Username"
+                    placeholder={t("login.username")}
                     autoComplete="username"
                   />
                 </Field.Root>
@@ -74,7 +76,9 @@ export default function Login() {
                       variant="ghost"
                       size="xs"
                       onClick={() => setShowPassword(!showPassword)}
-                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-label={
+                        showPassword ? t("login.hidePassword") : t("login.showPassword")
+                      }
                     >
                       {showPassword ? <HiOutlineEyeOff /> : <HiOutlineEye />}
                     </IconButton>
@@ -83,7 +87,7 @@ export default function Login() {
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Password"
+                      placeholder={t("login.password")}
                       autoComplete="current-password"
                     />
                   </InputGroup>
@@ -102,7 +106,7 @@ export default function Login() {
                   colorPalette="accent"
                 >
                   <HiOutlineLogout style={{ marginRight: 4 }} />
-                  Login
+                  {t("login.login")}
                 </Button>
               </VStack>
             </Box>

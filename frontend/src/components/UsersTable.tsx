@@ -19,20 +19,16 @@ import {
 } from "react-icons/fi";
 import { createListCollection } from "@chakra-ui/react";
 import { tableRoot } from "../theme-components";
-import { statusFilterItems } from "../constants/UserSettings";
 import { relativeTime } from "../utils/dateFormatter";
 import { getResetStrategyText } from "./UsageSlider";
 import type { User } from "../types/User";
 import StatusBadge from "./StatusBadge";
 import UsageSlider from "./UsageSlider";
 import { useUserContext } from "../contexts/UserContext";
+import { useTranslation } from "react-i18next";
 
 type SortKey = "username" | "status" | "data_usage";
 type SortDir = "asc" | "desc";
-
-const statusCollection = createListCollection({
-  items: statusFilterItems,
-});
 
 export default function UsersTable({
   users,
@@ -41,10 +37,21 @@ export default function UsersTable({
   users: User[];
   isFetching?: boolean;
 }) {
+  const { t } = useTranslation();
   const { openEdit, copyLink, downloadConfig, openQR } = useUserContext();
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey>("username");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  const statusCollection = useMemo(
+    () =>
+      createListCollection({
+        items: ["all", "active", "limited", "expired", "disabled"].map(
+          (value) => ({ label: t(`status.${value}` as const), value }),
+        ),
+      }),
+    [t],
+  );
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -101,7 +108,7 @@ export default function UsersTable({
         <Table.Header>
           <Table.Row>
             <Table.ColumnHeader minW="220px">
-              {renderSortable("username", "Username")}
+              {renderSortable("username", t("table.username"))}
             </Table.ColumnHeader>
             <Table.ColumnHeader minW="180px">
               <HStack gap={0} position="relative" align="center">
@@ -113,7 +120,8 @@ export default function UsersTable({
                   zIndex={1}
                   w="100%"
                 >
-                  Status{statusFilter !== "all" ? `: ${statusFilter}` : ""}
+                  {t("table.status")}
+                  {statusFilter !== "all" ? `: ${t(`status.${statusFilter}` as const)}` : ""}
                 </Text>
                 <Select.Root
                   collection={statusCollection}
@@ -152,12 +160,12 @@ export default function UsersTable({
               </HStack>
             </Table.ColumnHeader>
             <Table.ColumnHeader minW="220px">
-              {renderSortable("data_usage", "Data Usage")}
+              {renderSortable("data_usage", t("table.dataUsage"))}
             </Table.ColumnHeader>
             <Table.ColumnHeader minW="180px">
-              Data Reset
+              {t("table.dataReset")}
             </Table.ColumnHeader>
-            <Table.ColumnHeader minW="140px">Actions</Table.ColumnHeader>
+            <Table.ColumnHeader minW="140px">{t("table.actions")}</Table.ColumnHeader>
           </Table.Row>
         </Table.Header>
         <Table.Body>
@@ -165,6 +173,7 @@ export default function UsersTable({
             {(user) => {
               const resetStrategy = getResetStrategyText(
                 user.data_limit_reset_strategy,
+                t,
               );
               return (
                 <Table.Row
@@ -180,8 +189,10 @@ export default function UsersTable({
                       <Text fontWeight="semibold">{user.username}</Text>
                       <Text fontSize="xs" color="fg.muted">
                         {user.expire_at
-                          ? `expires ${relativeTime(user.expire_at)}`
-                          : "No expiration"}
+                          ? t("table.expires", {
+                              time: relativeTime(user.expire_at),
+                            })
+                          : t("table.noExpiration")}
                         {user.time_window_start && user.time_window_end
                           ? `\u00b7 ${user.time_window_start.slice(0, 5)}\u2013${user.time_window_end.slice(0, 5)}`
                           : ""}
@@ -202,28 +213,28 @@ export default function UsersTable({
                   <Table.Cell>
                     <Flex gap={1} onClick={(e) => e.stopPropagation()}>
                       <IconButton
-                        aria-label="Copy subscription link"
+                        aria-label={t("table.copyLink")}
                         variant="ghost"
                         size="sm"
-                        title="Copy subscription link"
+                        title={t("table.copyLink")}
                         onClick={() => copyLink(user)}
                       >
                         <FiLink />
                       </IconButton>
                       <IconButton
-                        aria-label="Download config"
+                        aria-label={t("table.downloadConfig")}
                         variant="ghost"
                         size="sm"
-                        title="Download .ovpn config"
+                        title={t("table.downloadConfig")}
                         onClick={() => downloadConfig(user)}
                       >
                         <FiDownload />
                       </IconButton>
                       <IconButton
-                        aria-label="Show QR code"
+                        aria-label={t("table.showQR")}
                         variant="ghost"
                         size="sm"
-                        title="Show QR code"
+                        title={t("table.showQR")}
                         onClick={() => openQR(user)}
                       >
                         <FiGrid />

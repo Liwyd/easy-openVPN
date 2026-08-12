@@ -1,5 +1,6 @@
 import { Button, Flex, Box, Input, IconButton, Icon, Spinner } from "@chakra-ui/react";
 import { FiSearch, FiRefreshCw, FiPlus, FiX } from "react-icons/fi";
+import { useTranslation } from "react-i18next";
 
 interface FiltersProps {
   search: string;
@@ -17,11 +18,12 @@ export default function Filters({
   onSearchChange,
   onRefresh,
   isRefreshing,
-  createLabel = "Create User",
+  createLabel,
   onCreate,
-  searchPlaceholder = "Search...",
+  searchPlaceholder,
   testId = "users-search",
 }: FiltersProps) {
+  const { t } = useTranslation();
   return (
     <Flex
       position="sticky"
@@ -45,7 +47,7 @@ export default function Filters({
           <Icon as={FiSearch} />
         </Box>
         <Input
-          placeholder={searchPlaceholder}
+          placeholder={searchPlaceholder ?? t("users.search")}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
           pl="36px"
@@ -61,7 +63,7 @@ export default function Filters({
             zIndex="2"
           >
             <IconButton
-              aria-label="Clear search"
+              aria-label={t("users.clearSearch")}
               size="xs"
               variant="ghost"
               onClick={() => onSearchChange("")}
@@ -75,11 +77,11 @@ export default function Filters({
       <Flex gap={2} align="center" ml="auto">
         {isRefreshing && <Spinner size="xs" />}
         <IconButton
-          aria-label="Refresh"
+          aria-label={t("users.refresh")}
           variant="outline"
           onClick={onRefresh}
           disabled={isRefreshing}
-          title="Refresh"
+          title={t("users.refresh")}
           size="sm"
         >
           <FiRefreshCw />
@@ -88,7 +90,7 @@ export default function Filters({
         {onCreate && (
           <Button colorPalette="accent" onClick={onCreate} size="sm" px={5}>
             <FiPlus />
-            {createLabel}
+            {createLabel ?? t("users.create")}
           </Button>
         )}
       </Flex>

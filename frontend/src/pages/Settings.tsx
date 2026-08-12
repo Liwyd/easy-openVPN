@@ -16,6 +16,7 @@ import {
   createListCollection,
 } from "@chakra-ui/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { FiSend, FiKey, FiArchive, FiDownload, FiUpload, FiTrash2, FiLock, FiServer } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import api from "../lib/api";
@@ -131,6 +132,7 @@ const minuteCollection = createListCollection({
 });
 
 function BackupSection() {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [sendToTelegram, setSendToTelegram] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -156,10 +158,10 @@ function BackupSection() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["backup-config"] });
-      toaster.create({ title: "Backup schedule saved", type: "success" });
+      toaster.create({ title: t("settings.backupScheduleSaved"), type: "success" });
     },
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Failed to save backup schedule";
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t("settings.backupScheduleSaveFailed");
       toaster.create({ title: msg, type: "error" });
     },
   });
@@ -171,11 +173,11 @@ function BackupSection() {
       setLastBackup({ filename: data.filename, size_bytes: data.size_bytes });
       queryClient.invalidateQueries({ queryKey: ["backup-list"] });
       toaster.create({
-        title: `Backup created${sendToTelegram ? " and sent to Telegram" : ""}`,
+        title: sendToTelegram ? t("settings.backupCreatedAndSent") : t("settings.backupCreated"),
         type: "success",
       });
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Failed to create backup";
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t("settings.backupCreateFailed");
       toaster.create({ title: msg, type: "error" });
     } finally {
       setCreating(false);
@@ -192,7 +194,7 @@ function BackupSection() {
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      toaster.create({ title: "Failed to download backup", type: "error" });
+      toaster.create({ title: t("settings.backupDownloadFailed"), type: "error" });
     }
   };
 
@@ -202,7 +204,7 @@ function BackupSection() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["backup-list"] });
-      toaster.create({ title: "Backup deleted", type: "success" });
+      toaster.create({ title: t("settings.backupDeleted"), type: "success" });
     },
   });
 
@@ -215,11 +217,11 @@ function BackupSection() {
       await api.post("/backup/restore", formData);
       queryClient.invalidateQueries();
       toaster.create({
-        title: "Panel restored from backup. Please sign in again.",
+        title: t("settings.panelRestored"),
         type: "success",
       });
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Restore failed";
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t("settings.restoreFailed");
       toaster.create({ title: msg, type: "error" });
     } finally {
       setFile(null);
@@ -227,33 +229,33 @@ function BackupSection() {
   };
 
   return (
-    <SectionCard title="Backup & Restore">
+    <SectionCard title={t("settings.backupTitle")}>
       <VStack align="stretch" gap={5}>
         {/* Create */}
         <Box>
           <Text fontSize="sm" color="fg.muted" mb={2}>
-            Create a full backup of the panel: all users, admins, settings,
-            billing records, logs and the VPN certificates. Download it and keep
-            it safe — restoring it brings the panel back to exactly this state.
+            {t("settings.backupIntro")}
           </Text>
           <HStack>
             <Button size="sm" onClick={createBackup} loading={creating} colorPalette="accent">
               <FiArchive style={{ marginRight: 6 }} />
-              Create Backup Now
+              {t("settings.createBackupNow")}
             </Button>
             <Switch.Root checked={sendToTelegram} onCheckedChange={(e) => setSendToTelegram(e.checked)}>
               <Switch.HiddenInput />
               <Switch.Control>
                 <Switch.Thumb />
               </Switch.Control>
-              <Switch.Label>Also send to Telegram</Switch.Label>
+              <Switch.Label>{t("settings.alsoSendToTelegram")}</Switch.Label>
             </Switch.Root>
           </HStack>
           {lastBackup && (
             <Text fontSize="xs" color="fg.muted" mt={2}>
-              {lastBackup.size_bytes ? `Created ${lastBackup.filename} (${formatBytes(lastBackup.size_bytes)}) ` : `Created ${lastBackup.filename} `}
+              {lastBackup.size_bytes
+                ? t("settings.createdFileSize", { filename: lastBackup.filename, size: formatBytes(lastBackup.size_bytes) })
+                : t("settings.createdFile", { filename: lastBackup.filename })}
               <Text as="span" textDecoration="underline" cursor="pointer" onClick={() => downloadBackup(lastBackup.filename)}>
-                Download
+                {t("settings.download")}
               </Text>
             </Text>
           )}
@@ -262,10 +264,9 @@ function BackupSection() {
         {/* Restore */}
         <Box>
           <Text fontSize="sm" color="fg.muted" mb={2}>
-            Restore the panel from a backup file.{" "}
+            {t("settings.restoreIntro")}
             <Text as="span" color="red.400" fontWeight="semibold">
-              Warning: this completely replaces all current users, admins and
-              settings — only the backup's data remains.
+              {t("settings.restoreWarning")}
             </Text>
           </Text>
           <HStack gap={3}>
@@ -278,7 +279,7 @@ function BackupSection() {
             />
             <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
               <FiUpload style={{ marginRight: 6 }} />
-              {file ? file.name : "Choose Backup File"}
+              {file ? file.name : t("settings.chooseBackupFile")}
             </Button>
             <Button
               size="sm"
@@ -288,7 +289,7 @@ function BackupSection() {
               onClick={() => setShowRestore(true)}
             >
               <FiDownload style={{ marginRight: 6 }} />
-              Restore Panel
+              {t("settings.restorePanel")}
             </Button>
           </HStack>
         </Box>
@@ -296,11 +297,10 @@ function BackupSection() {
         {/* Schedule */}
         <Box borderTop="1px solid" borderColor="bg.muted" pt={4}>
           <Heading size="xs" mb={2}>
-            Scheduled Backups
+            {t("settings.scheduledBackups")}
           </Heading>
           <Text fontSize="sm" color="fg.muted" mb={3}>
-            Run an automatic backup every day (UTC) and optionally deliver it to
-            the configured Telegram chat alongside the notifications.
+            {t("settings.scheduleIntro")}
           </Text>
           {config && (
             <VStack align="stretch" gap={3}>
@@ -313,7 +313,7 @@ function BackupSection() {
                   <Switch.Control>
                     <Switch.Thumb />
                   </Switch.Control>
-                  <Switch.Label>Enable scheduled backups</Switch.Label>
+                  <Switch.Label>{t("settings.enableScheduled")}</Switch.Label>
                 </Switch.Root>
                 <Switch.Root
                   checked={config.send_to_telegram}
@@ -323,13 +323,13 @@ function BackupSection() {
                   <Switch.Control>
                     <Switch.Thumb />
                   </Switch.Control>
-                  <Switch.Label>Send backups to Telegram</Switch.Label>
+                  <Switch.Label>{t("settings.sendBackupsToTelegram")}</Switch.Label>
                 </Switch.Root>
               </HStack>
 
               <HStack gap={4} alignItems="flex-end">
                 <Field.Root>
-                  <Field.Label>Hour (UTC)</Field.Label>
+                  <Field.Label>{t("settings.hourUtc")}</Field.Label>
                   <Select.Root
                     width="100px"
                     value={[String(config.schedule_hour)]}
@@ -356,7 +356,7 @@ function BackupSection() {
                 </Field.Root>
 
                 <Field.Root>
-                  <Field.Label>Minute</Field.Label>
+                  <Field.Label>{t("settings.minute")}</Field.Label>
                   <Select.Root
                     width="100px"
                     value={[String(config.schedule_minute)]}
@@ -383,7 +383,7 @@ function BackupSection() {
                 </Field.Root>
 
                 <Field.Root>
-                  <Field.Label>Keep (0 = keep all)</Field.Label>
+                  <Field.Label>{t("settings.keep")}</Field.Label>
                   <Input
                     type="number"
                     width="110px"
@@ -398,7 +398,7 @@ function BackupSection() {
 
               {config.last_backup_file && (
                 <Text fontSize="xs" color="fg.muted">
-                  Last scheduled backup: {config.last_backup_file}
+                  {t("settings.lastScheduledBackup", { file: config.last_backup_file })}
                   {config.last_run_at ? ` — ${new Date(config.last_run_at).toLocaleString()}` : ""}
                 </Text>
               )}
@@ -409,11 +409,11 @@ function BackupSection() {
         {/* Stored backups */}
         <Box borderTop="1px solid" borderColor="bg.muted" pt={4}>
           <Heading size="xs" mb={2}>
-            Stored Backups
+            {t("settings.storedBackups")}
           </Heading>
-          {loadingBackups && <Text fontSize="sm" color="fg.muted">Loading…</Text>}
+          {loadingBackups && <Text fontSize="sm" color="fg.muted">{t("settings.loading")}</Text>}
           {!loadingBackups && backups && backups.length === 0 && (
-            <Text fontSize="sm" color="fg.muted">No backups stored yet.</Text>
+            <Text fontSize="sm" color="fg.muted">{t("settings.noBackupsStored")}</Text>
           )}
           <VStack align="stretch" gap={2}>
             {backups?.map((b) => (
@@ -427,7 +427,7 @@ function BackupSection() {
                 <HStack>
                   <Button size="xs" variant="ghost" onClick={() => downloadBackup(b.name)}>
                     <FiDownload />
-                    Download
+                    {t("settings.download")}
                   </Button>
                   <Button
                     size="xs"
@@ -437,7 +437,7 @@ function BackupSection() {
                     onClick={() => deleteBackup.mutate(b.name)}
                   >
                     <FiTrash2 />
-                    Delete
+                    {t("settings.delete")}
                   </Button>
                 </HStack>
               </HStack>
@@ -449,20 +449,17 @@ function BackupSection() {
       <ConfirmDialog
         open={showRestore}
         onClose={() => setShowRestore(false)}
-        title="Restore Panel from Backup?"
-        confirmLabel="Restore Panel"
+        title={t("settings.restoreConfirmTitle")}
+        confirmLabel={t("settings.restorePanel")}
         confirmColorPalette="red"
         onConfirm={confirmRestore}
         body={
           <VStack align="stretch" gap={3}>
             <Text fontSize="sm">
-              This will <strong>completely replace</strong> all current users, admins,
-              settings and logs with the contents of{" "}
-              <Text as="span" fontWeight="semibold">{file?.name}</Text>. If the backup
-              contains VPN certificates, they will be re-imported and OpenVPN restarted.
+              {t("settings.restoreConfirmPrompt", { filename: file?.name })}
             </Text>
             <Text fontSize="sm" color="fg.muted">
-              You will need to sign in again afterwards. Continue?
+              {t("settings.restoreSignIn")}
             </Text>
           </VStack>
         }
@@ -472,6 +469,7 @@ function BackupSection() {
 }
 
 function TelegramSection() {
+  const { t } = useTranslation();
   const [sending, setSending] = useState(false);
 
   const handleTest = async () => {
@@ -480,7 +478,7 @@ function TelegramSection() {
       const { data } = await api.post("/settings/telegram/test");
       toaster.create({ title: data.detail, type: "success" });
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Failed to send test message";
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t("settings.testFailed");
       toaster.create({ title: msg, type: "error" });
     } finally {
       setSending(false);
@@ -488,15 +486,15 @@ function TelegramSection() {
   };
 
   return (
-    <SectionCard title="Telegram Notifications">
+    <SectionCard title={t("settings.telegramTitle")}>
       <VStack align="stretch" gap={3}>
         <Text fontSize="sm" color="fg.muted">
-          Telegram is configured via environment variables on the server. Use this section to test the connection.
+          {t("settings.telegramHelp")}
         </Text>
         <HStack>
           <Button size="sm" onClick={handleTest} loading={sending} variant="outline">
             <FiSend style={{ marginRight: 6 }} />
-            Send Test Message
+            {t("settings.sendTestMessage")}
           </Button>
         </HStack>
       </VStack>
@@ -505,6 +503,7 @@ function TelegramSection() {
 }
 
 function ServerConfigSection() {
+  const { t } = useTranslation();
   const { data: config, isLoading, error } = useQuery<ServerConfig>({
     queryKey: ["server-config"],
     queryFn: async () => {
@@ -514,13 +513,14 @@ function ServerConfigSection() {
   });
 
   if (isLoading) return <LoadingState />;
-  if (error || !config) return <ErrorState message="Failed to load server config." />;
+  if (error || !config) return <ErrorState message={t("settings.failedToLoadServerConfig")} />;
 
   // Keyed by updated_at so the form remounts (fresh state) after every apply.
   return <ServerConfigForm key={config.updated_at} config={config} />;
 }
 
 function ServerConfigForm({ config }: { config: ServerConfig }) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingValues, setPendingValues] = useState<Record<string, unknown> | null>(null);
@@ -551,7 +551,7 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
       }
     },
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Failed to apply config";
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t("settings.failedToApply");
       toaster.create({ title: msg, type: "error" });
     },
   });
@@ -597,12 +597,12 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
 
   return (
     <>
-      <SectionCard title="OpenVPN Server Configuration">
+      <SectionCard title={t("settings.serverConfigTitle")}>
         <form onSubmit={handleSubmit}>
           <VStack align="stretch" gap={4}>
             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
               <Field.Root>
-                <Field.Label>Protocol</Field.Label>
+                <Field.Label>{t("settings.protocol")}</Field.Label>
                 <Select.Root
                   value={[protocol]}
                   onValueChange={(details) => setProtocol(details.value[0])}
@@ -628,12 +628,12 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
               </Field.Root>
 
               <Field.Root>
-                <Field.Label>Port</Field.Label>
+                <Field.Label>{t("settings.port")}</Field.Label>
                 <Input name="port" type="number" defaultValue={config.port} />
               </Field.Root>
 
               <Field.Root>
-                <Field.Label>Cipher</Field.Label>
+                <Field.Label>{t("settings.cipher")}</Field.Label>
                 <Select.Root
                   value={[cipher]}
                   onValueChange={(details) => setCipher(details.value[0])}
@@ -659,7 +659,7 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
               </Field.Root>
 
               <Field.Root>
-                <Field.Label>Auth Digest</Field.Label>
+                <Field.Label>{t("settings.authDigest")}</Field.Label>
                 <Select.Root
                   value={[authDigest]}
                   onValueChange={(details) => setAuthDigest(details.value[0])}
@@ -685,7 +685,7 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
               </Field.Root>
 
               <Field.Root>
-                <Field.Label>TLS Mode</Field.Label>
+                <Field.Label>{t("settings.tlsMode")}</Field.Label>
                 <Select.Root
                   value={[tlsMode]}
                   onValueChange={(details) => setTlsMode(details.value[0])}
@@ -711,7 +711,7 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
               </Field.Root>
 
               <Field.Root>
-                <Field.Label>DNS Preset</Field.Label>
+                <Field.Label>{t("settings.dnsPreset")}</Field.Label>
                 <Select.Root
                   value={[dnsPreset]}
                   collection={dnsCollection}
@@ -745,46 +745,41 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
               </Field.Root>
 
               <Field.Root>
-                <Field.Label>MTU (optional)</Field.Label>
-                <Input name="mtu" type="number" defaultValue={config.mtu ?? ""} placeholder="1500" />
+                <Field.Label>{t("settings.mtu")}</Field.Label>
+                <Input name="mtu" type="number" defaultValue={config.mtu ?? ""} placeholder={t("settings.mtuPlaceholder")} />
               </Field.Root>
 
               <Field.Root>
-                <Field.Label>Public Host / Domain</Field.Label>
-                <Input name="public_host" defaultValue={config.public_host} placeholder="vpn.example.com" />
+                <Field.Label>{t("settings.publicHost")}</Field.Label>
+                <Input name="public_host" defaultValue={config.public_host} placeholder={t("settings.publicHostPlaceholder")} />
               </Field.Root>
 
               <Field.Root>
-                <Field.Label>Tunnel Address (optional)</Field.Label>
-                <Input name="tunnel_host" defaultValue={config.tunnel_host} placeholder="tunnel.example.com" />
+                <Field.Label>{t("settings.tunnelAddress")}</Field.Label>
+                <Input name="tunnel_host" defaultValue={config.tunnel_host} placeholder={t("settings.tunnelAddressPlaceholder")} />
                 <Field.HelperText>
-                  When set, generated .ovpn configs use this address as the{" "}
-                  <Text as="span" fontWeight="semibold">
-                    remote
-                  </Text>{" "}
-                  endpoint instead of the Public Host. It forwards the OpenVPN port back to this
-                  server — nothing needs to be installed on the tunnel itself.
+                  {t("settings.tunnelHelp")}
                 </Field.HelperText>
               </Field.Root>
 
               <Field.Root>
-                <Field.Label>Keepalive Interval</Field.Label>
+                <Field.Label>{t("settings.keepaliveInterval")}</Field.Label>
                 <Input name="keepalive_interval" type="number" defaultValue={config.keepalive_interval} />
               </Field.Root>
 
               <Field.Root>
-                <Field.Label>Keepalive Timeout</Field.Label>
+                <Field.Label>{t("settings.keepaliveTimeout")}</Field.Label>
                 <Input name="keepalive_timeout" type="number" defaultValue={config.keepalive_timeout} />
               </Field.Root>
             </SimpleGrid>
 
             {dnsPreset === "custom" && (
               <VStack align="stretch" gap={2}>
-                <Field.Label>Custom DNS Servers</Field.Label>
+                <Field.Label>{t("settings.customDnsServers")}</Field.Label>
                 {(localDns.length > 0 ? localDns : ["", ""]).map((dns, i) => (
                   <Input
                     key={i}
-                    placeholder={`DNS server ${i + 1}`}
+                    placeholder={t("settings.dnsServerPlaceholder", { index: i + 1 })}
                     value={dns}
                     onChange={(e) => {
                       const updated = [...localDns];
@@ -799,7 +794,7 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
                   alignSelf="flex-start"
                   onClick={() => setLocalDns([...localDns, ""])}
                 >
-                  + Add DNS
+                  {t("settings.addDns")}
                 </Button>
               </VStack>
             )}
@@ -813,7 +808,7 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
                 <Switch.Control>
                   <Switch.Thumb />
                 </Switch.Control>
-                <Switch.Label>Client-to-Client</Switch.Label>
+                <Switch.Label>{t("settings.clientToClient")}</Switch.Label>
               </Switch.Root>
 
               <Switch.Root
@@ -824,28 +819,24 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
                 <Switch.Control>
                   <Switch.Thumb />
                 </Switch.Control>
-                <Switch.Label>Redirect All Traffic</Switch.Label>
+                <Switch.Label>{t("settings.redirectAllTraffic")}</Switch.Label>
               </Switch.Root>
             </HStack>
 
             <Field.Root>
-              <Field.Label>Subscription URL Prefix</Field.Label>
+              <Field.Label>{t("settings.subscriptionUrlPrefix")}</Field.Label>
               <Input
                 name="subscription_url_prefix"
                 defaultValue={config.subscription_url_prefix}
-                placeholder="https://panel.example.com"
+                placeholder={t("settings.subscriptionUrlPrefixPlaceholder")}
               />
               <Field.HelperText>
-                Base URL used to build each user's subscription link (e.g.{" "}
-                <Text as="span" fontWeight="semibold">
-                  {"{prefix}/sub/{token}"}
-                </Text>
-                ). Clients use this link to auto-download their .ovpn config.
+                {t("settings.subscriptionUrlHelp")}
               </Field.HelperText>
             </Field.Root>
 
             <Button type="submit" alignSelf="flex-start" loading={applyMutation.isPending}>
-              Save & Apply Configuration
+              {t("settings.saveAndApply")}
             </Button>
           </VStack>
         </form>
@@ -857,21 +848,19 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
           setShowConfirm(false);
           setPendingValues(null);
         }}
-        title="Apply Server Configuration?"
-        confirmLabel="Apply & Restart"
+        title={t("settings.applyTitle")}
+        confirmLabel={t("settings.applyRestart")}
         confirmColorPalette="red"
         onConfirm={confirmApply}
         isLoading={applyMutation.isPending}
         body={
           <VStack align="stretch" gap={3}>
             <Text fontSize="sm">
-              This will restart your OpenVPN server and may require existing clients to
-              redownload their config file. Continue?
+              {t("settings.applyPrompt")}
             </Text>
             {pendingValues && (
               <Box bg="bg.muted" p={3} borderRadius="md" fontSize="xs" color="fg.muted">
-                Changes will be applied to: protocol, port, cipher, auth, TLS, DNS, keepalive,
-                and other modified fields.
+                {t("settings.applyChanges")}
               </Box>
             )}
           </VStack>
@@ -882,6 +871,7 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
 }
 
 function ChangePasswordSection() {
+  const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -890,11 +880,11 @@ function ChangePasswordSection() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      toaster.create({ title: "Passwords do not match", type: "error" });
+      toaster.create({ title: t("settings.passwordsDoNotMatch"), type: "error" });
       return;
     }
     if (newPassword.length < 6) {
-      toaster.create({ title: "Password must be at least 6 characters", type: "error" });
+      toaster.create({ title: t("settings.passwordMin"), type: "error" });
       return;
     }
     setLoading(true);
@@ -903,12 +893,12 @@ function ChangePasswordSection() {
         current_password: currentPassword,
         new_password: newPassword,
       });
-      toaster.create({ title: "Password updated successfully", type: "success" });
+      toaster.create({ title: t("settings.passwordUpdated"), type: "success" });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Failed to update password";
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t("settings.passwordFailed");
       toaster.create({ title: msg, type: "error" });
     } finally {
       setLoading(false);
@@ -916,11 +906,11 @@ function ChangePasswordSection() {
   };
 
   return (
-    <SectionCard title="Change Password">
+    <SectionCard title={t("settings.changePassword")}>
       <Box as="form" onSubmit={handleSubmit}>
         <VStack align="stretch" gap={3} maxW="400px">
           <Field.Root required>
-            <Field.Label>Current Password</Field.Label>
+            <Field.Label>{t("settings.currentPassword")}</Field.Label>
             <Input
               type="password"
               value={currentPassword}
@@ -929,7 +919,7 @@ function ChangePasswordSection() {
             />
           </Field.Root>
           <Field.Root required>
-            <Field.Label>New Password</Field.Label>
+            <Field.Label>{t("settings.newPassword")}</Field.Label>
             <Input
               type="password"
               value={newPassword}
@@ -938,7 +928,7 @@ function ChangePasswordSection() {
             />
           </Field.Root>
           <Field.Root required>
-            <Field.Label>Confirm New Password</Field.Label>
+            <Field.Label>{t("settings.confirmNewPassword")}</Field.Label>
             <Input
               type="password"
               value={confirmPassword}
@@ -948,7 +938,7 @@ function ChangePasswordSection() {
           </Field.Root>
           <Button type="submit" loading={loading} alignSelf="flex-start" variant="outline">
             <FiKey style={{ marginRight: 6 }} />
-            Update Password
+            {t("settings.updatePassword")}
           </Button>
         </VStack>
       </Box>
@@ -957,6 +947,7 @@ function ChangePasswordSection() {
 }
 
 export default function Settings() {
+  const { t } = useTranslation();
   const { admin } = useAuth();
   const isSudo = admin?.is_sudo;
 
@@ -966,24 +957,24 @@ export default function Settings() {
         <Tabs.List>
           <Tabs.Trigger value="account">
             <FiLock />
-            Account
+            {t("settings.account")}
           </Tabs.Trigger>
           {isSudo && (
             <Tabs.Trigger value="server">
               <FiServer />
-              Server
+              {t("settings.server")}
             </Tabs.Trigger>
           )}
           {isSudo && (
             <Tabs.Trigger value="telegram">
               <FiSend />
-              Telegram
+              {t("settings.telegram")}
             </Tabs.Trigger>
           )}
           {isSudo && (
             <Tabs.Trigger value="backup">
               <FiArchive />
-              Backup
+              {t("settings.backup")}
             </Tabs.Trigger>
           )}
           <Tabs.Indicator />

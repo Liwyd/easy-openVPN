@@ -1,0 +1,76 @@
+.react-datepicker {
+  background-color: var(--chakra-colors-bg-panel) !important;
+  border: 1px solid var(--chakra-colors-border);
+  border-radius: var(--chakra-radii-md) !important;
+  position: relative;
+  font-family: inherit;
+}
+
+.react-datepicker__header {
+  text-align: center;
+  background-color: unset;
+  position: relative;
+  border-bottom: 1px solid var(--chakra-colors-border);
+}
+
+.react-datepicker-popper[data-placement^="bottom"]
+  .react-datepicker__triangle::after {
+  border-top: none;
+  border-bottom-color: var(--chakra-colors-bg-panel);
+}
+
+.react-datepicker-popper[data-placement^="bottom"]
+  .react-datepicker__triangle::before {
+  top: -1px;
+  border-bottom-color: var(--chakra-colors-border);
+}
+
+.react-datepicker__current-month,
+.react-datepicker__day-name,
+.react-datepicker__day {
+  color: var(--chakra-colors-fg) !important;
+}
+
+.react-datepicker__day:hover {
+  border-radius: 0.3rem;
+  background-color: var(--chakra-colors-primary-400) !important;
+  color: var(--chakra-colors-white) !important;
+}
+
+.react-datepicker__day--disabled {
+  color: var(--chakra-colors-fg-muted) !important;
+}
+
+.react-datepicker__day--disabled:hover {
+  background-color: transparent !important;
+  color: var(--chakra-colors-fg-muted) !important;
+}
+
+.react-datepicker__day--keyboard-selected,
+.react-datepicker__day--selected,
+.react-datepicker__day--in-selecting-range,
+.react-datepicker__day--in-range {
+  border-radius: 0.3rem;
+  background-color: var(--chakra-colors-primary-500) !important;
+  color: var(--chakra-colors-white) !important;
+}
+
+.react-datepicker__day--selected:hover,
+.react-datepicker__day--in-selecting-range:hover {
+  background-color: var(--chakra-colors-primary-600) !important;
+}
+
+.react-datepicker__navigation.react-datepicker__navigation--previous,
+.react-datepicker__navigation.react-datepicker__navigation--next {
+  top: 8px;
+}
+
+.react-datepicker__navigation-icon::before {
+  border-color: var(--chakra-colors-fg) !important;
+}
+
+.react-datepicker__close-icon::after {
+  background-color: var(--chakra-colors-bg-muted);
+  color: var(--chakra-colors-fg-muted);
+  border-radius: 50%;
+}

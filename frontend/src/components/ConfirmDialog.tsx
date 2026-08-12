@@ -7,6 +7,7 @@ import {
   HStack,
 } from "@chakra-ui/react";
 import { buttonOutline } from "../theme-components";
+import { useTranslation } from "react-i18next";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -24,11 +25,12 @@ export default function ConfirmDialog({
   onClose,
   title,
   body,
-  confirmLabel = "Confirm",
+  confirmLabel,
   confirmColorPalette = "accent",
   onConfirm,
   isLoading,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation();
   return (
     <Dialog.Root
       open={open}
@@ -51,7 +53,7 @@ export default function ConfirmDialog({
             <Dialog.Footer>
               <HStack gap={2} justify="flex-end">
                 <Button variant="outline" css={buttonOutline} onClick={onClose}>
-                  Cancel
+                  {t("confirm.cancel")}
                 </Button>
                 <Button
                   colorPalette={confirmColorPalette}
@@ -60,7 +62,7 @@ export default function ConfirmDialog({
                     onConfirm();
                   }}
                 >
-                  {confirmLabel}
+                  {confirmLabel ?? t("confirm.confirm")}
                 </Button>
               </HStack>
             </Dialog.Footer>

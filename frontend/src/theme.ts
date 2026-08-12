@@ -2,8 +2,24 @@ import {
   createSystem,
   defaultConfig,
   defineConfig,
+  defineRecipe,
   defineSlotRecipe,
 } from "@chakra-ui/react";
+
+const buttonRecipe = defineRecipe({
+  base: {
+    borderRadius: "md",
+  },
+  variants: {
+    variant: {
+      outline: {
+        borderColor: "border.DEFAULT",
+        _hover: { bg: "bg.muted", borderColor: "border.DEFAULT" },
+        _expanded: { bg: "bg.muted", borderColor: "border.DEFAULT" },
+      },
+    },
+  },
+});
 
 const toastRecipe = defineSlotRecipe({
   slots: ["root", "title", "description", "indicator", "actionTrigger", "closeTrigger"],
@@ -120,6 +136,9 @@ const config = defineConfig({
     slotRecipes: {
       toast: toastRecipe,
     },
+    recipes: {
+      button: buttonRecipe,
+    },
     tokens: {
       fonts: {
         body: {
@@ -158,6 +177,8 @@ const config = defineConfig({
           DEFAULT: { value: { base: "#ffffff", _dark: "#1A202C" } },
           subtle: { value: { base: "#F9FAFB", _dark: "#222C3B" } },
           muted: { value: { base: "#EDF2F7", _dark: "#2D3748" } },
+          panel: { value: { base: "#ffffff", _dark: "#1A202C" } },
+          emphasized: { value: { base: "#EDF2F7", _dark: "#2D3748" } },
         },
         fg: {
           DEFAULT: { value: { base: "#1A202C", _dark: "#F7FAFC" } },

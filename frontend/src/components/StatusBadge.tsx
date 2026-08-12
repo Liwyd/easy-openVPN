@@ -1,18 +1,13 @@
 import { Badge } from "@chakra-ui/react";
 import { statusColors, statusIcons } from "../constants/UserSettings";
 import type { UserStatus } from "../types/User";
-
-const STATUS_LABEL: Record<UserStatus, string> = {
-  active: "Active",
-  limited: "Limited",
-  expired: "Expired",
-  disabled: "Disabled",
-};
+import { useTranslation } from "react-i18next";
 
 export default function StatusBadge({ status }: { status: string }) {
+  const { t } = useTranslation();
   const s = status as UserStatus;
   const Icon = statusIcons[s] ?? statusIcons.disabled;
-  const label = STATUS_LABEL[s] ?? "Disabled";
+  const label = t(`status.${s}` as const);
   return (
     <Badge
       colorPalette={statusColors[s] ?? "gray"}

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FiUsers, FiActivity, FiServer } from "react-icons/fi";
 import api from "../lib/api";
 import { formatBytes } from "../utils/formatByte";
+import { useTranslation } from "react-i18next";
 
 interface SummaryData {
   total_users: number;
@@ -102,6 +103,7 @@ function StatisticCard({
 }
 
 export default function Statistics() {
+  const { t } = useTranslation();
   const { data: summary } = useQuery<SummaryData>({
     queryKey: ["stats-summary"],
     queryFn: async () => {
@@ -138,7 +140,7 @@ export default function Statistics() {
       mb={4}
     >
       <StatisticCard
-        title="Active Users"
+        title={t("stats.activeUsers")}
         content={
           summary && statusBreakdown ? (
             <HStack alignItems="flex-end">
@@ -160,14 +162,14 @@ export default function Statistics() {
         icon={<FiUsers size={20} />}
       />
       <StatisticCard
-        title="Data Usage"
+        title={t("stats.dataUsage")}
         content={
           summary ? <Text>{formatBytes(summary.total_traffic_bytes)}</Text> : <Text>—</Text>
         }
         icon={<FiActivity size={20} />}
       />
       <StatisticCard
-        title="Memory Usage"
+        title={t("stats.memoryUsage")}
         content={
           systemMetrics ? (
             <HStack alignItems="flex-end">

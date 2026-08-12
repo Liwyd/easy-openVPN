@@ -13,6 +13,7 @@ import {
   Text,
 } from "@chakra-ui/react";
 import { createListCollection } from "@chakra-ui/react";
+import { useTranslation } from "react-i18next";
 import { buttonSolid, buttonOutline } from "../theme-components";
 import { formatBytes } from "../utils/formatByte";
 import { useAdminContext } from "../contexts/AdminContext";
@@ -68,6 +69,7 @@ function parseLimitBytes(value: string, unit: string): number | null {
 }
 
 export default function AdminDialog() {
+  const { t } = useTranslation();
   const {
     editAdmin,
     closeEdit,
@@ -99,22 +101,22 @@ export default function AdminDialog() {
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (isCreate) {
-      if (!form.username.trim()) e.username = "Username is required";
+      if (!form.username.trim()) e.username = t("adminDialog.usernameRequired");
       else if (!/^[a-zA-Z0-9_-]+$/.test(form.username.trim()))
-        e.username = "Only letters, numbers, hyphens and underscores allowed";
+        e.username = t("validate.usernameChars");
       if (form.password.length < 8)
-        e.password = "Password must be at least 8 characters";
+        e.password = t("adminDialog.passwordMin");
     } else if (form.password && form.password.length < 8) {
-      e.password = "Password must be at least 8 characters";
+      e.password = t("adminDialog.passwordMin");
     }
     if (
       form.dataLimit &&
       (isNaN(parseFloat(form.dataLimit)) || parseFloat(form.dataLimit) <= 0)
     ) {
-      e.dataLimit = "Must be a positive number";
+      e.dataLimit = t("validate.positiveNumber");
     }
     if (!form.isSudo && !form.dataLimit) {
-      e.dataLimit = "Sub-admins require a data limit";
+      e.dataLimit = t("adminDialog.subAdminRequiresLimit");
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -157,24 +159,24 @@ export default function AdminDialog() {
           <Dialog.Content maxW="md">
             <Dialog.Header>
               <Dialog.Title>
-                {isCreate ? "Create Admin" : `Edit Admin: ${editAdmin?.username}`}
+                {isCreate ? t("adminDialog.createTitle") : t("adminDialog.editTitle", { username: editAdmin?.username })}
               </Dialog.Title>
             </Dialog.Header>
             <Dialog.Body>
               {!isCreate && editAdmin && (
                 <Text fontSize="sm" color="fg.muted" mb={4}>
-                  {formatBytes(editAdmin.data_used)} used of{" "}
-                  {editAdmin.data_limit ? formatBytes(editAdmin.data_limit) : "unlimited"}
+                  {formatBytes(editAdmin.data_used)} {t("adminDialog.usedOf")}{" "}
+                  {editAdmin.data_limit ? formatBytes(editAdmin.data_limit) : t("adminDialog.unlimited")}
                 </Text>
               )}
               <VStack gap={4} align="stretch">
                 {isCreate && (
                   <Field.Root invalid={!!errors.username}>
-                    <Field.Label>Username</Field.Label>
+                    <Field.Label>{t("adminDialog.username")}</Field.Label>
                     <Input
                       value={form.username}
                       onChange={(e) => set({ username: e.target.value })}
-                      placeholder="e.g. reseller"
+                      placeholder={t("adminDialog.usernamePlaceholder")}
                     />
                     {errors.username && (
                       <Field.ErrorText>{errors.username}</Field.ErrorText>
@@ -184,7 +186,7 @@ export default function AdminDialog() {
 
                 {isCreate && (
                   <Field.Root>
-                    <Field.Label>Sudo admin</Field.Label>
+                    <Field.Label>{t("adminDialog.sudoAdmin")}</Field.Label>
                     <Switch.Root
                       checked={form.isSudo}
                       onCheckedChange={(e) => set({ isSudo: !!e.checked })}
@@ -193,8 +195,8 @@ export default function AdminDialog() {
                       <Switch.Control />
                       <Switch.Label>
                         {form.isSudo
-                          ? "Full access (no data limit)"
-                          : "Sub-admin with quota"}
+                          ? t("adminDialog.fullAccess")
+                          : t("adminDialog.subAdminWithQuota")}
                       </Switch.Label>
                     </Switch.Root>
                   </Field.Root>
@@ -202,14 +204,14 @@ export default function AdminDialog() {
 
                 <Field.Root invalid={!!errors.dataLimit}>
                   <Field.Label>
-                    Data Limit {form.isSudo ? "(unlimited)" : ""}
+                    {t("adminDialog.dataLimit")} {form.isSudo ? t("adminDialog.unlimitedHint") : ""}
                   </Field.Label>
                   <HStack gap={2}>
                     <Input
                       type="number"
                       value={form.dataLimit}
                       onChange={(e) => set({ dataLimit: e.target.value })}
-                      placeholder={form.isSudo ? "Unlimited" : "Required"}
+                      placeholder={form.isSudo ? t("adminDialog.unlimitedPlaceholder") : t("adminDialog.requiredPlaceholder")}
                       flex="1"
                       min="0"
                       disabled={form.isSudo}
@@ -248,13 +250,13 @@ export default function AdminDialog() {
 
                 <Field.Root invalid={!!errors.password}>
                   <Field.Label>
-                    {isCreate ? "Password" : "New Password (optional)"}
+                    {isCreate ? t("adminDialog.password") : t("adminDialog.newPasswordOptional")}
                   </Field.Label>
                   <Input
                     type="password"
                     value={form.password}
                     onChange={(e) => set({ password: e.target.value })}
-                    placeholder={isCreate ? "Minimum 8 characters" : "Leave blank to keep current"}
+                    placeholder={isCreate ? t("adminDialog.min8Chars") : t("adminDialog.leaveBlank")}
                     autoComplete="new-password"
                   />
                   {errors.password && (
@@ -264,7 +266,7 @@ export default function AdminDialog() {
 
                 {!isCreate && (
                   <Field.Root>
-                    <Field.Label>Status</Field.Label>
+                    <Field.Label>{t("adminDialog.status")}</Field.Label>
                     <Switch.Root
                       checked={!form.disabled}
                       onCheckedChange={(e) => set({ disabled: !e.checked })}
@@ -272,7 +274,7 @@ export default function AdminDialog() {
                       <Switch.HiddenInput />
                       <Switch.Control />
                       <Switch.Label>
-                        {form.disabled ? "Disabled" : "Active"}
+                        {form.disabled ? t("adminDialog.disabled") : t("adminDialog.active")}
                       </Switch.Label>
                     </Switch.Root>
                   </Field.Root>
@@ -281,14 +283,14 @@ export default function AdminDialog() {
             </Dialog.Body>
             <Dialog.Footer>
               <Button variant="outline" css={buttonOutline} onClick={closeDialog}>
-                Cancel
+                {t("adminDialog.cancel")}
               </Button>
               <Button
                 css={buttonSolid}
                 onClick={handleSubmit}
                 loading={createMutation.isPending || updateMutation.isPending}
               >
-                {isCreate ? "Create" : "Save"}
+                {isCreate ? t("adminDialog.create") : t("adminDialog.save")}
               </Button>
             </Dialog.Footer>
           </Dialog.Content>

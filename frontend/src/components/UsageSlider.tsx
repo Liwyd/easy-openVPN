@@ -1,17 +1,21 @@
 import { Box, Text, HStack, Slider } from "@chakra-ui/react";
+import { useTranslation } from "react-i18next";
 import { formatBytes } from "../utils/formatByte";
 import type { User } from "../types/User";
 
-export function getResetStrategyText(strategy: string): string {
+export function getResetStrategyText(
+  strategy: string,
+  t?: (key: string) => string,
+): string {
   switch (strategy) {
     case "day":
-      return "Daily";
+      return t ? t("usage.daily") : "Daily";
     case "week":
-      return "Weekly";
+      return t ? t("usage.weekly") : "Weekly";
     case "month":
-      return "Monthly";
+      return t ? t("usage.monthly") : "Monthly";
     case "year":
-      return "Yearly";
+      return t ? t("usage.yearly") : "Yearly";
     default:
       return strategy.charAt(0).toUpperCase() + strategy.slice(1);
   }
@@ -22,21 +26,22 @@ interface UsageSliderProps {
 }
 
 export default function UsageSlider({ user }: UsageSliderProps) {
+  const { t } = useTranslation();
   const used = Math.min(
     user.data_used,
     user.data_limit ?? Number.MAX_SAFE_INTEGER,
   );
 
-  const strategy = getResetStrategyText(user.data_limit_reset_strategy);
+  const strategy = getResetStrategyText(user.data_limit_reset_strategy, t);
 
   return (
     <Box>
       <HStack justify="space-between" mb={1}>
         <Text fontSize="xs" color="fg.muted">
-          {formatBytes(user.data_used)} used
+          {formatBytes(user.data_used)} {t("usage.used")}
         </Text>
         <Text fontSize="xs" color="fg.muted">
-          {user.data_limit ? formatBytes(user.data_limit) : "Unlimited"} {strategy}
+          {user.data_limit ? formatBytes(user.data_limit) : t("usage.unlimited")} {strategy}
         </Text>
       </HStack>
       {user.data_limit ? (

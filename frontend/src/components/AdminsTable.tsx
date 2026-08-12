@@ -10,6 +10,7 @@ import {
   Badge,
   HStack,
 } from "@chakra-ui/react";
+import { useTranslation } from "react-i18next";
 import {
   FiEdit2,
   FiTrash2,
@@ -29,10 +30,11 @@ type SortKey = "username" | "data_usage" | "user_count";
 type SortDir = "asc" | "desc";
 
 function AdminUsageBar({ admin }: { admin: Admin }) {
+  const { t } = useTranslation();
   if (!admin.data_limit) {
     return (
       <Text fontSize="sm" color="fg.muted">
-        {formatBytes(admin.data_used)} used
+        {formatBytes(admin.data_used)} {t("adminsTable.used")}
       </Text>
     );
   }
@@ -42,7 +44,7 @@ function AdminUsageBar({ admin }: { admin: Admin }) {
     <Box w="100%" maxW="220px">
       <Flex justify="space-between" mb={1}>
         <Text fontSize="xs" color="fg.muted">
-          {formatBytes(admin.data_used)} used
+          {formatBytes(admin.data_used)} {t("adminsTable.used")}
         </Text>
         <Text fontSize="xs" color="fg.muted">
           {formatBytes(admin.data_limit)}
@@ -69,6 +71,7 @@ export default function AdminsTable({
   isFetching?: boolean;
 }) {
   const { openEdit, openDelete, toggleMutation } = useAdminContext();
+  const { t } = useTranslation();
   const [sortKey, setSortKey] = useState<SortKey>("username");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -129,27 +132,27 @@ export default function AdminsTable({
           <Table.Row>
             <Table.ColumnHeader minW="200px">
               <SortHeader
-                label="Username"
+                label={t("adminsTable.username")}
                 sortable="username"
                 onClick={() => toggleSort("username")}
               />
             </Table.ColumnHeader>
             <Table.ColumnHeader minW="220px">
               <SortHeader
-                label="Data Usage"
+                label={t("adminsTable.dataUsage")}
                 sortable="data_usage"
                 onClick={() => toggleSort("data_usage")}
               />
             </Table.ColumnHeader>
             <Table.ColumnHeader minW="100px">
               <SortHeader
-                label="Users"
+                label={t("adminsTable.users")}
                 sortable="user_count"
                 onClick={() => toggleSort("user_count")}
               />
             </Table.ColumnHeader>
-            <Table.ColumnHeader minW="140px">Created</Table.ColumnHeader>
-            <Table.ColumnHeader textAlign="right">Actions</Table.ColumnHeader>
+            <Table.ColumnHeader minW="140px">{t("adminsTable.created")}</Table.ColumnHeader>
+            <Table.ColumnHeader textAlign="right">{t("adminsTable.actions")}</Table.ColumnHeader>
           </Table.Row>
         </Table.Header>
         <Table.Body>
@@ -164,7 +167,7 @@ export default function AdminsTable({
                       px={2}
                       py={0.5}
                       fontSize="xs"
-                      title={admin.is_sudo ? "Sudo admin" : "Sub-admin"}
+                      title={admin.is_sudo ? t("adminsTable.sudoAdmin") : t("adminsTable.subAdmin")}
                     >
                       {admin.is_sudo ? <FiShield /> : <FiUser />}
                     </Badge>
@@ -172,7 +175,7 @@ export default function AdminsTable({
                       <Text fontWeight="semibold">{admin.username}</Text>
                       {admin.disabled && (
                         <Badge colorPalette="gray" borderRadius="full" px={2} py={0} fontSize="xs">
-                          Disabled
+                          {t("adminsTable.disabled")}
                         </Badge>
                       )}
                     </Flex>
@@ -184,11 +187,11 @@ export default function AdminsTable({
                 <Table.Cell>
                   <Flex direction="column" gap={0.5}>
                     <Text fontSize="sm">
-                      {admin.user_count} users
+                      {t("adminsTable.usersCount", { count: admin.user_count })}
                     </Text>
                     {admin.limitless_user_count > 0 && (
                       <Text fontSize="xs" color="fg.muted">
-                        {admin.limitless_user_count} unlimited
+                        {t("adminsTable.unlimitedCount", { count: admin.limitless_user_count })}
                       </Text>
                     )}
                   </Flex>
@@ -199,11 +202,11 @@ export default function AdminsTable({
                 <Table.Cell>
                   <HStack justify="flex-end" gap={1}>
                     <IconButton
-                      aria-label={admin.disabled ? "Enable admin" : "Disable admin"}
+                      aria-label={admin.disabled ? t("adminsTable.enableAdmin") : t("adminsTable.disableAdmin")}
                       variant="ghost"
                       size="sm"
                       colorPalette={admin.disabled ? "green" : "gray"}
-                      title={admin.disabled ? "Enable admin" : "Disable admin"}
+                      title={admin.disabled ? t("adminsTable.enableAdmin") : t("adminsTable.disableAdmin")}
                       disabled={admin.is_sudo}
                       onClick={() =>
                         toggleMutation.mutate({
@@ -215,20 +218,20 @@ export default function AdminsTable({
                       <FiPower />
                     </IconButton>
                     <IconButton
-                      aria-label="Edit admin"
+                      aria-label={t("adminsTable.editAdmin")}
                       variant="ghost"
                       size="sm"
-                      title="Edit admin"
+                      title={t("adminsTable.editAdmin")}
                       onClick={() => openEdit(admin)}
                     >
                       <FiEdit2 />
                     </IconButton>
                     <IconButton
-                      aria-label="Delete admin"
+                      aria-label={t("adminsTable.deleteAdmin")}
                       variant="ghost"
                       size="sm"
                       colorPalette="red"
-                      title="Delete admin"
+                      title={t("adminsTable.deleteAdmin")}
                       disabled={admin.is_sudo}
                       onClick={() => openDelete(admin)}
                     >
