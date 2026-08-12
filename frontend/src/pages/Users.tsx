@@ -5,6 +5,7 @@ import { card } from "../theme-components";
 import { UserProvider, useUserContext } from "../contexts/UserContext";
 import { useUsersQuery, USERS_PER_PAGE_KEY } from "../hooks/useUsers";
 import { useDebouncedValue, useStoredPerPage } from "../hooks/useCommon";
+import Statistics from "../components/Statistics";
 import Filters from "../components/Filters";
 import UsersTable from "../components/UsersTable";
 import Pagination from "../components/Pagination";
@@ -48,6 +49,7 @@ function UsersContent() {
 
   return (
     <VStack align="stretch" gap={6}>
+      <Statistics />
       <Filters
         search={search}
         onSearchChange={handleSearch}

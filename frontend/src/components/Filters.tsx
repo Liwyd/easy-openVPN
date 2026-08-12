@@ -1,6 +1,5 @@
-import { Flex, Input, Box, IconButton, Button } from "@chakra-ui/react";
-import { FiSearch, FiRefreshCw, FiPlus } from "react-icons/fi";
-import { buttonSolid, buttonOutline } from "../theme-components";
+import { Button, Flex, Box, Input, IconButton, Icon, Spinner } from "@chakra-ui/react";
+import { FiSearch, FiRefreshCw, FiPlus, FiX } from "react-icons/fi";
 
 interface FiltersProps {
   search: string;
@@ -27,52 +26,72 @@ export default function Filters({
     <Flex
       position="sticky"
       top="0"
-      zIndex="1"
+      zIndex="docked"
       bg="bg"
-      py={3}
-      gap={3}
-      wrap="wrap"
+      py={4}
+      gap={4}
       align="center"
+      wrap="wrap"
     >
-      <Box position="relative" flex="1" maxW="320px" minW="200px">
+      <Flex position="relative" flex="1" minW="220px" align="center">
+        <Box
+          position="absolute"
+          left="10px"
+          top="50%"
+          transform="translateY(-50%)"
+          color="fg.muted"
+          zIndex="2"
+        >
+          <Icon as={FiSearch} />
+        </Box>
         <Input
           placeholder={searchPlaceholder}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          pe="36px"
+          pl="36px"
+          pr={search ? "30px" : "10px"}
           data-testid={testId}
         />
-        <Box
-          position="absolute"
-          right="10px"
-          top="50%"
-          transform="translateY(-50%)"
-          pointerEvents="none"
-          color="fg.muted"
+        {search && (
+          <Box
+            position="absolute"
+            right="6px"
+            top="50%"
+            transform="translateY(-50%)"
+            zIndex="2"
+          >
+            <IconButton
+              aria-label="Clear search"
+              size="xs"
+              variant="ghost"
+              onClick={() => onSearchChange("")}
+            >
+              <FiX />
+            </IconButton>
+          </Box>
+        )}
+      </Flex>
+
+      <Flex gap={2} align="center" ml="auto">
+        {isRefreshing && <Spinner size="xs" />}
+        <IconButton
+          aria-label="Refresh"
+          variant="outline"
+          onClick={onRefresh}
+          disabled={isRefreshing}
+          title="Refresh"
+          size="sm"
         >
-          <FiSearch />
-        </Box>
-      </Box>
+          <FiRefreshCw />
+        </IconButton>
 
-      <Box flex="1" />
-
-      <IconButton
-        aria-label="Refresh"
-        variant="outline"
-        css={buttonOutline}
-        onClick={onRefresh}
-        disabled={isRefreshing}
-        title="Refresh"
-      >
-        <FiRefreshCw />
-      </IconButton>
-
-      {onCreate && (
-        <Button css={buttonSolid} onClick={onCreate}>
-          <FiPlus />
-          {createLabel}
-        </Button>
-      )}
+        {onCreate && (
+          <Button colorPalette="accent" onClick={onCreate} size="sm" px={5}>
+            <FiPlus />
+            {createLabel}
+          </Button>
+        )}
+      </Flex>
     </Flex>
   );
 }

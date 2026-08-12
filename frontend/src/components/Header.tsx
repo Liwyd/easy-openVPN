@@ -13,8 +13,8 @@ import { useAuth } from "../context/AuthContext";
 import { HOME_PATH } from "../lib/base";
 
 const NAV_ITEMS = [
-  { label: "Dashboard", icon: FiGrid, path: HOME_PATH },
-  { label: "Users", icon: FiUsers, path: "/users" },
+  { label: "Users", icon: FiUsers, path: HOME_PATH },
+  { label: "Dashboard", icon: FiGrid, path: "/dashboard" },
   { label: "Admins", icon: FiShield, path: "/admins", sudoOnly: true },
   { label: "Billing", icon: FiDollarSign, path: "/billing", sudoOnly: true },
   { label: "Settings", icon: FiSettings, path: "/settings" },
@@ -31,24 +31,10 @@ export default function Header() {
   );
 
   const title =
-    filtered.find((i) =>
-      i.path === HOME_PATH
-        ? location.pathname === HOME_PATH || location.pathname === "/dashboard"
-        : location.pathname === i.path,
-    )?.label ?? "eovpanel";
+    filtered.find((i) => location.pathname === i.path)?.label ?? "Users";
 
   return (
-    <Flex
-      h="56px"
-      minH="56px"
-      px={6}
-      align="center"
-      justify="space-between"
-      gap={3}
-      borderBottom="1px solid"
-      borderColor="border"
-      bg="bg"
-    >
+    <Flex align="center" justify="space-between" gap={3} wrap="wrap" mb={4}>
       <Text as="h1" fontWeight="semibold" fontSize="2xl">
         {title}
       </Text>
@@ -56,7 +42,7 @@ export default function Header() {
       <Flex align="center" gap={2}>
         <Button
           onClick={toggleColorMode}
-          variant="ghost"
+          variant="outline"
           size="sm"
           aria-label="Toggle color mode"
         >

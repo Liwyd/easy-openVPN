@@ -11,7 +11,7 @@ import {
   Text,
   VStack,
 } from "@chakra-ui/react";
-import { HiOutlineEye, HiOutlineEyeOff } from "react-icons/hi";
+import { HiOutlineEye, HiOutlineEyeOff, HiOutlineLogout } from "react-icons/hi";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { HOME_PATH } from "../lib/base";
@@ -101,6 +101,7 @@ export default function Login() {
                   w="full"
                   colorPalette="accent"
                 >
+                  <HiOutlineLogout style={{ marginRight: 4 }} />
                   Login
                 </Button>
               </VStack>

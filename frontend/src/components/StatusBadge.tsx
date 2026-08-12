@@ -17,11 +17,12 @@ export default function StatusBadge({ status }: { status: string }) {
     <Badge
       colorPalette={statusColors[s] ?? "gray"}
       borderRadius="full"
-      px={2.5}
+      px={3}
       py={1}
-      fontSize="xs"
-      fontWeight="semibold"
-      lineHeight="1"
+      fontSize="sm"
+      fontWeight="medium"
+      lineHeight="1.25rem"
+      letterSpacing="tighter"
       title={label}
     >
       <Icon style={{ display: "inline-block", marginRight: 6 }} />

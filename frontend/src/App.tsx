@@ -38,8 +38,9 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route path={HOME_PATH} element={<Dashboard />} />
+            <Route path={HOME_PATH} element={<Users />} />
             <Route path="/users" element={<Users />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route
               path="/admins"
               element={
