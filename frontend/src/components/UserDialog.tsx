@@ -1,26 +1,30 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   Portal,
   Field,
   Input,
-  Select,
-  For,
+  Textarea,
+  Button,
   HStack,
   VStack,
   Box,
   Text,
-  Textarea,
-  Button,
+  Grid,
+  GridItem,
+  IconButton,
   Badge,
+  Switch,
 } from "@chakra-ui/react";
 import {
+  FiUserPlus,
+  FiEdit3,
+  FiRefreshCw,
   FiPower,
   FiRotateCcw,
   FiTrash2,
-  FiRefreshCw,
+  FiServer,
 } from "react-icons/fi";
-import { createListCollection } from "@chakra-ui/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../lib/api";
 import { toaster } from "../lib/toaster";
@@ -30,24 +34,12 @@ import type { User } from "../types/User";
 import StatusBadge from "./StatusBadge";
 import { useUserContext } from "../contexts/UserContext";
 
-const unitCollection = createListCollection({
-  items: [
-    { label: "GB", value: "gb" },
-    { label: "MB", value: "mb" },
-  ],
-});
-
-const statusCollection = createListCollection({
-  items: [
-    { label: "Active", value: "active" },
-    { label: "Disabled", value: "disabled" },
-  ],
-});
+const RANDOM_CHARS =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
 interface FormState {
   username: string;
   dataLimit: string;
-  dataUnit: string;
   expireAt: string;
   timeWindowStart: string;
   timeWindowEnd: string;
@@ -59,7 +51,6 @@ function emptyForm(): FormState {
   return {
     username: "",
     dataLimit: "",
-    dataUnit: "gb",
     expireAt: "",
     timeWindowStart: "",
     timeWindowEnd: "",
@@ -70,20 +61,12 @@ function emptyForm(): FormState {
 
 function userToForm(user: User): FormState {
   let limitVal = "";
-  let unit = "gb";
   if (user.data_limit) {
-    if (user.data_limit % 1024 ** 3 === 0) {
-      limitVal = String(user.data_limit / 1024 ** 3);
-      unit = "gb";
-    } else {
-      limitVal = String(user.data_limit / 1024 ** 2);
-      unit = "mb";
-    }
+    limitVal = String((user.data_limit / 1024 ** 3).toFixed(2));
   }
   return {
     username: user.username,
     dataLimit: limitVal,
-    dataUnit: unit,
     expireAt: user.expire_at
       ? new Date(user.expire_at).toISOString().slice(0, 10)
       : "",
@@ -98,11 +81,64 @@ function userToForm(user: User): FormState {
   };
 }
 
-function parseLimitBytes(value: string, unit: string): number | null {
+function parseLimitBytes(value: string): number | null {
   if (!value) return null;
   const num = parseFloat(value);
   if (isNaN(num) || num <= 0) return null;
-  return Math.round(num * (unit === "gb" ? 1024 ** 3 : 1024 ** 2));
+  return Math.round(num * 1024 ** 3);
+}
+
+function createRandomUsername(): string {
+  let result = "";
+  for (let i = 0; i < 6; i += 1) {
+    result += RANDOM_CHARS.charAt(
+      Math.floor(Math.random() * RANDOM_CHARS.length),
+    );
+  }
+  return result;
+}
+
+function HeaderIcon({ children }: { children: React.ReactNode }) {
+  return (
+    <Box
+      p="2"
+      position="relative"
+      color="white"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      _before={{
+        content: `""`,
+        position: "absolute",
+        top: 0,
+        left: 0,
+        bg: "primary.400",
+        display: "block",
+        w: "full",
+        h: "full",
+        borderRadius: "5px",
+        opacity: ".5",
+        zIndex: "1",
+      }}
+      _after={{
+        content: `""`,
+        position: "absolute",
+        top: "-5px",
+        left: "-5px",
+        bg: "primary.400",
+        display: "block",
+        w: "calc(100% + 10px)",
+        h: "calc(100% + 10px)",
+        borderRadius: "8px",
+        opacity: ".4",
+        zIndex: "1",
+      }}
+    >
+      <Box position="relative" zIndex="2" w={5} h={5}>
+        {children}
+      </Box>
+    </Box>
+  );
 }
 
 export default function UserDialog() {
@@ -116,6 +152,7 @@ export default function UserDialog() {
     openReset,
     openRegenerate,
     enableMutation,
+    disableMutation,
   } = useUserContext();
 
   const isCreate = createOpen;
@@ -123,6 +160,7 @@ export default function UserDialog() {
 
   const [form, setForm] = useState<FormState>(emptyForm());
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [usernameLoading, setUsernameLoading] = useState(false);
 
   useEffect(() => {
     if (createOpen) {
@@ -134,12 +172,13 @@ export default function UserDialog() {
     }
   }, [createOpen, editUser]);
 
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["users"] });
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ["users"] });
 
   const createMutation = useMutation({
     mutationFn: async (f: FormState) => {
       const body: Record<string, unknown> = { username: f.username };
-      const limit = parseLimitBytes(f.dataLimit, f.dataUnit);
+      const limit = parseLimitBytes(f.dataLimit);
       if (limit !== null) body.data_limit = limit;
       if (f.expireAt) body.expire_at = new Date(f.expireAt).toISOString();
       if (f.timeWindowStart) body.time_window_start = f.timeWindowStart;
@@ -169,7 +208,7 @@ export default function UserDialog() {
       f: FormState;
     }) => {
       const body: Record<string, unknown> = {};
-      const limit = parseLimitBytes(f.dataLimit, f.dataUnit);
+      const limit = parseLimitBytes(f.dataLimit);
       if (limit !== null) body.data_limit = limit;
       else body.data_limit = null;
       if (f.expireAt) body.expire_at = new Date(f.expireAt).toISOString();
@@ -198,7 +237,7 @@ export default function UserDialog() {
   function validate(): boolean {
     const e: Record<string, string> = {};
     if (isCreate) {
-      if (!form.username.trim()) e.username = "Username is required";
+      if (!form.username.trim()) e.username = "Required";
       else if (!/^[a-zA-Z0-9_-]+$/.test(form.username.trim()))
         e.username = "Only letters, numbers, hyphens and underscores allowed";
     }
@@ -226,244 +265,344 @@ export default function UserDialog() {
   const set = (patch: Partial<FormState>) =>
     setForm((f) => ({ ...f, ...patch }));
 
+  const nodesPlaceholder = useMemo(
+    () => [
+      { name: "Main", address: "Default", selected: true },
+      { name: "Node 2", address: "Coming soon", selected: false },
+    ],
+    [],
+  );
+
   return (
     <Dialog.Root
       open={isOpen}
+      size="lg"
       onOpenChange={(e) => {
         if (!e.open) closeDialog();
       }}
     >
       <Portal>
-        <Dialog.Backdrop />
+        <Dialog.Backdrop
+          bg="blackAlpha.300"
+          _dark={{ bg: "blackAlpha.500" }}
+          backdropFilter="blur(10px)"
+        />
         <Dialog.Positioner>
-          <Dialog.Content maxW="md">
-            <Dialog.Header>
-              <Dialog.Title>
-                {isCreate ? "Create User" : `Edit User`}
-              </Dialog.Title>
-            </Dialog.Header>
-            <Dialog.Body>
-              {!isCreate && editUser && (
-                <HStack gap={3} mb={4} justify="space-between">
-                  <HStack gap={2}>
-                    <Text fontWeight="semibold">{editUser.username}</Text>
-                    <StatusBadge status={editUser.status} />
-                  </HStack>
-                  <Text fontSize="sm" color="fg.muted">
-                    {formatBytes(editUser.data_used)} used of{" "}
-                    {editUser.data_limit ? formatBytes(editUser.data_limit) : "unlimited"}
-                  </Text>
-                </HStack>
-              )}
-              <VStack gap={4} align="stretch">
-                {isCreate && (
-                  <Field.Root invalid={!!errors.username}>
-                    <Field.Label>Username</Field.Label>
-                    <Input
-                      value={form.username}
-                      onChange={(e) => set({ username: e.target.value })}
-                      placeholder="e.g. john"
-                    />
-                    {errors.username && (
-                      <Field.ErrorText>{errors.username}</Field.ErrorText>
-                    )}
-                  </Field.Root>
-                )}
-
-                <Field.Root invalid={!!errors.dataLimit}>
-                  <Field.Label>Data Limit (optional)</Field.Label>
-                  <HStack gap={2}>
-                    <Input
-                      type="number"
-                      value={form.dataLimit}
-                      onChange={(e) => set({ dataLimit: e.target.value })}
-                      placeholder="Unlimited"
-                      flex="1"
-                      min="0"
-                    />
-                    <Select.Root
-                      collection={unitCollection}
-                      value={[form.dataUnit]}
-                      onValueChange={(details) =>
-                        set({ dataUnit: details.value[0] ?? "gb" })
-                      }
-                      width="90px"
-                    >
-                      <Select.Control>
-                        <Select.Trigger>
-                          <Select.ValueText />
-                        </Select.Trigger>
-                      </Select.Control>
-                      <Select.Positioner>
-                        <Select.Content>
-                          <For each={unitCollection.items}>
-                            {(item) => (
-                              <Select.Item key={item.value} item={item}>
-                                <Select.ItemText>{item.label}</Select.ItemText>
-                              </Select.Item>
-                            )}
-                          </For>
-                        </Select.Content>
-                      </Select.Positioner>
-                    </Select.Root>
-                  </HStack>
-                  {errors.dataLimit && (
-                    <Field.ErrorText>{errors.dataLimit}</Field.ErrorText>
+          <Dialog.Content mx="3">
+            <Dialog.Header pt={6} pb={4}>
+              <HStack gap={2}>
+                <HeaderIcon>
+                  {isCreate ? (
+                    <FiUserPlus size={20} />
+                  ) : (
+                    <FiEdit3 size={20} />
                   )}
-                </Field.Root>
+                </HeaderIcon>
+                <Text fontWeight="semibold" fontSize="lg">
+                  {isCreate ? "Create New User" : "Edit User"}
+                </Text>
+              </HStack>
+            </Dialog.Header>
+            <Dialog.CloseTrigger mt={3} />
 
-                <Field.Root>
-                  <Field.Label>Expiry Date (optional)</Field.Label>
-                  <Input
-                    type="date"
-                    value={form.expireAt}
-                    onChange={(e) => set({ expireAt: e.target.value })}
-                  />
-                </Field.Root>
+            <Dialog.Body>
+              <Grid
+                templateColumns={{ base: "repeat(1, 1fr)", md: "repeat(2, 1fr)" }}
+                gap={3}
+              >
+                <GridItem>
+                  <VStack justifyContent="space-between" h="full">
+                    <VStack gap={0} w="full">
+                      {isCreate && (
+                        <Field.Root invalid={!!errors.username} mb="10px">
+                          <Field.Label>
+                            <HStack gap={1.5} align="center">
+                              Username
+                              <IconButton
+                                aria-label="Random username"
+                                size="2xs"
+                                variant="ghost"
+                                onClick={() => {
+                                  setUsernameLoading(true);
+                                  const name = createRandomUsername();
+                                  set({ username: name });
+                                  setTimeout(
+                                    () => setUsernameLoading(false),
+                                    350,
+                                  );
+                                }}
+                              >
+                                <FiRefreshCw
+                                  style={{
+                                    width: 12,
+                                    height: 12,
+                                    animation: usernameLoading
+                                      ? "spin 1s linear infinite"
+                                      : undefined,
+                                  }}
+                                />
+                              </IconButton>
+                            </HStack>
+                          </Field.Label>
+                          <HStack w="full">
+                            <Input
+                              size="sm"
+                              borderRadius="6px"
+                              value={form.username}
+                              onChange={(e) => set({ username: e.target.value })}
+                              placeholder="Username"
+                            />
+                          </HStack>
+                          {errors.username && (
+                            <Field.ErrorText>{errors.username}</Field.ErrorText>
+                          )}
+                        </Field.Root>
+                      )}
 
-                <Field.Root>
-                  <Field.Label>
-                    Time Window{" "}
-                    <Badge size="sm" colorPalette="gray">
-                      Optional
-                    </Badge>
-                  </Field.Label>
-                  <HStack gap={2}>
-                    <Box flex="1">
-                      <Text fontSize="xs" color="fg.muted" mb={1}>
-                        Start
-                      </Text>
-                      <Input
-                        type="time"
-                        value={form.timeWindowStart}
-                        onChange={(e) => set({ timeWindowStart: e.target.value })}
-                      />
-                    </Box>
-                    <Box flex="1">
-                      <Text fontSize="xs" color="fg.muted" mb={1}>
-                        End
-                      </Text>
-                      <Input
-                        type="time"
-                        value={form.timeWindowEnd}
-                        onChange={(e) => set({ timeWindowEnd: e.target.value })}
-                      />
-                    </Box>
-                  </HStack>
-                </Field.Root>
+                      {!isCreate && editUser && (
+                        <Field.Root mb="10px">
+                          <Field.Label>
+                            <HStack gap={2} align="center">
+                              <Text>{editUser.username}</Text>
+                              <StatusBadge status={editUser.status} />
+                              <Switch.Root
+                                size="sm"
+                                colorPalette="primary"
+                                checked={form.status === "active"}
+                                onCheckedChange={(e) =>
+                                  set({
+                                    status: e.checked ? "active" : "disabled",
+                                  })
+                                }
+                                title={`status: ${form.status}`}
+                              >
+                                <Switch.HiddenInput />
+                                <Switch.Control />
+                                <Switch.Thumb />
+                              </Switch.Root>
+                            </HStack>
+                          </Field.Label>
+                          <Text fontSize="sm" color="fg.muted">
+                            {formatBytes(editUser.data_used)} used of{" "}
+                            {editUser.data_limit
+                              ? formatBytes(editUser.data_limit)
+                              : "unlimited"}
+                          </Text>
+                        </Field.Root>
+                      )}
 
-                {!isCreate && (
-                  <Field.Root>
-                    <Field.Label>Status</Field.Label>
-                    <Select.Root
-                      collection={statusCollection}
-                      value={[form.status]}
-                      onValueChange={(details) =>
-                        set({ status: details.value[0] ?? "active" })
-                      }
+                      <Field.Root invalid={!!errors.dataLimit} mb="10px">
+                        <Field.Label>Data Limit (GB)</Field.Label>
+                        <Input
+                          size="sm"
+                          borderRadius="6px"
+                          type="number"
+                          min="0"
+                          value={form.dataLimit}
+                          onChange={(e) => set({ dataLimit: e.target.value })}
+                          placeholder="Unlimited"
+                        />
+                        {errors.dataLimit && (
+                          <Field.ErrorText>{errors.dataLimit}</Field.ErrorText>
+                        )}
+                      </Field.Root>
+
+                      <Field.Root mb="10px">
+                        <Field.Label>Expiry Date</Field.Label>
+                        <Input
+                          size="sm"
+                          borderRadius="6px"
+                          type="date"
+                          value={form.expireAt}
+                          onChange={(e) => set({ expireAt: e.target.value })}
+                        />
+                      </Field.Root>
+
+                      <Field.Root mb="10px">
+                        <Field.Label>
+                          Time Window{" "}
+                          <Badge size="sm" colorPalette="gray">
+                            Optional
+                          </Badge>
+                        </Field.Label>
+                        <HStack gap={2} w="full">
+                          <Box flex="1">
+                            <Input
+                              size="sm"
+                              borderRadius="6px"
+                              type="time"
+                              value={form.timeWindowStart}
+                              onChange={(e) =>
+                                set({ timeWindowStart: e.target.value })
+                              }
+                            />
+                          </Box>
+                          <Box flex="1">
+                            <Input
+                              size="sm"
+                              borderRadius="6px"
+                              type="time"
+                              value={form.timeWindowEnd}
+                              onChange={(e) =>
+                                set({ timeWindowEnd: e.target.value })
+                              }
+                            />
+                          </Box>
+                        </HStack>
+                      </Field.Root>
+
+                      <Field.Root mb="10px">
+                        <Field.Label>Note</Field.Label>
+                        <Textarea
+                          rows={2}
+                          size="sm"
+                          borderRadius="6px"
+                          value={form.note}
+                          onChange={(e) => set({ note: e.target.value })}
+                          placeholder="Internal note..."
+                        />
+                      </Field.Root>
+                    </VStack>
+                  </VStack>
+                </GridItem>
+
+                <GridItem>
+                  <VStack w="full" align="stretch" gap={2}>
+                    <Text fontWeight="semibold" fontSize="sm" mb={1}>
+                      Nodes
+                    </Text>
+                    <Text fontSize="xs" color="fg.muted" mb={2}>
+                      Select which nodes this user can access through their
+                      subscription link.
+                    </Text>
+                    {nodesPlaceholder.map((node) => (
+                      <Box
+                        key={node.name}
+                        p={2}
+                        borderRadius="6px"
+                        border="1px solid"
+                        borderColor={node.selected ? "primary.500" : "border"}
+                        bg={node.selected ? "bg.muted" : "transparent"}
+                        boxShadow={node.selected ? "outline" : undefined}
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        opacity={node.selected ? 1 : 0.55}
+                        cursor="not-allowed"
+                      >
+                        <HStack gap={2}>
+                          <FiServer size={16} color="var(--chakra-colors-primary-500)" />
+                          <Text fontSize="sm" fontWeight="medium" textTransform="capitalize">
+                            {node.name}
+                          </Text>
+                          <Text as="span" fontSize="xs" color="fg.muted">
+                            ({node.address})
+                          </Text>
+                        </HStack>
+                        <Box
+                          width="18px"
+                          height="18px"
+                          borderRadius="4px"
+                          border="1px solid"
+                          borderColor="primary.500"
+                          bg="primary.500"
+                          display="inline-flex"
+                          alignItems="center"
+                          justifyContent="center"
+                          color="white"
+                          fontSize="xs"
+                        >
+                          {"\u2713"}
+                        </Box>
+                      </Box>
+                    ))}
+                    <Box
+                      mt={1}
+                      p={2}
+                      borderRadius="6px"
+                      border="1px dashed"
+                      borderColor="border.strong"
+                      textAlign="center"
                     >
-                      <Select.Control>
-                        <Select.Trigger>
-                          <Select.ValueText />
-                        </Select.Trigger>
-                      </Select.Control>
-                      <Select.Positioner>
-                        <Select.Content>
-                          <For each={statusCollection.items}>
-                            {(item) => (
-                              <Select.Item key={item.value} item={item}>
-                                <Select.ItemText>{item.label}</Select.ItemText>
-                              </Select.Item>
-                            )}
-                          </For>
-                        </Select.Content>
-                      </Select.Positioner>
-                    </Select.Root>
-                  </Field.Root>
-                )}
-
-                <Field.Root>
-                  <Field.Label>Note (optional)</Field.Label>
-                  <Textarea
-                    value={form.note}
-                    onChange={(e) => set({ note: e.target.value })}
-                    placeholder="Internal note..."
-                    rows={2}
-                  />
-                </Field.Root>
-              </VStack>
+                      <Text fontSize="xs" color="fg.muted">
+                        Node management is coming in a future update.
+                      </Text>
+                    </Box>
+                  </VStack>
+                </GridItem>
+              </Grid>
             </Dialog.Body>
-            <Dialog.Footer>
-              <HStack gap={2} justify="space-between" w="100%">
-                <HStack gap={1}>
+
+            <Dialog.Footer mt="3" pt={4}>
+              <HStack justifyContent="space-between" w="full" gap={3} flexWrap="wrap">
+                <HStack justifyContent="flex-start" gap={1} flexWrap="wrap">
                   {!isCreate && editUser && (
                     <>
-                      <Button
+                      <IconButton
+                        aria-label="Toggle status"
+                        title="Toggle status"
                         size="sm"
-                        variant="ghost"
-                        colorPalette={
-                          editUser.status === "disabled" ? "green" : "orange"
-                        }
+                        variant="outline"
                         onClick={() => {
-                          const u = editUser.username;
                           if (editUser.status === "disabled") {
-                            enableMutation.mutate(u);
+                            enableMutation.mutate(editUser.username);
                             closeEdit();
                           } else {
-                            openDelete(editUser);
+                            disableMutation.mutate(editUser.username);
+                            closeEdit();
                           }
                         }}
-                        title={
-                          editUser.status === "disabled"
-                            ? "Enable user"
-                            : "Disable user"
-                        }
                       >
                         <FiPower />
-                        {editUser.status === "disabled" ? "Enable" : "Disable"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => openReset(editUser)}
+                      </IconButton>
+                      <IconButton
+                        aria-label="Reset usage"
                         title="Reset usage"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openReset(editUser)}
                       >
                         <FiRotateCcw />
-                        Reset
-                      </Button>
-                      <Button
+                      </IconButton>
+                      <IconButton
+                        aria-label="Regenerate subscription"
+                        title="Regenerate subscription"
                         size="sm"
-                        variant="ghost"
-                        colorPalette="orange"
+                        variant="outline"
                         onClick={() => openRegenerate(editUser)}
-                        title="Regenerate subscription link"
                       >
                         <FiRefreshCw />
-                      </Button>
-                      {editUser.status === "disabled" && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          colorPalette="red"
-                          onClick={() => openDelete(editUser)}
-                          title="Delete user"
-                        >
-                          <FiTrash2 />
-                        </Button>
-                      )}
+                      </IconButton>
+                      <IconButton
+                        aria-label="Delete"
+                        title="Delete"
+                        size="sm"
+                        variant="outline"
+                        colorPalette="red"
+                        onClick={() => openDelete(editUser)}
+                      >
+                        <FiTrash2 />
+                      </IconButton>
                     </>
                   )}
                 </HStack>
-                <HStack gap={2}>
-                  <Button variant="outline" css={buttonOutline} onClick={closeDialog}>
+                <HStack w="full" maxW={{ md: "50%", base: "full" }} justify="end">
+                  <Button
+                    variant="outline"
+                    css={buttonOutline}
+                    size="sm"
+                    onClick={closeDialog}
+                  >
                     Cancel
                   </Button>
                   <Button
                     css={buttonSolid}
+                    size="sm"
+                    px="8"
                     onClick={handleSubmit}
                     loading={createMutation.isPending || updateMutation.isPending}
                   >
-                    {isCreate ? "Create" : "Save"}
+                    {isCreate ? "Create User" : "Edit User"}
                   </Button>
                 </HStack>
               </HStack>

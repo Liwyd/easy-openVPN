@@ -120,6 +120,9 @@ class User(Base):
     usage_logs: Mapped[list[UsageLog]] = relationship(
         "UsageLog", back_populates="user", lazy="select", cascade="all, delete-orphan"
     )
+    nodes: Mapped[list[Node]] = relationship(
+        "Node", secondary="user_nodes", back_populates="users", lazy="select"
+    )
 
     def __init__(self, **kwargs):
         # Auto-generate subscription_token if not provided.

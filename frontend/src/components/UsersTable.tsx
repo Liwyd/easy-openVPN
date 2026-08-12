@@ -4,6 +4,7 @@ import {
   Table,
   For,
   Flex,
+  HStack,
   Text,
   IconButton,
   Spinner,
@@ -103,7 +104,17 @@ export default function UsersTable({
               {renderSortable("username", "Username")}
             </Table.ColumnHeader>
             <Table.ColumnHeader minW="180px">
-              {renderSortable("status", "Status", (
+              <HStack gap={0} position="relative" align="center">
+                <Text
+                  position="absolute"
+                  bg="bg.subtle"
+                  userSelect="none"
+                  pointerEvents="none"
+                  zIndex={1}
+                  w="100%"
+                >
+                  Status{statusFilter !== "all" ? `: ${statusFilter}` : ""}
+                </Text>
                 <Select.Root
                   collection={statusCollection}
                   value={[statusFilter]}
@@ -111,15 +122,18 @@ export default function UsersTable({
                     setStatusFilter(details.value[0] ?? "all")
                   }
                   size="sm"
-                  width="150px"
-                  position="absolute"
-                  right={2}
-                  top="50%"
-                  translateY="-50%"
                   onClick={(e: any) => e.stopPropagation()}
                 >
                   <Select.Control>
-                    <Select.Trigger>
+                    <Select.Trigger
+                      cursor="pointer"
+                      border="0"
+                      bg="transparent"
+                      p={0}
+                      h="auto"
+                      w="auto"
+                      _focusVisible={{ outline: "none" }}
+                    >
                       <Select.ValueText />
                     </Select.Trigger>
                   </Select.Control>
@@ -135,7 +149,7 @@ export default function UsersTable({
                     </Select.Content>
                   </Select.Positioner>
                 </Select.Root>
-              ))}
+              </HStack>
             </Table.ColumnHeader>
             <Table.ColumnHeader minW="220px">
               {renderSortable("data_usage", "Data Usage")}

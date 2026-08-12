@@ -40,15 +40,6 @@ export default function Header() {
       </Text>
 
       <Flex align="center" gap={2}>
-        <Button
-          onClick={toggleColorMode}
-          variant="outline"
-          size="sm"
-          aria-label="Toggle color mode"
-        >
-          <Icon as={colorMode === "light" ? FiMoon : FiSun} />
-        </Button>
-
         <Menu.Root>
           <Menu.Trigger asChild>
             <Button variant="outline" size="sm" aria-label="Menu">
@@ -78,6 +69,25 @@ export default function Header() {
             </Menu.Positioner>
           </Portal>
         </Menu.Root>
+
+        <Button
+          variant="outline"
+          size="sm"
+          aria-label="Settings"
+          title="Settings"
+          onClick={() => navigate("/settings")}
+        >
+          <Icon as={FiSettings} />
+        </Button>
+
+        <Button
+          onClick={toggleColorMode}
+          variant="outline"
+          size="sm"
+          aria-label="Toggle color mode"
+        >
+          <Icon as={colorMode === "light" ? FiMoon : FiSun} />
+        </Button>
       </Flex>
     </Flex>
   );

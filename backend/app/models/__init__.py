@@ -6,6 +6,7 @@ from app.models.admin_log import AdminAction, AdminLog, TargetType  # noqa: F401
 from app.models.backup_config import BackupConfig  # noqa: F401
 from app.models.billing import BillingRecord, BillingType  # noqa: F401
 from app.models.jwt import JWTSecret  # noqa: F401
+from app.models.node import Node, user_nodes  # noqa: F401
 from app.models.server_config import (  # noqa: F401
     AuthDigest,
     Cipher,
