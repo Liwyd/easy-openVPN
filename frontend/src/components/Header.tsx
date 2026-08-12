@@ -1,4 +1,5 @@
 import {
+  Box,
   Flex,
   Text,
   Button,
@@ -26,15 +27,23 @@ export default function Header() {
     { label: t("header.dashboard"), icon: FiGrid, path: "/dashboard" },
     { label: t("header.admins"), icon: FiShield, path: "/admins", sudoOnly: true },
     { label: t("header.billing"), icon: FiDollarSign, path: "/billing", sudoOnly: true },
-    { label: t("header.settings"), icon: FiSettings, path: "/settings" },
   ] as const;
 
-  const filtered = NAV_ITEMS.filter(
-    (item) => !("sudoOnly" in item && item.sudoOnly) || admin?.is_sudo,
+  const MENU_ITEMS = [
+    ...NAV_ITEMS,
+    { label: t("header.settings"), icon: FiSettings, path: "/settings" },
+  ];
+
+  const isSudo = admin?.is_sudo;
+  const visibleNav = NAV_ITEMS.filter(
+    (item) => !("sudoOnly" in item && item.sudoOnly) || isSudo,
+  );
+  const visibleMenu = MENU_ITEMS.filter(
+    (item) => !("sudoOnly" in item && item.sudoOnly) || isSudo,
   );
 
   const title =
-    filtered.find((i) => location.pathname === i.path)?.label ?? t("header.users");
+    visibleMenu.find((i) => location.pathname === i.path)?.label ?? t("header.users");
 
   return (
     <Flex align="center" justify="space-between" gap={3} wrap="wrap" mb={4}>
@@ -42,7 +51,8 @@ export default function Header() {
         {title}
       </Text>
 
-      <Flex align="center" gap={2}>
+      <Box dir="rtl">
+        <Flex align="center" gap={2}>
         <Menu.Root>
           <Menu.Trigger asChild>
             <Button variant="outline" size="xs" aria-label={t("header.menu")}>
@@ -52,7 +62,7 @@ export default function Header() {
           <Portal>
             <Menu.Positioner>
               <Menu.Content minW="190px">
-                {filtered.map((item) => (
+                {visibleNav.map((item) => (
                   <Menu.Item
                     key={item.path}
                     value={item.path}
@@ -102,7 +112,8 @@ export default function Header() {
         >
           <Icon as={colorMode === "light" ? FiMoon : FiSun} boxSize="4" />
         </Button>
-      </Flex>
+        </Flex>
+      </Box>
     </Flex>
   );
 }

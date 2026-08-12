@@ -1,4 +1,4 @@
-import { Button, Flex, Box, Input, IconButton, Icon, Spinner } from "@chakra-ui/react";
+import { Button, Flex, Box, Input, IconButton, Icon } from "@chakra-ui/react";
 import { FiSearch, FiRefreshCw, FiPlus, FiX } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
 
@@ -75,7 +75,6 @@ export default function Filters({
       </Flex>
 
       <Flex gap={2} align="center" ml="auto">
-        {isRefreshing && <Spinner size="xs" />}
         <IconButton
           aria-label={t("users.refresh")}
           variant="outline"
@@ -84,7 +83,7 @@ export default function Filters({
           title={t("users.refresh")}
           size="sm"
         >
-          <FiRefreshCw />
+          <FiRefreshCw className={isRefreshing ? "animate-spin" : undefined} />
         </IconButton>
 
         {onCreate && (

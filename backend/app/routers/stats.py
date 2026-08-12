@@ -226,9 +226,19 @@ def _get_disk_info(path: str = "/") -> dict:
         return {"total_bytes": 0, "used_bytes": 0, "free_bytes": 0, "percent": 0}
 
 
+def _get_uptime_seconds() -> float:
+    """Read system uptime in seconds from /proc/uptime."""
+    try:
+        with open("/proc/uptime") as f:
+            parts = f.read().split()
+        return float(parts[0]) if parts else 0.0
+    except (OSError, ValueError, IndexError):
+        return 0.0
+
+
 @router.get("/system")
 def get_system_metrics():
-    """Return live CPU, RAM, and disk metrics for the server."""
+    """Return live CPU, RAM, disk, and uptime metrics for the server."""
     cpu = _get_cpu_percent()
     mem = _get_mem_info()
     disk = _get_disk_info()
@@ -236,6 +246,7 @@ def get_system_metrics():
         "cpu_percent": cpu,
         "ram": mem,
         "disk": disk,
+        "uptime_seconds": _get_uptime_seconds(),
     }
 
 

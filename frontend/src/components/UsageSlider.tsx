@@ -8,6 +8,8 @@ export function getResetStrategyText(
   t?: (key: string) => string,
 ): string {
   switch (strategy) {
+    case "no_reset":
+      return "";
     case "day":
       return t ? t("usage.daily") : "Daily";
     case "week":
@@ -41,7 +43,8 @@ export default function UsageSlider({ user }: UsageSliderProps) {
           {formatBytes(user.data_used)} {t("usage.used")}
         </Text>
         <Text fontSize="xs" color="fg.muted">
-          {user.data_limit ? formatBytes(user.data_limit) : t("usage.unlimited")} {strategy}
+          {user.data_limit ? formatBytes(user.data_limit) : t("usage.unlimited")}
+          {strategy ? ` ${strategy}` : ""}
         </Text>
       </HStack>
       {user.data_limit ? (

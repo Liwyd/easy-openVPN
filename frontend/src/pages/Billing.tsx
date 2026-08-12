@@ -21,6 +21,7 @@ import {
   Table,
   SimpleGrid,
   For,
+  Tooltip,
 } from "@chakra-ui/react";
 import {
   FiDollarSign,
@@ -29,6 +30,7 @@ import {
   FiEye,
   FiUsers,
   FiShield,
+  FiHelpCircle,
 } from "react-icons/fi";
 import api from "../lib/api";
 import { toaster } from "../lib/toaster";
@@ -64,6 +66,26 @@ interface BillingRecord {
 
 function fmtDebt(v: number): string {
   return `$${v.toFixed(2)}`;
+}
+
+function HeaderWithHelp({ label, help }: { label: string; help: string }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}>
+      {label}
+      <Tooltip.Root positioning={{ placement: "top" }}>
+        <Tooltip.Trigger>
+          <span style={{ display: "inline-flex", cursor: "help" }}>
+            <FiHelpCircle size={13} style={{ opacity: 0.65 }} />
+          </span>
+        </Tooltip.Trigger>
+        <Tooltip.Positioner>
+          <Tooltip.Content fontSize="xs" maxW="220px">
+            {help}
+          </Tooltip.Content>
+        </Tooltip.Positioner>
+      </Tooltip.Root>
+    </span>
+  );
 }
 
 export default function Billing() {
@@ -188,14 +210,30 @@ export default function Billing() {
           <Table.Root size="sm" variant="outline">
             <Table.Header>
               <Table.Row>
-                <Table.ColumnHeader>{t("billing.admin")}</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="center">{t("billing.users")}</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="center">{t("billing.unlimited")}</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="center">{t("billing.userMonths")}</Table.ColumnHeader>
-                <Table.ColumnHeader>{t("billing.capacity")}</Table.ColumnHeader>
-                <Table.ColumnHeader>{t("billing.pricePerUser")}</Table.ColumnHeader>
-                <Table.ColumnHeader>{t("billing.pricePerGB")}</Table.ColumnHeader>
-                <Table.ColumnHeader textAlign="right">{t("billing.debt")}</Table.ColumnHeader>
+                <Table.ColumnHeader>
+                  <HeaderWithHelp label={t("billing.admin")} help={t("billing.help.admin")} />
+                </Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="center">
+                  <HeaderWithHelp label={t("billing.users")} help={t("billing.help.users")} />
+                </Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="center">
+                  <HeaderWithHelp label={t("billing.unlimited")} help={t("billing.help.unlimited")} />
+                </Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="center">
+                  <HeaderWithHelp label={t("billing.userMonths")} help={t("billing.help.userMonths")} />
+                </Table.ColumnHeader>
+                <Table.ColumnHeader>
+                  <HeaderWithHelp label={t("billing.capacity")} help={t("billing.help.capacity")} />
+                </Table.ColumnHeader>
+                <Table.ColumnHeader>
+                  <HeaderWithHelp label={t("billing.pricePerUser")} help={t("billing.help.pricePerUser")} />
+                </Table.ColumnHeader>
+                <Table.ColumnHeader>
+                  <HeaderWithHelp label={t("billing.pricePerGB")} help={t("billing.help.pricePerGB")} />
+                </Table.ColumnHeader>
+                <Table.ColumnHeader textAlign="right">
+                  <HeaderWithHelp label={t("billing.debt")} help={t("billing.help.debt")} />
+                </Table.ColumnHeader>
                 <Table.ColumnHeader textAlign="right">{t("billing.actions")}</Table.ColumnHeader>
               </Table.Row>
             </Table.Header>

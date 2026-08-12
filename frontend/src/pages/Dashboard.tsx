@@ -5,10 +5,12 @@ import {
   Progress,
   Flex,
   SimpleGrid,
-  Table,
   HStack,
+  Select,
+  createListCollection,
 } from "@chakra-ui/react";
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   AreaChart,
   Area,
@@ -20,16 +22,16 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { FiUsers, FiShield, FiActivity, FiCpu, FiDatabase, FiServer } from "react-icons/fi";
+import { FiUsers, FiShield, FiActivity, FiCpu, FiDatabase, FiServer, FiClock } from "react-icons/fi";
 import { useAuth } from "../context/AuthContext";
 import api from "../lib/api";
-import StatusBadge from "../components/StatusBadge";
 import LoadingState from "../components/LoadingState";
 import ErrorState from "../components/ErrorState";
 import EmptyState from "../components/EmptyState";
 import StatCard from "../components/StatCard";
 import SectionCard from "../components/SectionCard";
 import { formatBytes } from "../utils/formatByte";
+import { formatUptime } from "../utils/dateFormatter";
 import { useTranslation } from "react-i18next";
 
 interface UsageData {
@@ -53,13 +55,6 @@ interface UsageOverTimePoint {
   bytes: number;
 }
 
-interface TopUser {
-  username: string;
-  data_used: number;
-  data_limit: number | null;
-  status: string;
-}
-
 interface StatusBreakdown {
   active: number;
   limited: number;
@@ -71,6 +66,7 @@ interface SystemMetrics {
   cpu_percent: number;
   ram: { total_bytes: number; used_bytes: number; available_bytes: number; percent: number };
   disk: { total_bytes: number; used_bytes: number; free_bytes: number; percent: number };
+  uptime_seconds: number;
 }
 
 interface BillingMe {
@@ -189,18 +185,21 @@ export default function Dashboard() {
     },
   });
 
-  const { data: usageOverTime } = useQuery<UsageOverTimePoint[]>({
-    queryKey: ["stats-usage-over-time"],
-    queryFn: async () => {
-      const { data } = await api.get("/stats/usage-over-time", { params: { days: 30 } });
-      return data;
-    },
+  const trafficDaysOptions = createListCollection({
+    items: [1, 7, 30, 90, 180, 365].map((d) => ({
+      value: String(d),
+      label: d === 1 ? "24h" : `${d}d`,
+    })),
   });
 
-  const { data: topUsers } = useQuery<TopUser[]>({
-    queryKey: ["stats-top-users"],
+  const [trafficDays, setTrafficDays] = useState(30);
+
+  const { data: usageOverTime } = useQuery<UsageOverTimePoint[]>({
+    queryKey: ["stats-usage-over-time", trafficDays],
     queryFn: async () => {
-      const { data } = await api.get("/stats/top-users", { params: { limit: 5 } });
+      const { data } = await api.get("/stats/usage-over-time", {
+        params: { days: trafficDays },
+      });
       return data;
     },
   });
@@ -334,7 +333,8 @@ export default function Dashboard() {
       )}
 
       {systemMetrics && (
-        <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+        <>
+          <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
           <SectionCard title={<Flex align="center" gap={2}><FiCpu /> {t("dashboard.cpu")}</Flex>}>
             <GaugeBar label={t("dashboard.usage")} percent={systemMetrics.cpu_percent} color="blue" />
           </SectionCard>
@@ -351,10 +351,45 @@ export default function Dashboard() {
             </Text>
           </SectionCard>
         </SimpleGrid>
+        <Flex align="center" gap={2} fontSize="sm" color="fg.muted">
+          <FiClock size={14} />
+          <Text>{t("dashboard.uptime")}: {formatUptime(systemMetrics.uptime_seconds)}</Text>
+        </Flex>
+        </>
       )}
 
       <SimpleGrid columns={{ base: 1, lg: 2 }} gap={4}>
-        <SectionCard title={t("dashboard.trafficOverTime")}>
+        <SectionCard
+          title={
+            <Flex align="center" justify="space-between" gap={3} width="100%">
+              <Text>{t("dashboard.trafficOverTime")}</Text>
+              <Select.Root
+                collection={trafficDaysOptions}
+                value={[String(trafficDays)]}
+                onValueChange={(details) =>
+                  setTrafficDays(Number(details.value[0]))
+                }
+                size="xs"
+                width="76px"
+              >
+                <Select.Control>
+                  <Select.Trigger>
+                    <Select.ValueText />
+                  </Select.Trigger>
+                </Select.Control>
+                <Select.Positioner>
+                  <Select.Content>
+                    {trafficDaysOptions.items.map((item) => (
+                      <Select.Item key={item.value} item={item}>
+                        <Select.ItemText>{item.label}</Select.ItemText>
+                      </Select.Item>
+                    ))}
+                  </Select.Content>
+                </Select.Positioner>
+              </Select.Root>
+            </Flex>
+          }
+        >
           {chartData.length === 0 ? (
             <EmptyState icon={<FiActivity size={32} style={{ opacity: 0.3 }} />} message={t("dashboard.noTraffic")} />
           ) : (
@@ -403,33 +438,6 @@ export default function Dashboard() {
 
         {statusBreakdown && <StatusDonut data={statusBreakdown} />}
       </SimpleGrid>
-
-      {topUsers && topUsers.length > 0 && (
-        <SectionCard title={t("dashboard.topUsers")}>
-          <Table.Root size="sm">
-            <Table.Header>
-              <Table.Row>
-                <Table.ColumnHeader>{t("table.username")}</Table.ColumnHeader>
-                <Table.ColumnHeader>{t("dashboard.usedCol")}</Table.ColumnHeader>
-                <Table.ColumnHeader>{t("dashboard.limitCol")}</Table.ColumnHeader>
-                <Table.ColumnHeader>{t("table.status")}</Table.ColumnHeader>
-              </Table.Row>
-            </Table.Header>
-            <Table.Body>
-              {topUsers.map((u) => (
-                <Table.Row key={u.username}>
-                  <Table.Cell fontWeight="medium">{u.username}</Table.Cell>
-                  <Table.Cell>{formatBytes(u.data_used)}</Table.Cell>
-                  <Table.Cell>{u.data_limit ? formatBytes(u.data_limit) : t("dashboard.unlimited")}</Table.Cell>
-                  <Table.Cell>
-                    <StatusBadge status={u.status} />
-                  </Table.Cell>
-                </Table.Row>
-              ))}
-            </Table.Body>
-          </Table.Root>
-        </SectionCard>
-      )}
     </VStack>
   );
 }

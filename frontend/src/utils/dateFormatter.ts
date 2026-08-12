@@ -54,3 +54,15 @@ export function formatTime(time: string | null): string {
   if (!time) return "\u2014";
   return time.length >= 5 ? time.slice(0, 5) : time;
 }
+
+export function formatUptime(seconds: number): string {
+  if (!seconds || seconds <= 0) return "\u2014";
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  return parts.join(" ") || "0m";
+}

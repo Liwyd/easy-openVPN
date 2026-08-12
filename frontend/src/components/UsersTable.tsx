@@ -8,7 +8,6 @@ import {
   Text,
   IconButton,
   Spinner,
-  Select,
 } from "@chakra-ui/react";
 import {
   FiLink,
@@ -21,7 +20,7 @@ import { createListCollection } from "@chakra-ui/react";
 import { tableRoot } from "../theme-components";
 import { relativeTime } from "../utils/dateFormatter";
 import { getResetStrategyText } from "./UsageSlider";
-import type { User } from "../types/User";
+import type { User, UserStatus } from "../types/User";
 import StatusBadge from "./StatusBadge";
 import UsageSlider from "./UsageSlider";
 import { useUserContext } from "../contexts/UserContext";
@@ -29,6 +28,13 @@ import { useTranslation } from "react-i18next";
 
 type SortKey = "username" | "status" | "data_usage";
 type SortDir = "asc" | "desc";
+
+const statusDotColor: Record<UserStatus, string> = {
+  active: "green.400",
+  limited: "red.400",
+  expired: "orange.400",
+  disabled: "gray.400",
+};
 
 export default function UsersTable({
   users,
@@ -119,44 +125,35 @@ export default function UsersTable({
                   pointerEvents="none"
                   zIndex={1}
                   w="100%"
+                  textTransform="uppercase"
                 >
                   {t("table.status")}
                   {statusFilter !== "all" ? `: ${t(`status.${statusFilter}` as const)}` : ""}
                 </Text>
-                <Select.Root
-                  collection={statusCollection}
-                  value={[statusFilter]}
-                  onValueChange={(details) =>
-                    setStatusFilter(details.value[0] ?? "all")
-                  }
-                  size="sm"
-                  onClick={(e: any) => e.stopPropagation()}
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  aria-label={t("table.status")}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    border: 0,
+                    background: "transparent",
+                    cursor: "pointer",
+                    opacity: 0,
+                    appearance: "none",
+                    WebkitAppearance: "none",
+                  }}
                 >
-                  <Select.Control>
-                    <Select.Trigger
-                      cursor="pointer"
-                      border="0"
-                      bg="transparent"
-                      p={0}
-                      h="auto"
-                      w="auto"
-                      _focusVisible={{ outline: "none" }}
-                    >
-                      <Select.ValueText />
-                    </Select.Trigger>
-                  </Select.Control>
-                  <Select.Positioner>
-                    <Select.Content>
-                      <For each={statusCollection.items}>
-                        {(item) => (
-                          <Select.Item key={item.value} item={item}>
-                            <Select.ItemText>{item.label}</Select.ItemText>
-                          </Select.Item>
-                        )}
-                      </For>
-                    </Select.Content>
-                  </Select.Positioner>
-                </Select.Root>
+                  {statusCollection.items.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
               </HStack>
             </Table.ColumnHeader>
             <Table.ColumnHeader minW="220px">
@@ -184,20 +181,30 @@ export default function UsersTable({
                   _hover={{ bg: "bg.muted" }}
                   transition="background 0.1s ease"
                 >
-                  <Table.Cell>
-                    <Flex direction="column" gap={0.5}>
-                      <Text fontWeight="semibold">{user.username}</Text>
-                      <Text fontSize="xs" color="fg.muted">
-                        {user.expire_at
-                          ? t("table.expires", {
-                              time: relativeTime(user.expire_at),
-                            })
-                          : t("table.noExpiration")}
-                        {user.time_window_start && user.time_window_end
-                          ? `\u00b7 ${user.time_window_start.slice(0, 5)}\u2013${user.time_window_end.slice(0, 5)}`
-                          : ""}
-                      </Text>
-                    </Flex>
+                  <Table.Cell pl={2}>
+                    <HStack align="center" gap={2.5}>
+                      <Box
+                        w="10px"
+                        h="10px"
+                        borderRadius="full"
+                        flexShrink={0}
+                        bg={statusDotColor[user.status]}
+                        boxShadow="0 0 1px 1px rgba(0, 0, 0, 0.1)"
+                      />
+                      <Flex direction="column" gap={0.5} minW={0}>
+                        <Text fontWeight="semibold">{user.username}</Text>
+                        <Text fontSize="xs" color="fg.muted">
+                          {user.expire_at
+                            ? t("table.expires", {
+                                time: relativeTime(user.expire_at),
+                              })
+                            : t("table.noExpiration")}
+                          {user.time_window_start && user.time_window_end
+                            ? `\u00b7 ${user.time_window_start.slice(0, 5)}\u2013${user.time_window_end.slice(0, 5)}`
+                            : ""}
+                        </Text>
+                      </Flex>
+                    </HStack>
                   </Table.Cell>
                   <Table.Cell>
                     <StatusBadge status={user.status} />
@@ -207,7 +214,7 @@ export default function UsersTable({
                   </Table.Cell>
                   <Table.Cell>
                     <Text fontSize="xs" color="fg.muted">
-                      {resetStrategy}
+                      {resetStrategy || "\u2014"}
                     </Text>
                   </Table.Cell>
                   <Table.Cell>

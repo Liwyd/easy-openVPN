@@ -30,6 +30,7 @@ import api from "../lib/api";
 import { toaster } from "../lib/toaster";
 import { buttonSolid, buttonOutline } from "../theme-components";
 import { formatBytes } from "../utils/formatByte";
+import { relativeTime } from "../utils/dateFormatter";
 import type { User } from "../types/User";
 import StatusBadge from "./StatusBadge";
 import { useUserContext } from "../contexts/UserContext";
@@ -436,6 +437,13 @@ export default function UserDialog() {
                             <Input size="sm" borderRadius="6px" data-testid="expiry-date" />
                           }
                         />
+                        {form.expireAt && (
+                          <Field.HelperText>
+                            {t("userDialog.expiresIn", {
+                              time: relativeTime(form.expireAt),
+                            })}
+                          </Field.HelperText>
+                        )}
                       </Field.Root>
 
                       <Field.Root mb="10px">
