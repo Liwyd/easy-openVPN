@@ -1,6 +1,6 @@
 import { Dialog, Portal, Text, Button, VStack, HStack, Code } from "@chakra-ui/react";
 import { QRCodeSVG } from "qrcode.react";
-import { FiCopy, FiCheck } from "react-icons/fi";
+import { FiCheck } from "react-icons/fi";
 import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import api from "../lib/api";
@@ -61,7 +61,7 @@ export default function QRCodeDialog() {
       <Portal>
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content maxW="sm">
+          <Dialog.Content maxW="400px">
             <Dialog.Header>
               <Dialog.Title>{t("qrCode.title")}</Dialog.Title>
             </Dialog.Header>
@@ -83,9 +83,23 @@ export default function QRCodeDialog() {
                     <Text fontSize="sm" color="fg.muted" textAlign="center">
                       {t("qrCode.scanPrompt", { username })}
                     </Text>
-                    <Code fontSize="xs" maxW="100%" wordBreak="break-all">
+                    <Code
+                      fontSize="xs"
+                      maxW="100%"
+                      wordBreak="break-all"
+                      cursor="pointer"
+                      title={t("qrCode.copyLink")}
+                      onClick={handleCopy}
+                      _hover={{ opacity: 0.8 }}
+                    >
                       {link || "\u2014"}
                     </Code>
+                    {copied && (
+                      <Text fontSize="xs" color="green.400" textAlign="center">
+                        <FiCheck style={{ display: "inline-block", verticalAlign: "-2px" }} />{" "}
+                        {t("qrCode.copied")}
+                      </Text>
+                    )}
                   </>
                 )}
               </VStack>
@@ -94,10 +108,6 @@ export default function QRCodeDialog() {
               <HStack gap={2} w="100%" justify="flex-end">
                 <Button variant="outline" css={buttonOutline} onClick={closeQR}>
                   {t("qrCode.close")}
-                </Button>
-                <Button css={buttonOutline} onClick={handleCopy} disabled={!link}>
-                  {copied ? <FiCheck /> : <FiCopy />}
-                  {copied ? t("qrCode.copied") : t("qrCode.copyLink")}
                 </Button>
               </HStack>
             </Dialog.Footer>

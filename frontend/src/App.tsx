@@ -11,11 +11,13 @@ import Users from "./pages/Users";
 import Admins from "./pages/Admins";
 import Billing from "./pages/Billing";
 import Settings from "./pages/Settings";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 export default function App() {
   return (
     <BrowserRouter basename={BASE_PATH || undefined}>
-      <AuthProvider>
+      <ErrorBoundary>
+        <AuthProvider>
         <Toaster toaster={toaster}>
           {(toast) => (
             <Toast.Root>
@@ -62,7 +64,8 @@ export default function App() {
 
           <Route path="*" element={<Navigate to={HOME_PATH} replace />} />
         </Routes>
-      </AuthProvider>
+        </AuthProvider>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

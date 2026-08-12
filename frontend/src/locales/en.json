@@ -33,6 +33,8 @@
     "refresh": "Refresh",
     "failedToLoad": "Failed to load users",
     "unexpectedError": "An unexpected error occurred.",
+    "disableUser": "Disable user",
+    "enableUser": "Enable user",
     "emptySearch": "No users match your search.",
     "empty": "No users yet. Create your first user to get started."
   },
@@ -195,6 +197,8 @@
     "unlimitedHint": "(unlimited)",
     "unlimitedPlaceholder": "Unlimited",
     "requiredPlaceholder": "Required",
+    "limitExample": "e.g. 100",
+    "optionalLimitHint": "Leave blank for unlimited data",
     "password": "Password",
     "newPasswordOptional": "New Password (optional)",
     "min8Chars": "Minimum 8 characters",
@@ -330,7 +334,7 @@
     "failedToLoadServerConfig": "Failed to load server config.",
     "failedToApply": "Failed to apply config",
     "telegramTitle": "Telegram Notifications",
-    "telegramHelp": "Telegram is configured via environment variables on the server. Use this section to test the connection.",
+    "telegramHelp": "Configure the Telegram bot used for notifications. Settings are stored in the panel and applied immediately.",
     "sendTestMessage": "Send Test Message",
     "testFailed": "Failed to send test message",
     "backupTitle": "Backup & Restore",
@@ -367,6 +371,15 @@
     "backupDownloadFailed": "Failed to download backup",
     "backupDeleted": "Backup deleted",
     "panelRestored": "Panel restored from backup. Please sign in again.",
-    "restoreFailed": "Restore failed"
+    "restoreFailed": "Restore failed",
+    "telegramEnabled": "Enable Telegram notifications",
+    "botToken": "Bot Token",
+    "botTokenHelp": "Plaintext token from @BotFather, shown unmasked so it can be edited here.",
+    "adminChatIds": "Admin Chat IDs",
+    "adminChatIdsHelp": "Comma-separated chat IDs (private or group) that receive notifications.",
+    "adminChatIdsPlaceholder": "e.g. 123456789, -100123456789",
+    "saveTelegram": "Save Telegram Settings",
+    "telegramSaved": "Telegram settings saved",
+    "telegramSaveFailed": "Failed to save Telegram settings"
   }
 }

@@ -84,6 +84,20 @@ def create_app() -> FastAPI:
         try:
             seed_all(db)
             db.commit()
+
+            # Load the panel-managed Telegram settings (if any) so
+            # notifications use the stored config after a restart.
+            from app.bot.config import reset_to_env, set_config
+            from app.models.telegram_config import get_telegram_config
+
+            reset_to_env()
+            tg = get_telegram_config(db)
+            if tg is not None:
+                set_config(
+                    enabled=tg.enabled,
+                    bot_token=tg.bot_token,
+                    admin_chat_ids=list(tg.admin_chat_ids or []),
+                )
         finally:
             db.close()
 

@@ -1,6 +1,6 @@
 """Tests that the bot module is resilient — never breaks the app.
 
-Specifically: when TELEGRAM_ENABLED is False or the token/chat IDs are
+Specifically: when Telegram is disabled or the token/chat IDs are
 missing, emit() must be a silent no-op and the rest of the application
 must function normally.
 """
@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-from app.bot.config import is_configured
+from app.bot.config import get_config, is_configured, set_config
 from app.bot.events import EventCategory, emit
 
 
@@ -33,29 +33,38 @@ class TestBotDisabled:
             action="usage_sync_tick",
         )
 
+    def _with_config(self, enabled, bot_token, chat_ids):
+        old = dict(get_config())
+        set_config(enabled=enabled, bot_token=bot_token, admin_chat_ids=chat_ids)
+        return old
+
     def test_is_configured_false_when_no_token(self):
-        with patch("app.bot.config.TELEGRAM_ENABLED", True), \
-             patch("app.bot.config.TELEGRAM_BOT_TOKEN", ""), \
-             patch("app.bot.config.TELEGRAM_ADMIN_CHAT_IDS", ["123"]):
+        old = self._with_config(True, "", ["123"])
+        try:
             assert is_configured() is False
+        finally:
+            set_config(**old)
 
     def test_is_configured_false_when_no_chat_ids(self):
-        with patch("app.bot.config.TELEGRAM_ENABLED", True), \
-             patch("app.bot.config.TELEGRAM_BOT_TOKEN", "token123"), \
-             patch("app.bot.config.TELEGRAM_ADMIN_CHAT_IDS", []):
+        old = self._with_config(True, "token123", [])
+        try:
             assert is_configured() is False
+        finally:
+            set_config(**old)
 
     def test_is_configured_false_when_disabled(self):
-        with patch("app.bot.config.TELEGRAM_ENABLED", False), \
-             patch("app.bot.config.TELEGRAM_BOT_TOKEN", "token123"), \
-             patch("app.bot.config.TELEGRAM_ADMIN_CHAT_IDS", ["123"]):
+        old = self._with_config(False, "token123", ["123"])
+        try:
             assert is_configured() is False
+        finally:
+            set_config(**old)
 
     def test_is_configured_true_when_all_set(self):
-        with patch("app.bot.config.TELEGRAM_ENABLED", True), \
-             patch("app.bot.config.TELEGRAM_BOT_TOKEN", "token123"), \
-             patch("app.bot.config.TELEGRAM_ADMIN_CHAT_IDS", ["123"]):
+        old = self._with_config(True, "token123", ["123"])
+        try:
             assert is_configured() is True
+        finally:
+            set_config(**old)
 
 
 class TestBotDoesNotBreakEnforcement:

@@ -16,7 +16,7 @@ import os
 
 import httpx
 
-from app.bot.config import TELEGRAM_ADMIN_CHAT_IDS, TELEGRAM_BOT_TOKEN
+from app.bot.config import get_config
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,8 @@ def send_message(text: str, *, parse_mode: str = "MarkdownV2") -> None:
     Raises on HTTP errors so the caller can decide how to handle them
     (the ``events.emit`` wrapper catches all exceptions).
     """
-    url = _TELEGRAM_API.format(token=TELEGRAM_BOT_TOKEN)
+    cfg = get_config()
+    url = _TELEGRAM_API.format(token=cfg["bot_token"])
     payload: dict = {
         "text": text,
         "parse_mode": parse_mode,
@@ -38,7 +39,7 @@ def send_message(text: str, *, parse_mode: str = "MarkdownV2") -> None:
     }
 
     with httpx.Client(timeout=10) as client:
-        for chat_id in TELEGRAM_ADMIN_CHAT_IDS:
+        for chat_id in cfg["admin_chat_ids"]:
             payload["chat_id"] = chat_id
             resp = client.post(url, json=payload)
             if resp.status_code != 200:
@@ -62,9 +63,10 @@ def send_document(filename: str, file_path: str) -> None:
     """
     if not file_path or not os.path.exists(file_path):
         raise FileNotFoundError(f"Document not found: {file_path}")
-    url = _TELEGRAM_DOCUMENT_API.format(token=TELEGRAM_BOT_TOKEN)
+    cfg = get_config()
+    url = _TELEGRAM_DOCUMENT_API.format(token=cfg["bot_token"])
     with httpx.Client(timeout=300) as client:
-        for chat_id in TELEGRAM_ADMIN_CHAT_IDS:
+        for chat_id in cfg["admin_chat_ids"]:
             with open(file_path, "rb") as handle:
                 resp = client.post(
                     url,

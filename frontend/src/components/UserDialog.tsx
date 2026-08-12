@@ -20,7 +20,6 @@ import {
   FiUserPlus,
   FiEdit3,
   FiRefreshCw,
-  FiPower,
   FiRotateCcw,
   FiTrash2,
   FiServer,
@@ -157,8 +156,6 @@ export default function UserDialog() {
     openDelete,
     openReset,
     openRegenerate,
-    enableMutation,
-    disableMutation,
   } = useUserContext();
 
   const isCreate = createOpen;
@@ -190,6 +187,7 @@ export default function UserDialog() {
       if (f.timeWindowStart) body.time_window_start = f.timeWindowStart;
       if (f.timeWindowEnd) body.time_window_end = f.timeWindowEnd;
       if (f.note.trim()) body.note = f.note.trim();
+      body.status = f.status;
       return api.post("/users", body);
     },
     onSuccess: () => {
@@ -364,6 +362,35 @@ export default function UserDialog() {
                           {errors.username && (
                             <Field.ErrorText>{errors.username}</Field.ErrorText>
                           )}
+                        </Field.Root>
+                      )}
+
+                      {isCreate && (
+                        <Field.Root mb="10px">
+                          <Field.Label>
+                            <HStack gap={2} align="center">
+                              <Text>{t("userDialog.status")}</Text>
+                              <Switch.Root
+                                size="sm"
+                                colorPalette="primary"
+                                checked={form.status === "active"}
+                                onCheckedChange={(e) =>
+                                  set({
+                                    status: e.checked ? "active" : "disabled",
+                                  })
+                                }
+                              >
+                                <Switch.HiddenInput />
+                                <Switch.Control />
+                                <Switch.Thumb />
+                              </Switch.Root>
+                              <Text fontSize="sm" color="fg.muted">
+                                {form.status === "active"
+                                  ? t("status.active")
+                                  : t("status.disabled")}
+                              </Text>
+                            </HStack>
+                          </Field.Label>
                         </Field.Root>
                       )}
 
@@ -566,23 +593,6 @@ export default function UserDialog() {
                 <HStack justifyContent="flex-start" gap={1} flexWrap="wrap">
                   {!isCreate && editUser && (
                     <>
-                      <IconButton
-                        aria-label="Toggle status"
-                        title="Toggle status"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          if (editUser.status === "disabled") {
-                            enableMutation.mutate(editUser.username);
-                            closeEdit();
-                          } else {
-                            disableMutation.mutate(editUser.username);
-                            closeEdit();
-                          }
-                        }}
-                      >
-                        <FiPower />
-                      </IconButton>
                       <IconButton
                         aria-label="Reset usage"
                         title="Reset usage"

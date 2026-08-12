@@ -32,19 +32,15 @@ def create_admin(
 ):
     """Create a sub-admin.  Only sudo admins can create admins.
 
-    A data_limit is REQUIRED for non-sudo admins.  The creating sudo
-    admin's remaining allocatable quota is validated to ensure the
-    parent can cover the child's limit.
+    A data_limit is OPTIONAL: when omitted the sub-admin gets unlimited
+    data.  When a limit is set, the creating sudo admin's remaining
+    allocatable quota is validated to ensure the parent can cover the
+    child's limit.
     """
     if db.query(Admin).filter(Admin.username == body.username).first():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Username already taken")
 
     data_limit = body.data_limit
-    if not body.is_sudo and (data_limit is None or data_limit <= 0):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Non-sudo admins require a positive data_limit",
-        )
 
     # Validate parent admin has enough remaining quota
     if data_limit is not None and data_limit > 0:

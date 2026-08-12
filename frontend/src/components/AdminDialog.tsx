@@ -115,9 +115,6 @@ export default function AdminDialog() {
     ) {
       e.dataLimit = t("validate.positiveNumber");
     }
-    if (!form.isSudo && !form.dataLimit) {
-      e.dataLimit = t("adminDialog.subAdminRequiresLimit");
-    }
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -211,7 +208,7 @@ export default function AdminDialog() {
                       type="number"
                       value={form.dataLimit}
                       onChange={(e) => set({ dataLimit: e.target.value })}
-                      placeholder={form.isSudo ? t("adminDialog.unlimitedPlaceholder") : t("adminDialog.requiredPlaceholder")}
+                      placeholder={form.isSudo ? t("adminDialog.unlimitedPlaceholder") : t("adminDialog.limitExample")}
                       flex="1"
                       min="0"
                       disabled={form.isSudo}
@@ -245,6 +242,9 @@ export default function AdminDialog() {
                   </HStack>
                   {errors.dataLimit && (
                     <Field.ErrorText>{errors.dataLimit}</Field.ErrorText>
+                  )}
+                  {!form.isSudo && (
+                    <Field.HelperText>{t("adminDialog.optionalLimitHint")}</Field.HelperText>
                   )}
                 </Field.Root>
 

@@ -8,6 +8,7 @@ import {
   Text,
   IconButton,
   Spinner,
+  Switch,
 } from "@chakra-ui/react";
 import {
   FiLink,
@@ -44,7 +45,8 @@ export default function UsersTable({
   isFetching?: boolean;
 }) {
   const { t } = useTranslation();
-  const { openEdit, copyLink, downloadConfig, openQR } = useUserContext();
+  const { openEdit, copyLink, downloadConfig, openQR, enableMutation, disableMutation } =
+    useUserContext();
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey>("username");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -207,7 +209,30 @@ export default function UsersTable({
                     </HStack>
                   </Table.Cell>
                   <Table.Cell>
-                    <StatusBadge status={user.status} />
+                    <HStack gap={2} align="center">
+                      <StatusBadge status={user.status} />
+                      <Box
+                        onClick={(e) => e.stopPropagation()}
+                        display="inline-flex"
+                        aria-label={`Toggle ${user.username} status`}
+                      >
+                        <Switch.Root
+                          size="sm"
+                          colorPalette={user.status === "active" ? "green" : "primary"}
+                          checked={user.status === "active"}
+                          disabled={user.status === "limited" || user.status === "expired"}
+                          title={user.status === "disabled" ? t("users.enableUser") : t("users.disableUser")}
+                          onCheckedChange={(e) => {
+                            if (e.checked) enableMutation.mutate(user.username);
+                            else disableMutation.mutate(user.username);
+                          }}
+                        >
+                          <Switch.HiddenInput />
+                          <Switch.Control />
+                          <Switch.Thumb />
+                        </Switch.Root>
+                      </Box>
+                    </HStack>
                   </Table.Cell>
                   <Table.Cell>
                     <UsageSlider user={user} />

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import {
   Box,
   Heading,
@@ -470,7 +470,48 @@ function BackupSection() {
 
 function TelegramSection() {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [sending, setSending] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+  const [botToken, setBotToken] = useState("");
+  const [chatIds, setChatIds] = useState("");
+
+  const { data } = useQuery<{
+    enabled: boolean;
+    bot_token: string;
+    admin_chat_ids: string[];
+  }>({
+    queryKey: ["telegram-settings"],
+    queryFn: async () => (await api.get("/settings/telegram")).data,
+  });
+
+  useEffect(() => {
+    if (!data) return;
+    setEnabled(!!data.enabled);
+    setBotToken(data.bot_token ?? "");
+    setChatIds((data.admin_chat_ids ?? []).join(", "));
+  }, [data]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const { data: saved } = await api.put("/settings/telegram", {
+        enabled,
+        bot_token: botToken.trim(),
+        admin_chat_ids: chatIds
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+      });
+      return saved;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["telegram-settings"] });
+      toaster.create({ title: t("settings.telegramSaved"), type: "success" });
+    },
+    onError: () => {
+      toaster.create({ title: t("settings.telegramSaveFailed"), type: "error" });
+    },
+  });
 
   const handleTest = async () => {
     setSending(true);
@@ -491,10 +532,44 @@ function TelegramSection() {
         <Text fontSize="sm" color="fg.muted">
           {t("settings.telegramHelp")}
         </Text>
+        <Field.Root>
+          <Field.Label>{t("settings.telegramEnabled")}</Field.Label>
+          <Switch.Root checked={enabled} onCheckedChange={(e) => setEnabled(e.checked)}>
+            <Switch.HiddenInput />
+            <Switch.Control />
+            <Switch.Thumb />
+            <Switch.Label>
+              {enabled ? t("status.active") : t("status.disabled")}
+            </Switch.Label>
+          </Switch.Root>
+        </Field.Root>
+        <Field.Root>
+          <Field.Label>{t("settings.botToken")}</Field.Label>
+          <Input
+            value={botToken}
+            onChange={(e) => setBotToken(e.target.value)}
+            dir="ltr"
+            placeholder="1234567890:AA..."
+          />
+          <Field.HelperText>{t("settings.botTokenHelp")}</Field.HelperText>
+        </Field.Root>
+        <Field.Root>
+          <Field.Label>{t("settings.adminChatIds")}</Field.Label>
+          <Input
+            value={chatIds}
+            onChange={(e) => setChatIds(e.target.value)}
+            dir="ltr"
+            placeholder={t("settings.adminChatIdsPlaceholder")}
+          />
+          <Field.HelperText>{t("settings.adminChatIdsHelp")}</Field.HelperText>
+        </Field.Root>
         <HStack>
           <Button size="sm" onClick={handleTest} loading={sending} variant="outline">
             <FiSend style={{ marginRight: 6 }} />
             {t("settings.sendTestMessage")}
+          </Button>
+          <Button size="sm" onClick={() => saveMutation.mutate()} loading={saveMutation.isPending}>
+            {t("settings.saveTelegram")}
           </Button>
         </HStack>
       </VStack>

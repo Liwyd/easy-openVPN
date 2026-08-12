@@ -17,6 +17,7 @@ class UserCreate(BaseModel):
     time_window_start: dt.time | None = None
     time_window_end: dt.time | None = None
     note: str | None = None
+    status: UserStatus = UserStatus.ACTIVE
 
     @field_validator("username")
     @classmethod

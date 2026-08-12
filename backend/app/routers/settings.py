@@ -15,13 +15,14 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.bot.client import send_message_plain
-from app.bot.config import is_configured
+from app.bot.config import is_configured, set_config
 from app.bot.formatter import EMOJI_SYSTEM
 from app.db import get_db
 from app.logging_config import enforcement_log
 from app.models.admin import Admin
 from app.models.admin_log import AdminAction, TargetType
 from app.models.server_config import ServerConfig
+from app.models.telegram_config import TelegramConfig, get_telegram_config
 from app.models.user import User, UserStatus
 from app.schemas.server_config import (
     ServerConfigApplyResult,
@@ -252,11 +253,90 @@ def _notify_users_redownload(db: Session, changed_fields: list[str]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Telegram test endpoint
+# Telegram settings + test endpoints
 # ---------------------------------------------------------------------------
 
 class TelegramTestResponse(BaseModel):
     detail: str
+
+
+class TelegramConfigResponse(BaseModel):
+    enabled: bool
+    bot_token: str
+    admin_chat_ids: list[str]
+
+
+class TelegramConfigUpdate(BaseModel):
+    enabled: bool
+    bot_token: str = ""
+    admin_chat_ids: list[str] = []
+
+
+@router.get("/telegram", response_model=TelegramConfigResponse)
+def get_telegram_settings(
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_sudo_admin),
+):
+    """Return the panel-managed Telegram settings.
+
+    The bot token is returned in plaintext — the panel is trusted as
+    the only way to administer it.
+    """
+    cfg = get_telegram_config(db)
+    if cfg is None:
+        from app.bot.config import get_config
+
+        runtime = get_config()
+        return TelegramConfigResponse(
+            enabled=runtime["enabled"],
+            bot_token=runtime["bot_token"],
+            admin_chat_ids=list(runtime["admin_chat_ids"]),
+        )
+    return TelegramConfigResponse(
+        enabled=cfg.enabled,
+        bot_token=cfg.bot_token,
+        admin_chat_ids=list(cfg.admin_chat_ids or []),
+    )
+
+
+@router.put("/telegram", response_model=TelegramConfigResponse)
+def update_telegram_settings(
+    body: TelegramConfigUpdate,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_sudo_admin),
+):
+    """Persist the Telegram bot settings and apply them to the running
+    process immediately (no restart needed)."""
+    cfg = get_telegram_config(db)
+    if cfg is None:
+        cfg = TelegramConfig(id=1)
+        db.add(cfg)
+    cfg.enabled = body.enabled
+    cfg.bot_token = body.bot_token.strip()
+    cfg.admin_chat_ids = [x.strip() for x in body.admin_chat_ids if x.strip()]
+    db.commit()
+    db.refresh(cfg)
+
+    set_config(
+        enabled=cfg.enabled,
+        bot_token=cfg.bot_token,
+        admin_chat_ids=list(cfg.admin_chat_ids or []),
+    )
+
+    write_admin_log(
+        db,
+        admin_id=current_admin.id,
+        action=AdminAction.UPDATE_SERVER_CONFIG,
+        target_type=TargetType.SERVER_CONFIG,
+        detail="Updated Telegram bot settings",
+    )
+    db.commit()
+
+    return TelegramConfigResponse(
+        enabled=cfg.enabled,
+        bot_token=cfg.bot_token,
+        admin_chat_ids=list(cfg.admin_chat_ids or []),
+    )
 
 
 @router.post("/telegram/test", response_model=TelegramTestResponse)

@@ -12,7 +12,7 @@ from app.utils.validation import validate_username
 class AdminCreate(BaseModel):
     username: str
     password: str
-    data_limit: int  # required for non-sudo admins
+    data_limit: int | None = None  # None = unlimited (optional for non-sudo admins)
     is_sudo: bool = False
 
     @field_validator("username")

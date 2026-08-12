@@ -15,5 +15,6 @@ from app.models.server_config import (  # noqa: F401
     ServerConfig,
     TLSSettings,
 )
+from app.models.telegram_config import TelegramConfig  # noqa: F401
 from app.models.usage_log import UsageLog  # noqa: F401
 from app.models.user import DataLimitResetStrategy, User, UserStatus  # noqa: F401

@@ -5,9 +5,9 @@ users; sudo admins can manage anyone's users.  Quota validation is
 enforced at creation time using the allocation-based guard from
 ``app.services.quota``.
 
-Soft-delete policy: DELETE sets status='disabled' and revoked=True but
-keeps the DB row for history (mirrors Marzban's approach).  Revoked
-users are excluded from list queries by default.
+Delete policy: DELETE removes the user permanently (revokes the cert and
+drops the DB row). Connectivity is controlled independently via the
+enable/disable endpoints and the status toggle in the UI.
 """
 
 from __future__ import annotations
@@ -181,8 +181,25 @@ def create_user(
         time_window_end=body.time_window_end,
         note=body.note,
         common_name=body.username,
+        status=body.status,
         revoked=False,
     )
+
+    # If the user is created disabled, mirror that at the vpn-core level
+    # (writes a CCD blockfile) so they cannot connect until re-enabled.
+    if body.status == UserStatus.DISABLED:
+        try:
+            _disable_client(
+                body.username,
+                management_socket=OPENVPN_MANAGEMENT_SOCKET,
+            )
+        except Exception as exc:
+            enforcement_log(
+                event="disable_client_failed",
+                username=body.username,
+                admin_username=current_admin.username,
+                reason=str(exc),
+            )
 
     db.add(new_user)
     db.flush()
@@ -322,7 +339,20 @@ def update_user(
     if body.note is not None:
         user.note = body.note
     if body.status is not None:
+        old_status = user.status
         user.status = body.status
+        # Mirror status changes at the vpn-core level (kill session + block
+        # on disable, unblock on enable) so toggles via the edit form behave
+        # the same as the dedicated /enable and /disable endpoints.
+        if body.status != old_status and user.common_name:
+            if body.status == UserStatus.DISABLED:
+                _kill_client_session(user.common_name, OPENVPN_MANAGEMENT_SOCKET)
+                _disable_client(
+                    user.common_name,
+                    management_socket=OPENVPN_MANAGEMENT_SOCKET,
+                )
+            elif body.status == UserStatus.ACTIVE:
+                _enable_client(user.common_name)
 
     write_admin_log(
         db,
@@ -468,7 +498,7 @@ def enable_user(
 
 
 # ---------------------------------------------------------------------------
-# DELETE /api/users/{username} — soft-delete (revoke + disable)
+# DELETE /api/users/{username} — hard delete
 # ---------------------------------------------------------------------------
 
 @router.delete("/{username}", status_code=status.HTTP_204_NO_CONTENT)
@@ -477,21 +507,22 @@ def delete_user(
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
-    """Soft-delete a user: revoke cert, disable, keep DB row for history.
+    """Delete a user permanently: revoke the cert and remove the DB row.
 
-    The row stays in DB with status='disabled' and revoked=True, but is
-    excluded from list queries by default (see list_users).
-    Recalculates admin's data_used in the same transaction.
+    This is a true delete — the user disappears entirely (along with their
+    usage logs). Control of a user's connectivity is handled separately via
+    the enable/disable endpoints (and the status toggle in the UI).
+    Recalculates the owning admin's data_used in the same transaction.
     """
     user = _get_validated_user(username, current_admin, db)
 
-    # Revoke the certificate via vpn-core
+    # Revoke the certificate via vpn-core (best-effort — never block the
+    # DB removal on vpn-core failures).
     if user.common_name and not user.revoked:
         try:
             _kill_client_session(user.common_name, OPENVPN_MANAGEMENT_SOCKET)
             _revoke_client_cert(user.common_name)
         except Exception:
-            # Best-effort revocation — log but don't block DB cleanup
             enforcement_log(
                 event="cert_revoke_failed",
                 username=username,
@@ -499,8 +530,7 @@ def delete_user(
                 reason="vpn-core error",
             )
 
-    user.status = UserStatus.DISABLED
-    user.revoked = True
+    admin = db.query(Admin).filter(Admin.id == user.admin_id).first()
 
     write_admin_log(
         db,
@@ -511,8 +541,10 @@ def delete_user(
         detail=f"Deleted user '{username}'",
     )
 
-    # Recalculate admin data_used after deletion.
-    admin = db.query(Admin).filter(Admin.id == user.admin_id).first()
+    # Hard delete: usage logs cascade via delete-orphan; user_nodes rows are
+    # removed automatically by SQLAlchemy.
+    db.delete(user)
+
     if admin is not None:
         recalculate_admin_data_used(admin, db)
 
@@ -530,7 +562,7 @@ def delete_user(
         action="user_deleted",
         username=username,
         admin_username=current_admin.username,
-        belongs_to=user.admin.username if user.admin else None,
+        belongs_to=admin.username if admin else None,
     )
 
 

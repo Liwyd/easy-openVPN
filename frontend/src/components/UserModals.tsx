@@ -13,44 +13,30 @@ export default function UserModals() {
     regenerateState,
     closeRegenerate,
     deleteMutation,
-    disableMutation,
     resetMutation,
     revokeMutation,
   } = useUserContext();
-
-  const isDelete = deleteState.user?.status === "disabled";
 
   return (
     <>
       <ConfirmDialog
         open={deleteState.open}
         onClose={closeDelete}
-        title={isDelete ? t("confirm.deleteUser") : t("confirm.disableUser")}
-        confirmLabel={isDelete ? t("confirm.delete") : t("confirm.disable")}
-        confirmColorPalette={isDelete ? "red" : "orange"}
+        title={t("confirm.deleteUser")}
+        confirmLabel={t("confirm.delete")}
+        confirmColorPalette="red"
         onConfirm={() => {
           if (!deleteState.user) return;
-          const u = deleteState.user.username;
-          if (isDelete) deleteMutation.mutate(u);
-          else disableMutation.mutate(u);
+          deleteMutation.mutate(deleteState.user.username);
         }}
-        isLoading={deleteMutation.isPending || disableMutation.isPending}
+        isLoading={deleteMutation.isPending}
         body={
-          isDelete ? (
-            <Text>
-              <Trans
-                i18nKey="confirm.deletePrompt"
-                values={{ username: deleteState.user?.username ?? "" }}
-              />
-            </Text>
-          ) : (
-            <Text>
-              <Trans
-                i18nKey="confirm.disablePrompt"
-                values={{ username: deleteState.user?.username ?? "" }}
-              />
-            </Text>
-          )
+          <Text>
+            <Trans
+              i18nKey="confirm.deletePrompt"
+              values={{ username: deleteState.user?.username ?? "" }}
+            />
+          </Text>
         }
       />
 
