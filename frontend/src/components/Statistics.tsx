@@ -36,7 +36,7 @@ function StatisticCard({
     <Box
       p={6}
       borderWidth="1px"
-      borderColor="light-border"
+      borderColor="border"
       bg="#F9FAFB"
       _dark={{ borderColor: "gray.600", bg: "gray.750" }}
       borderStyle="solid"

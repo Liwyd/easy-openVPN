@@ -357,8 +357,8 @@ export default function Dashboard() {
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="trafficGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#396fe4" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#396fe4" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#fa5252" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#fa5252" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <XAxis
@@ -385,7 +385,7 @@ export default function Dashboard() {
                   <Area
                     type="monotone"
                     dataKey="GB"
-                    stroke="#396fe4"
+                    stroke="#fa5252"
                     strokeWidth={2}
                     fill="url(#trafficGrad)"
                   />
