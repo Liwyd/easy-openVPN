@@ -13,6 +13,7 @@ import {
   SimpleGrid,
   Portal,
   Tabs,
+  Checkbox,
   createListCollection,
 } from "@chakra-ui/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -53,6 +54,18 @@ interface ApplyResult {
   requires_redownload: boolean;
   requires_redownload_fields: string[];
   message: string;
+}
+
+interface ImportField {
+  field: string;
+  current: unknown;
+  parsed: unknown;
+  status: "ok" | "same" | "invalid";
+  reason: string;
+}
+
+interface ImportPreview {
+  fields: ImportField[];
 }
 
 interface BackupConfig {
@@ -609,6 +622,98 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
   const [clientToClient, setClientToClient] = useState(config.client_to_client);
   const [redirectGateway, setRedirectGateway] = useState(config.redirect_gateway);
 
+  // Import state
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
+  const [importSelected, setImportSelected] = useState<Set<string>>(new Set());
+  const [showImportConfirm, setShowImportConfirm] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Import mutation
+  const importMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const { data } = await api.post<ImportPreview>("/settings/server-config/import", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      return data;
+    },
+    onSuccess: (data) => {
+      setImportPreview(data);
+      // Select all "ok" fields by default
+      const selected = new Set<string>();
+      data.fields.forEach((f) => {
+        if (f.status === "ok") selected.add(f.field);
+      });
+      setImportSelected(selected);
+      setUploading(false);
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t("settings.importParseFailed");
+      toaster.create({ title: msg, type: "error" });
+      setUploading(false);
+    },
+  });
+
+  // Apply import mutation
+  const applyImportMutation = useMutation({
+    mutationFn: async (values: Record<string, unknown>) => {
+      const { data } = await api.put<ApplyResult>("/settings/server-config", values);
+      return data;
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["server-config"] });
+      if (result.success) {
+        toaster.create({
+          title: result.message,
+          type: result.requires_redownload ? "warning" : "success",
+        });
+      } else {
+        toaster.create({ title: result.message, type: "error" });
+      }
+      setImportPreview(null);
+      setImportSelected(new Set());
+      setShowImportConfirm(false);
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t("settings.importApplyFailed");
+      toaster.create({ title: msg, type: "error" });
+    },
+  });
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    importMutation.mutate(file);
+    // Reset input so same file can be re-uploaded
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleImportConfirm = () => {
+    if (!importPreview) return;
+    const values: Record<string, unknown> = {};
+    importPreview.fields.forEach((f) => {
+      if (f.status === "ok" && importSelected.has(f.field)) {
+        values[f.field] = f.parsed;
+      }
+    });
+    if (Object.keys(values).length === 0) {
+      setShowImportConfirm(false);
+      return;
+    }
+    applyImportMutation.mutate(values);
+  };
+
+  const formatFieldValue = (field: string, value: unknown): string => {
+    if (value === null || value === undefined) return "(none)";
+    if (field === "dns_servers" && Array.isArray(value)) return value.join(", ");
+    if (typeof value === "boolean") return value ? "Yes" : "No";
+    return String(value);
+  };
+
   const applyMutation = useMutation({
     mutationFn: async (values: Record<string, unknown>) => {
       const { data } = await api.put<ApplyResult>("/settings/server-config", values);
@@ -917,6 +1022,134 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
         </form>
       </SectionCard>
 
+      {/* Import from file */}
+      <SectionCard title={t("settings.importFromFile")}>
+        <VStack align="stretch" gap={4}>
+          <Text fontSize="sm" color="fg.muted">
+            {t("settings.importSelectFields")}
+          </Text>
+          <HStack>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".ovpn,.conf,.txt"
+              hidden
+              onChange={handleImportFile}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+              loading={uploading}
+            >
+              <FiUpload style={{ marginRight: 6 }} />
+              {t("settings.importOvpnFile")}
+            </Button>
+          </HStack>
+
+          {importPreview && importPreview.fields.length > 0 && (
+            <VStack align="stretch" gap={3}>
+              <Text fontSize="sm" fontWeight="medium">
+                {t("settings.importReview")}
+              </Text>
+              <VStack align="stretch" gap={2}>
+                {importPreview.fields.map((f) => (
+                  <HStack
+                    key={f.field}
+                    p={2}
+                    borderRadius="md"
+                    bg="bg.muted"
+                    opacity={f.status === "invalid" ? 0.6 : 1}
+                  >
+                    <Checkbox.Root
+                      disabled={f.status !== "ok"}
+                      checked={importSelected.has(f.field)}
+                      onCheckedChange={(e) => {
+                        const newSelected = new Set(importSelected);
+                        if (e.checked) {
+                          newSelected.add(f.field);
+                        } else {
+                          newSelected.delete(f.field);
+                        }
+                        setImportSelected(newSelected);
+                      }}
+                    >
+                      <Checkbox.HiddenInput />
+                      <Checkbox.Control />
+                    </Checkbox.Root>
+                    <VStack align="stretch" gap={0} flex={1}>
+                      <HStack justify="space-between">
+                        <Text fontSize="sm" fontWeight="medium">
+                          {f.field === "dns_servers"
+                            ? t("settings.customDnsServers")
+                            : f.field === "public_host"
+                            ? t("settings.publicHost")
+                            : f.field === "interface"
+                            ? "Interface"
+                            : f.field === "auth_digest"
+                            ? t("settings.authDigest")
+                            : f.field === "tls_mode"
+                            ? t("settings.tlsMode")
+                            : f.field === "client_to_client"
+                            ? t("settings.clientToClient")
+                            : f.field === "redirect_gateway"
+                            ? t("settings.redirectAllTraffic")
+                            : f.field === "keepalive_interval"
+                            ? t("settings.keepaliveInterval")
+                            : f.field === "keepalive_timeout"
+                            ? t("settings.keepaliveTimeout")
+                            : f.field.charAt(0).toUpperCase() + f.field.slice(1).replace(/_/g, " ")}
+                        </Text>
+                        <Text
+                          fontSize="xs"
+                          color={
+                            f.status === "ok"
+                              ? "green.500"
+                              : f.status === "same"
+                              ? "fg.muted"
+                              : "red.500"
+                          }
+                        >
+                          {f.status === "ok"
+                            ? t("settings.importStatusOk")
+                            : f.status === "same"
+                            ? t("settings.importStatusSame")
+                            : t("settings.importStatusInvalid")}
+                        </Text>
+                      </HStack>
+                      <HStack gap={4} fontSize="xs" color="fg.muted">
+                        <Text>
+                          Current: {formatFieldValue(f.field, f.current)}
+                        </Text>
+                        <Text>→</Text>
+                        <Text fontWeight="medium" color={f.status === "invalid" ? "red.500" : "default"}>
+                          {f.status === "invalid" ? f.reason : formatFieldValue(f.field, f.parsed)}
+                        </Text>
+                      </HStack>
+                    </VStack>
+                  </HStack>
+                ))}
+              </VStack>
+              <Button
+                size="sm"
+                alignSelf="flex-start"
+                disabled={importSelected.size === 0}
+                onClick={() => setShowImportConfirm(true)}
+                loading={applyImportMutation.isPending}
+              >
+                {t("settings.importConfirm")}
+              </Button>
+            </VStack>
+          )}
+
+          {importPreview && importPreview.fields.length === 0 && (
+            <Text fontSize="sm" color="fg.muted">
+              {t("settings.importNoChanges")}
+            </Text>
+          )}
+        </VStack>
+      </SectionCard>
+
       <ConfirmDialog
         open={showConfirm}
         onClose={() => {
@@ -938,6 +1171,23 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
                 {t("settings.applyChanges")}
               </Box>
             )}
+          </VStack>
+        }
+      />
+
+      <ConfirmDialog
+        open={showImportConfirm}
+        onClose={() => setShowImportConfirm(false)}
+        title={t("settings.importConfirm")}
+        confirmLabel={t("settings.importConfirm")}
+        confirmColorPalette="red"
+        onConfirm={handleImportConfirm}
+        isLoading={applyImportMutation.isPending}
+        body={
+          <VStack align="stretch" gap={3}>
+            <Text fontSize="sm">
+              {t("settings.importConfirmPrompt")}
+            </Text>
           </VStack>
         }
       />

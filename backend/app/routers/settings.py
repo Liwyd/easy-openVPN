@@ -4,13 +4,15 @@ GET /api/settings/server-config → current settings
 PUT /api/settings/server-config → validate, apply via vpn-core, commit
 only if apply succeeds (same "don't leave DB and real state out of
 sync" rule as user creation).
+POST /api/settings/server-config/import → parse uploaded .ovpn file,
+return diff preview without writing anything.
 """
 
 from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -30,6 +32,7 @@ from app.schemas.server_config import (
     ServerConfigUpdate,
 )
 from app.services.auth import get_current_sudo_admin
+from app.services.ovpn_config_parser import parse_ovpn_config, preview_to_dict
 from app.services.quota import write_admin_log
 from app.services.vpn_bridge import apply_server_config as _apply_server_config
 
@@ -219,6 +222,79 @@ def update_server_config(
             )
         ),
     )
+
+
+_MAX_IMPORT_BYTES = 65_536  # 64 KB
+
+
+@router.post("/server-config/import")
+async def import_server_config(
+    file: UploadFile,
+    db: Session = Depends(get_db),
+    current_admin: Admin = Depends(get_current_sudo_admin),
+):
+    """Parse an uploaded .ovpn / server.conf file and return a preview of
+    the fields that differ from the current DB settings.
+
+    Does NOT write to the database or restart OpenVPN.  The admin must
+    confirm by calling PUT /api/settings/server-config with the selected
+    fields.
+    """
+    # Read the file (enforce size limit before full read)
+    raw = await file.read()
+    if len(raw) > _MAX_IMPORT_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large ({len(raw)} bytes). Maximum is {_MAX_IMPORT_BYTES} bytes.",
+        )
+    try:
+        content = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        try:
+            content = raw.decode("latin-1")
+        except UnicodeDecodeError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File is not valid text (UTF-8 or Latin-1).",
+            )
+
+    # Load current DB values
+    cfg = db.query(ServerConfig).first()
+    if cfg is None:
+        from app.db.seed import seed_default_server_config
+        seed_default_server_config(db)
+        db.flush()
+        cfg = db.query(ServerConfig).first()
+
+    current_dict = {
+        "protocol": cfg.protocol.value if cfg.protocol else None,
+        "port": cfg.port,
+        "interface": cfg.interface,
+        "cipher": cfg.cipher.value if cfg.cipher else None,
+        "auth_digest": cfg.auth_digest.value if cfg.auth_digest else None,
+        "tls_mode": cfg.tls_mode.value if cfg.tls_mode else None,
+        "dns_servers": cfg.dns_servers,
+        "mtu": cfg.mtu,
+        "keepalive_interval": cfg.keepalive_interval,
+        "keepalive_timeout": cfg.keepalive_timeout,
+        "client_to_client": cfg.client_to_client,
+        "redirect_gateway": cfg.redirect_gateway,
+        "public_host": cfg.public_host,
+    }
+
+    preview = parse_ovpn_config(content, current_dict)
+    result = preview_to_dict(preview)
+
+    write_admin_log(
+        db,
+        admin_id=current_admin.id,
+        action=AdminAction.UPDATE_SERVER_CONFIG,
+        target_type=TargetType.SERVER_CONFIG,
+        target_id=cfg.id,
+        detail=f"Previewed import from uploaded file: {file.filename}",
+    )
+
+    return result
 
 
 # ---------------------------------------------------------------------------
