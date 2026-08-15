@@ -626,7 +626,6 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
   const [importSelected, setImportSelected] = useState<Set<string>>(new Set());
   const [showImportConfirm, setShowImportConfirm] = useState(false);
-  const [importing, setImporting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 

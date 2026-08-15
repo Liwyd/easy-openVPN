@@ -249,14 +249,14 @@ async def import_server_config(
         )
     try:
         content = raw.decode("utf-8")
-    except UnicodeDecodeError:
+    except UnicodeDecodeError as exc:
         try:
             content = raw.decode("latin-1")
-        except UnicodeDecodeError:
+        except UnicodeDecodeError as exc2:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="File is not valid text (UTF-8 or Latin-1).",
-            )
+            ) from exc2
 
     # Load current DB values
     cfg = db.query(ServerConfig).first()

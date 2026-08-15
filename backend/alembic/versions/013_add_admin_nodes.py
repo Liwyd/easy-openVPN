@@ -28,7 +28,15 @@ def upgrade() -> None:
     op.add_column("nodes", sa.Column("current_users", sa.Integer, nullable=False, server_default="0"))
     op.add_column("nodes", sa.Column("tags", sa.JSON, nullable=True))
     op.add_column("nodes", sa.Column("note", sa.Text, nullable=True))
-    op.add_column("nodes", sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False))
+    op.add_column(
+        "nodes",
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.func.now(),
+            nullable=False,
+        ),
+    )
 
     # ── admin_nodes: which admins can see / manage which nodes ──────────
     # New nodes are auto-assigned to ALL existing admins by default.

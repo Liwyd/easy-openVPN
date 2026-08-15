@@ -13,7 +13,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.models.server_config import AuthDigest, Cipher, Protocol
+from app.models.server_config import AuthDigest, Cipher, Protocol  # noqa: I001
 
 
 # ---------------------------------------------------------------------------
@@ -197,11 +197,9 @@ def parse_ovpn_config(content: str, current_config: dict[str, Any]) -> ImportPre
             continue
 
         # --- Generic directives -------------------------------------------
-        matched = False
         for field_name, regex, parser_name, _default in _DIRECTIVES:
             m = regex.match(line)
             if m:
-                matched = True
                 parser = _PARSER_MAP[parser_name]
                 # Pass captured groups (single string or empty)
                 arg = m.group(1) if m.lastindex and m.lastindex >= 1 else ""

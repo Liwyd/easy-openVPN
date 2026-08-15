@@ -14,7 +14,7 @@ import logging
 from sqlalchemy.orm import Session
 
 from app.models.admin import Admin
-from app.models.node import Node, admin_nodes
+from app.models.node import Node
 
 logger = logging.getLogger(__name__)
 
