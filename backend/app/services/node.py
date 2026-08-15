@@ -2,6 +2,7 @@
 
 Core logic:
 * When a node is created, it is auto-assigned to **all** existing admins.
+* When an admin is created, all existing nodes are auto-assigned to them.
 * A sudo admin can later grant/revoke node access per sub-admin.
 * Sub-admins only see nodes assigned to them via ``admin_nodes``.
 """
@@ -33,6 +34,19 @@ def assign_node_to_all_admins(db: Session, node: Node) -> None:
     for admin in admins:
         if admin not in node.admins:
             node.admins.append(admin)
+    db.flush()
+
+
+def assign_all_nodes_to_admin(db: Session, admin: Admin) -> None:
+    """Grant *admin* access to every existing node.
+
+    Called right after a new admin is created so they can see all nodes
+    from the start.  Sudo admins can later revoke access per sub-admin.
+    """
+    nodes = db.query(Node).all()
+    for node in nodes:
+        if node not in admin.nodes:
+            admin.nodes.append(node)
     db.flush()
 
 

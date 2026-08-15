@@ -14,7 +14,7 @@ from app.models.admin_log import AdminAction, TargetType
 from app.models.user import User
 from app.schemas.admin import AdminCreate, AdminResponse, AdminUpdate, AdminUsageResponse, AdminWithStatsResponse
 from app.services.auth import get_current_sudo_admin
-from app.services.node import assign_node_to_all_admins, get_admin_node_ids, set_admin_nodes
+from app.services.node import assign_all_nodes_to_admin, assign_node_to_all_admins, get_admin_node_ids, set_admin_nodes
 from app.services.quota import (
     can_admin_allocate,
     remaining_allocatable,
@@ -67,7 +67,7 @@ def create_admin(
     if body.node_ids is not None:
         set_admin_nodes(db, new_admin, body.node_ids)
     else:
-        assign_node_to_all_admins(db, new_admin)
+        assign_all_nodes_to_admin(db, new_admin)
 
     write_admin_log(
         db,
