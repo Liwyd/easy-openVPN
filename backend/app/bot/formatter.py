@@ -67,6 +67,10 @@ _ACTION_MAP: dict[str, tuple[str, str]] = {
     "admin_disabled": (EMOJI_DISABLE, "Disabled"),
     "admin_enabled": (EMOJI_ENABLE, "Activated"),
     "admin_updated": (EMOJI_MODIFY, "Modified"),
+    # Node lifecycle
+    "node_created": (EMOJI_CREATE, "Node Created"),
+    "node_deleted": (EMOJI_DELETE, "Node Deleted"),
+    "node_updated": (EMOJI_MODIFY, "Node Modified"),
     # System
     "server_config_updated": (EMOJI_SYSTEM, "Config Updated"),
     "session_killed": (EMOJI_KICKED, "Kicked"),

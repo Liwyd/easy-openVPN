@@ -14,6 +14,7 @@ class AdminCreate(BaseModel):
     password: str
     data_limit: int | None = None  # None = unlimited (optional for non-sudo admins)
     is_sudo: bool = False
+    node_ids: list[int] | None = None  # Nodes this admin can manage; None = all nodes
 
     @field_validator("username")
     @classmethod
@@ -26,6 +27,7 @@ class AdminUpdate(BaseModel):
     data_limit: int | None = None
     disabled: bool | None = None
     password: str | None = None
+    node_ids: list[int] | None = None  # Replace node access list; None = no change
 
 
 class AdminResponse(BaseModel):
@@ -37,6 +39,7 @@ class AdminResponse(BaseModel):
     data_limit: int | None
     data_used: int
     parent_admin_id: int | None
+    node_ids: list[int]
 
     model_config = {"from_attributes": True}
 
@@ -62,5 +65,6 @@ class AdminWithStatsResponse(BaseModel):
     parent_admin_id: int | None
     user_count: int
     limitless_user_count: int
+    node_ids: list[int]
 
     model_config = {"from_attributes": True}

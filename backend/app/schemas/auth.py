@@ -31,5 +31,6 @@ class AdminProfile(BaseModel):
     data_limit: int | None
     data_used: int
     parent_admin_id: int | None
+    node_ids: list[int]
 
     model_config = {"from_attributes": True}

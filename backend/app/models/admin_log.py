@@ -28,12 +28,18 @@ class AdminAction(str, enum.Enum):
     RESET_USAGE = "reset_usage"
     REGENERATE_SUBSCRIPTION = "regenerate_subscription"
     UPDATE_SERVER_CONFIG = "update_server_config"
+    CREATE_NODE = "create_node"
+    UPDATE_NODE = "update_node"
+    DELETE_NODE = "delete_node"
+    ASSIGN_NODE_ADMIN = "assign_node_admin"
+    REVOKE_NODE_ADMIN = "revoke_node_admin"
 
 
 class TargetType(str, enum.Enum):
     USER = "user"
     ADMIN = "admin"
     SERVER_CONFIG = "server_config"
+    NODE = "node"
 
 
 class AdminLog(Base):

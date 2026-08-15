@@ -108,6 +108,8 @@ def get_me(
     db: Session = Depends(get_db),
 ):
     """Return the logged-in admin's profile including quota info."""
+    from app.services.node import get_admin_node_ids
+
     return AdminProfile(
         id=current_admin.id,
         username=current_admin.username,
@@ -117,6 +119,7 @@ def get_me(
         data_limit=current_admin.data_limit,
         data_used=current_admin.data_used,
         parent_admin_id=current_admin.parent_admin_id,
+        node_ids=get_admin_node_ids(current_admin),
     )
 
 

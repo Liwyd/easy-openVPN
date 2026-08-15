@@ -23,6 +23,7 @@ from app.routers.auth import router as auth_router
 from app.routers.backup import router as backup_router  # noqa: F401
 from app.routers.billing import router as billing_router
 from app.routers.health import router as health_router
+from app.routers.nodes import router as nodes_router
 from app.routers.settings import router as settings_router
 from app.routers.stats import router as stats_router
 from app.routers.subscription import router as subscription_router
@@ -65,6 +66,7 @@ def create_app() -> FastAPI:
     application.include_router(auth_router)
     application.include_router(admins_router)
     application.include_router(users_router)
+    application.include_router(nodes_router)
     application.include_router(settings_router)
     application.include_router(stats_router)
     application.include_router(billing_router)

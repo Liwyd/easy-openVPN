@@ -70,3 +70,6 @@ class Admin(Base):
     admin_logs: Mapped[list[AdminLog]] = relationship(
         "AdminLog", back_populates="admin", lazy="select"
     )
+    nodes: Mapped[list[Node]] = relationship(
+        "Node", secondary="admin_nodes", back_populates="admins", lazy="select"
+    )

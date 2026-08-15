@@ -14,6 +14,7 @@ from app.models.admin_log import AdminAction, TargetType
 from app.models.user import User
 from app.schemas.admin import AdminCreate, AdminResponse, AdminUpdate, AdminUsageResponse, AdminWithStatsResponse
 from app.services.auth import get_current_sudo_admin
+from app.services.node import assign_node_to_all_admins, get_admin_node_ids, set_admin_nodes
 from app.services.quota import (
     can_admin_allocate,
     remaining_allocatable,
@@ -62,6 +63,12 @@ def create_admin(
     db.add(new_admin)
     db.flush()
 
+    # Assign nodes: use provided list, or auto-assign all nodes by default.
+    if body.node_ids is not None:
+        set_admin_nodes(db, new_admin, body.node_ids)
+    else:
+        assign_node_to_all_admins(db, new_admin)
+
     write_admin_log(
         db,
         admin_id=current_admin.id,
@@ -85,7 +92,17 @@ def create_admin(
         data_limit_str=_fmt_bytes(data_limit) if data_limit else None,
     )
 
-    return new_admin
+    return AdminResponse(
+        id=new_admin.id,
+        username=new_admin.username,
+        is_sudo=new_admin.is_sudo,
+        disabled=new_admin.disabled,
+        created_at=new_admin.created_at,
+        data_limit=new_admin.data_limit,
+        data_used=new_admin.data_used,
+        parent_admin_id=new_admin.parent_admin_id,
+        node_ids=get_admin_node_ids(new_admin),
+    )
 
 
 @router.get("", response_model=list[AdminWithStatsResponse])
@@ -137,6 +154,7 @@ def list_admins(
             parent_admin_id=adm.parent_admin_id,
             user_count=user_count,
             limitless_user_count=limitless_user_count,
+            node_ids=get_admin_node_ids(adm),
         ))
     return result
 
@@ -151,7 +169,17 @@ def get_admin(
     admin = db.query(Admin).filter(Admin.id == admin_id).first()
     if admin is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Admin not found")
-    return admin
+    return AdminResponse(
+        id=admin.id,
+        username=admin.username,
+        is_sudo=admin.is_sudo,
+        disabled=admin.disabled,
+        created_at=admin.created_at,
+        data_limit=admin.data_limit,
+        data_used=admin.data_used,
+        parent_admin_id=admin.parent_admin_id,
+        node_ids=get_admin_node_ids(admin),
+    )
 
 
 @router.put("/{admin_id}", response_model=AdminResponse)
@@ -225,6 +253,17 @@ def update_admin(
             detail=f"Changed data_limit to {body.data_limit} for admin '{admin.username}'",
         )
 
+    if body.node_ids is not None:
+        set_admin_nodes(db, admin, body.node_ids)
+        write_admin_log(
+            db,
+            admin_id=current_admin.id,
+            action=AdminAction.ASSIGN_NODE_ADMIN,
+            target_type=TargetType.ADMIN,
+            target_id=admin.id,
+            detail=f"Updated node access for admin '{admin.username}'",
+        )
+
     db.commit()
     db.refresh(admin)
 
@@ -248,7 +287,17 @@ def update_admin(
         data_limit_str=_fmt_bytes(admin.data_limit) if admin.data_limit else None,
     )
 
-    return admin
+    return AdminResponse(
+        id=admin.id,
+        username=admin.username,
+        is_sudo=admin.is_sudo,
+        disabled=admin.disabled,
+        created_at=admin.created_at,
+        data_limit=admin.data_limit,
+        data_used=admin.data_used,
+        parent_admin_id=admin.parent_admin_id,
+        node_ids=get_admin_node_ids(admin),
+    )
 
 
 @router.delete("/{admin_id}", status_code=status.HTTP_204_NO_CONTENT)
