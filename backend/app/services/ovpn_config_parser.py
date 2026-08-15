@@ -13,8 +13,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.models.server_config import AuthDigest, Cipher, Protocol  # noqa: I001
-
+from app.models.server_config import AuthDigest, Cipher, Protocol
 
 # ---------------------------------------------------------------------------
 # Allowed value sets (mirrors the frontend / schema validation)
