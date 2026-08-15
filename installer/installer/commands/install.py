@@ -234,6 +234,9 @@ def cmd_install(args) -> None:
     backup_dir = "/opt/eovpanel/backups"
     try:
         os.makedirs(backup_dir, exist_ok=True)
+        # Match the uid:gid of `appuser` inside the container (uid 1000 by
+        # default) so the bind-mounted directory is writable by the backend.
+        run_cmd(["chown", "-R", "1000:1000", backup_dir])
     except OSError:
         backup_dir = "./backups"
     env["BACKUP_DIR"] = backup_dir
