@@ -1,5 +1,5 @@
 import { Button, Flex, Box, Input, IconButton, Icon } from "@chakra-ui/react";
-import { FiSearch, FiRefreshCw, FiPlus, FiX } from "react-icons/fi";
+import { FiSearch, FiRefreshCw, FiX } from "react-icons/fi";
 import { useTranslation } from "react-i18next";
 
 interface FiltersProps {
@@ -88,7 +88,6 @@ export default function Filters({
 
         {onCreate && (
           <Button colorPalette="accent" onClick={onCreate} size="sm" px={5}>
-            <FiPlus />
             {createLabel ?? t("users.create")}
           </Button>
         )}

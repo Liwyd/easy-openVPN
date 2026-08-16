@@ -46,7 +46,7 @@ export default function Header() {
     visibleMenu.find((i) => location.pathname === i.path)?.label ?? t("header.users");
 
   return (
-    <Flex align="center" justify="space-between" gap={3} wrap="wrap" mb={4}>
+    <Flex align="center" justify="space-between" gap={2} wrap="wrap" mb={4}>
       <Text as="h1" fontWeight="semibold" fontSize="2xl">
         {title}
       </Text>
@@ -55,7 +55,7 @@ export default function Header() {
         <Flex align="center" gap={2}>
         <Menu.Root>
           <Menu.Trigger asChild>
-            <Button variant="outline" size="xs" aria-label={t("header.menu")}>
+            <Button variant="outline" size="sm" aria-label={t("header.menu")}>
               <Icon as={FiMenu} boxSize="4" />
             </Button>
           </Menu.Trigger>
@@ -94,7 +94,7 @@ export default function Header() {
 
         <Button
           variant="outline"
-          size="xs"
+          size="sm"
           aria-label={t("header.settings")}
           title={t("header.settings")}
           onClick={() => navigate("/settings")}
@@ -107,7 +107,7 @@ export default function Header() {
         <Button
           onClick={toggleColorMode}
           variant="outline"
-          size="xs"
+          size="sm"
           aria-label={t("header.switchTheme")}
         >
           <Icon as={colorMode === "light" ? FiMoon : FiSun} boxSize="4" />

@@ -35,40 +35,56 @@ export default function UsageSlider({ user }: UsageSliderProps) {
   );
 
   const strategy = getResetStrategyText(user.data_limit_reset_strategy, t);
+  const isUnlimited = !user.data_limit;
+  const isReached = !isUnlimited && user.data_limit !== null && (used / user.data_limit) * 100 >= 100;
 
   return (
     <Box>
-      <HStack justify="space-between" mb={1}>
-        <Text fontSize="xs" color="fg.muted">
-          {formatBytes(user.data_used)} {t("usage.used")}
-        </Text>
-        <Text fontSize="xs" color="fg.muted">
-          {user.data_limit ? formatBytes(user.data_limit) : t("usage.unlimited")}
-          {strategy ? ` ${strategy}` : ""}
-        </Text>
-      </HStack>
       {user.data_limit ? (
         <Slider.Root
           value={[used]}
           max={user.data_limit}
           size="sm"
-          colorPalette={used / user.data_limit > 0.8 ? "orange" : "green"}
+          colorPalette={isReached ? "red" : "accent"}
+          mb={2}
         >
           <Slider.Control>
-            <Slider.Track>
-              <Slider.Range />
+            <Slider.Track h="6px" borderRadius="full">
+              <Slider.Range borderRadius="full" />
             </Slider.Track>
           </Slider.Control>
         </Slider.Root>
       ) : (
-        <Slider.Root value={[0]} max={1} size="sm" colorPalette="green">
+        <Slider.Root value={[0]} max={1} size="sm" colorPalette="accent" mb={2}>
           <Slider.Control>
-            <Slider.Track>
-              <Slider.Range />
+            <Slider.Track h="6px" borderRadius="full">
+              <Slider.Range borderRadius="full" />
             </Slider.Track>
           </Slider.Control>
         </Slider.Root>
       )}
+      <HStack
+        justifyContent="space-between"
+        fontSize="xs"
+        fontWeight="medium"
+        color="gray.600"
+        _dark={{ color: "gray.400" }}
+      >
+        <Text>
+          {formatBytes(user.data_used)} /{" "}
+          {isUnlimited ? (
+            <Text as="span" fontFamily="system-ui">
+              ∞
+            </Text>
+          ) : (
+            formatBytes(user.data_limit!) +
+            (strategy ? ` ${strategy}` : "")
+          )}
+        </Text>
+        <Text>
+          {t("usage.total")}: {formatBytes(user.data_used)}
+        </Text>
+      </HStack>
     </Box>
   );
 }

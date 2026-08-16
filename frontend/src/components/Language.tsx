@@ -34,7 +34,7 @@ export function Language() {
       <Menu.Trigger asChild>
         <Button
           variant="outline"
-          size="xs"
+          size="sm"
           aria-label={t("header.language")}
           title={t("header.language")}
         >

@@ -118,12 +118,24 @@ const config = defineConfig({
       textTransform: "uppercase",
       letterSpacing: "wider",
       color: "var(--chakra-colors-fg-muted)",
+      borderBottom: "1px solid",
+      borderColor: "var(--chakra-colors-border)",
     },
     "table thead th:first-of-type": {
       borderTopLeftRadius: "8px",
     },
     "table thead th:last-of-type": {
       borderTopRightRadius: "8px",
+    },
+    "table tbody tr": {
+      borderBottom: "1px solid",
+      borderColor: "var(--chakra-colors-border)",
+    },
+    "table tbody tr:last-of-type": {
+      borderBottom: "none",
+    },
+    "table tbody td": {
+      py: "14px",
     },
     "table tbody tr:last-of-type td:first-of-type": {
       borderBottomLeftRadius: "8px",

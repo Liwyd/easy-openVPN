@@ -28,7 +28,7 @@
   },
   "users": {
     "create": "Create User",
-    "search": "Search...",
+    "search": "Search",
     "clearSearch": "Clear search",
     "refresh": "Refresh",
     "failedToLoad": "Failed to load users",
@@ -152,6 +152,7 @@
   },
   "usage": {
     "used": "used",
+    "total": "Total",
     "unlimited": "Unlimited",
     "daily": "Daily",
     "weekly": "Weekly",
