@@ -48,7 +48,8 @@
     "downloadConfig": "Download .ovpn config",
     "showQR": "Show QR code",
     "sortBy": "Sort by",
-    "expires": "Expires {{time}}",
+    "expiresIn": "Expires in {{time}}",
+    "expiredAgo": "Expired {{time}}",
     "noExpiration": "No expiration"
   },
   "status": {

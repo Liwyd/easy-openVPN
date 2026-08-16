@@ -48,7 +48,8 @@
     "downloadConfig": "دانلود کانفیگ .ovpn",
     "showQR": "نمایش کد QR",
     "sortBy": "مرتب‌سازی بر اساس",
-    "expires": "انقضا {{time}}",
+    "expiresIn": "منقضی می‌شود در {{time}}",
+    "expiredAgo": "منقضی شده {{time}}",
     "noExpiration": "بدون انقضا"
   },
   "status": {

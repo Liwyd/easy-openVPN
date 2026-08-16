@@ -17,6 +17,12 @@ export default function StatusBadge({
   const s = status as UserStatus;
   const Icon = statusIcons[s] ?? statusIcons.disabled;
   const label = t(`status.${s}` as const);
+
+  const now = Date.now();
+  const expiryTime = expiryDate ? new Date(expiryDate).getTime() : 0;
+  const isExpired = expiryDate && expiryTime < now;
+  const expiryKey = isExpired ? "table.expiredAgo" : "table.expiresIn";
+
   return (
     <Flex align="center" wrap="nowrap" gap={2}>
       <Badge
@@ -50,7 +56,7 @@ export default function StatusBadge({
           whiteSpace="nowrap"
           _dark={{ color: "gray.400" }}
         >
-          {t("table.expires", { time: relativeTime(expiryDate) })}
+          {t(expiryKey, { time: relativeTime(expiryDate) })}
         </Text>
       )}
     </Flex>
