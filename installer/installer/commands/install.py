@@ -266,7 +266,7 @@ def cmd_install(args) -> None:
     # 5. TLS (optional)
     if setup_tls:
         info("Setting up TLS via ESSL...")
-        from installer.utils import ensure_essl_installed, run_essl
+        from installer.utils import run_essl
         try:
             success, output = run_essl(domain, email, ESSL_CERT_DIR)
             if success:

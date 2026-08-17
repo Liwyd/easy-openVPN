@@ -126,27 +126,153 @@ ESSL_SCRIPT_URL = "https://raw.githubusercontent.com/erfjab/ESSL/main/essl.sh"
 ESSL_INSTALL_PATH = ESSL_DIR / "essl.sh"
 
 
-def ensure_essl_installed() -> Path:
-    if ESSL_INSTALL_PATH.exists():
-        return ESSL_INSTALL_PATH
-    ESSL_DIR.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["curl", "-fsSL", ESSL_SCRIPT_URL, "-o", str(ESSL_INSTALL_PATH)], check=True, timeout=30)
-    ESSL_INSTALL_PATH.chmod(0o755)
-    return ESSL_INSTALL_PATH
+def _ensure_certbot() -> bool:
+    """Install certbot and socat if not already present."""
+    try:
+        subprocess.run(
+            ["apt-get", "update", "-qq"],
+            capture_output=True, text=True, timeout=60,
+        )
+        subprocess.run(
+            ["apt-get", "install", "-y", "--no-install-recommends", "certbot", "socat"],
+            capture_output=True, text=True, timeout=120,
+        )
+        return True
+    except Exception:
+        return False
+
+
+def _ensure_acme_sh() -> bool:
+    """Install acme.sh if not already present."""
+    acme_bin = Path.home() / ".acme.sh" / "acme.sh"
+    if acme_bin.exists():
+        return True
+    try:
+        r = subprocess.run(
+            ["curl", "-fsSL", "https://get.acme.sh", "-o", "/tmp/acme-install.sh"],
+            capture_output=True, text=True, timeout=30,
+        )
+        if r.returncode != 0:
+            return False
+        subprocess.run(
+            ["bash", "/tmp/acme-install.sh"],
+            capture_output=True, text=True, timeout=60,
+        )
+        # Set default CA to Let's Encrypt
+        subprocess.run(
+            [str(acme_bin), "--set-default-ca", "--server", "letsencrypt"],
+            capture_output=True, text=True, timeout=30,
+        )
+        return acme_bin.exists()
+    except Exception:
+        return False
+
+
+def _issue_cert_certbot(domain: str, email: str, dest_dir: Path) -> tuple[bool, str]:
+    """Issue a certificate using certbot standalone mode."""
+    output_parts: list[str] = []
+    try:
+        # Stop anything on port 80 first (certbot standalone needs it)
+        subprocess.run(
+            ["fuser", "-k", "80/tcp"],
+            capture_output=True, text=True, timeout=5,
+        )
+    except Exception:
+        pass
+
+    cmd = [
+        "certbot", "certonly", "--standalone",
+        "--non-interactive", "--agree-tos",
+        "--keep-until-expiring",
+        "-d", domain,
+        "--email", email,
+    ]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        output_parts.append(r.stdout)
+        output_parts.append(r.stderr)
+        if r.returncode == 0:
+            # Copy certs to dest_dir
+            live_dir = Path(f"/etc/letsencrypt/live/{domain}")
+            if (live_dir / "fullchain.pem").exists() and (live_dir / "privkey.pem").exists():
+                import shutil
+                shutil.copy2(live_dir / "fullchain.pem", dest_dir / "fullchain.pem")
+                shutil.copy2(live_dir / "privkey.pem", dest_dir / "privkey.pem")
+                return True, "\n".join(output_parts)
+            return False, "\n".join(output_parts) + "\nCert files not found in letsencrypt live dir."
+        return False, "\n".join(output_parts)
+    except subprocess.TimeoutExpired:
+        return False, "certbot timed out after 180s"
+    except Exception as exc:
+        return False, str(exc)
+
+
+def _issue_cert_acme(domain: str, email: str, dest_dir: Path) -> tuple[bool, str]:
+    """Issue a certificate using acme.sh standalone mode."""
+    acme_bin = Path.home() / ".acme.sh" / "acme.sh"
+    output_parts: list[str] = []
+    try:
+        subprocess.run(
+            ["fuser", "-k", "80/tcp"],
+            capture_output=True, text=True, timeout=5,
+        )
+    except Exception:
+        pass
+
+    cmd = [
+        str(acme_bin), "--issue", "--force", "--standalone",
+        "-d", domain,
+        "--accountemail", email,
+    ]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+        output_parts.append(r.stdout)
+        output_parts.append(r.stderr)
+        if r.returncode == 0:
+            # acme.sh stores certs in ~/.acme.sh/<domain>_ecc/
+            acme_cert_dir = Path.home() / ".acme.sh" / f"{domain}_ecc"
+            fullchain = acme_cert_dir / "fullchain.cer"
+            key = acme_cert_dir / f"{domain}.key"
+            if fullchain.exists() and key.exists():
+                import shutil
+                shutil.copy2(fullchain, dest_dir / "fullchain.pem")
+                shutil.copy2(key, dest_dir / "privkey.pem")
+                return True, "\n".join(output_parts)
+            return False, "\n".join(output_parts) + "\nCert files not found in acme.sh dir."
+        return False, "\n".join(output_parts)
+    except subprocess.TimeoutExpired:
+        return False, "acme.sh timed out after 180s"
+    except Exception as exc:
+        return False, str(exc)
 
 
 def run_essl(domain: str, email: str, dest_dir: Path) -> tuple[bool, str]:
+    """Issue a TLS certificate for the given domain.
+
+    Tries acme.sh first (faster, no interactive prompts), then falls back to
+    certbot standalone.  Certificates are copied to *dest_dir* as
+    fullchain.pem / privkey.pem.
+    """
     dest_dir.mkdir(parents=True, exist_ok=True)
-    try:
-        script = ensure_essl_installed()
-        input_text = f"{domain}\n{email}\n{dest_dir}\n"
-        r = subprocess.run(["bash", str(script)], input=input_text, capture_output=True, text=True, timeout=120)
-        output = r.stdout + r.stderr
-        if (dest_dir / "fullchain.pem").exists() and (dest_dir / "privkey.pem").exists():
-            return True, output
-        return False, output
-    except Exception as exc:
-        return False, str(exc)
+    output_parts: list[str] = []
+
+    # Try acme.sh first
+    acme_ok = _ensure_acme_sh()
+    if acme_ok:
+        ok, out = _issue_cert_acme(domain, email, dest_dir)
+        output_parts.append(f"[acme.sh] {out}")
+        if ok:
+            return True, "\n".join(output_parts)
+
+    # Fall back to certbot
+    certbot_ok = _ensure_certbot()
+    if certbot_ok:
+        ok, out = _issue_cert_certbot(domain, email, dest_dir)
+        output_parts.append(f"[certbot] {out}")
+        if ok:
+            return True, "\n".join(output_parts)
+
+    return False, "\n".join(output_parts) + "\nFailed to obtain certificate via acme.sh and certbot."
 
 
 # ---------------------------------------------------------------------------

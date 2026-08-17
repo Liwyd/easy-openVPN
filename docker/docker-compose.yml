@@ -86,9 +86,10 @@ services:
     networks:
       - eovpanel
     # --- TLS (optional) ---
-    # To enable TLS with certs from erfjab/ESSL, uncomment and adjust:
-    # volumes:
-    #   - /etc/letsencrypt/live/yourdomain.com:/etc/nginx/ssl:ro
+    # To enable TLS, mount the cert directory into the frontend container.
+    # The entrypoint.sh detects certs at /etc/nginx/ssl/{fullchain,privkey}.pem
+    volumes:
+      - /etc/ssl/eovpanel:/etc/nginx/ssl:ro
     healthcheck:
       # favicon.svg is served at the root in both default and hidden modes
       # (in hidden mode "/" returns 404 by design, so we probe an asset).
