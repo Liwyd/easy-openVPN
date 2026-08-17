@@ -638,9 +638,7 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
     mutationFn: async (file: File) => {
       const formData = new FormData();
       formData.append("file", file);
-      const { data } = await api.post<ImportPreview>("/settings/server-config/import", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const { data } = await api.post<ImportPreview>("/settings/server-config/import", formData);
       return data;
     },
     onSuccess: (data) => {
