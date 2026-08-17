@@ -174,7 +174,8 @@ function BackupSection() {
       toaster.create({ title: t("settings.backupScheduleSaved"), type: "success" });
     },
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t("settings.backupScheduleSaveFailed");
+      const raw = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+      const msg = typeof raw === "string" ? raw : t("settings.backupScheduleSaveFailed");
       toaster.create({ title: msg, type: "error" });
     },
   });
@@ -190,7 +191,8 @@ function BackupSection() {
         type: "success",
       });
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t("settings.backupCreateFailed");
+      const raw = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+      const msg = typeof raw === "string" ? raw : t("settings.backupCreateFailed");
       toaster.create({ title: msg, type: "error" });
     } finally {
       setCreating(false);
@@ -234,7 +236,8 @@ function BackupSection() {
         type: "success",
       });
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t("settings.restoreFailed");
+      const raw = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+      const msg = typeof raw === "string" ? raw : t("settings.restoreFailed");
       toaster.create({ title: msg, type: "error" });
     } finally {
       setFile(null);
@@ -532,7 +535,8 @@ function TelegramSection() {
       const { data } = await api.post("/settings/telegram/test");
       toaster.create({ title: data.detail, type: "success" });
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t("settings.testFailed");
+      const raw = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+      const msg = typeof raw === "string" ? raw : t("settings.testFailed");
       toaster.create({ title: msg, type: "error" });
     } finally {
       setSending(false);
@@ -650,7 +654,8 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
       setUploading(false);
     },
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t("settings.importParseFailed");
+      const raw = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+      const msg = typeof raw === "string" ? raw : t("settings.importParseFailed");
       toaster.create({ title: msg, type: "error" });
       setUploading(false);
     },
@@ -677,7 +682,8 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
       setShowImportConfirm(false);
     },
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t("settings.importApplyFailed");
+      const raw = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+      const msg = typeof raw === "string" ? raw : t("settings.importApplyFailed");
       toaster.create({ title: msg, type: "error" });
     },
   });
@@ -730,7 +736,8 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
       }
     },
     onError: (err: unknown) => {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t("settings.failedToApply");
+      const raw = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+      const msg = typeof raw === "string" ? raw : t("settings.failedToApply");
       toaster.create({ title: msg, type: "error" });
     },
   });
@@ -1222,7 +1229,8 @@ function ChangePasswordSection() {
       setNewPassword("");
       setConfirmPassword("");
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || t("settings.passwordFailed");
+      const raw = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+      const msg = typeof raw === "string" ? raw : t("settings.passwordFailed");
       toaster.create({ title: msg, type: "error" });
     } finally {
       setLoading(false);

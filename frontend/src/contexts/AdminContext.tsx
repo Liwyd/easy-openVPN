@@ -58,7 +58,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     },
     onError: (err: any) => {
       toaster.create({
-        title: err?.response?.data?.detail || "Failed to create admin",
+        title: typeof err?.response?.data?.detail === "string" ? err.response.data.detail : "Failed to create admin",
         type: "error",
       });
     },
@@ -83,7 +83,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     },
     onError: (err: any) => {
       toaster.create({
-        title: err?.response?.data?.detail || "Failed to update admin",
+        title: typeof err?.response?.data?.detail === "string" ? err.response.data.detail : "Failed to update admin",
         type: "error",
       });
     },
@@ -98,7 +98,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     },
     onError: (err: any) => {
       toaster.create({
-        title: err?.response?.data?.detail || "Failed to delete admin",
+        title: typeof err?.response?.data?.detail === "string" ? err.response.data.detail : "Failed to delete admin",
         type: "error",
       });
     },
@@ -116,7 +116,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     },
     onError: (err: any) => {
       toaster.create({
-        title: err?.response?.data?.detail || "Failed to update admin",
+        title: typeof err?.response?.data?.detail === "string" ? err.response.data.detail : "Failed to update admin",
         type: "error",
       });
     },

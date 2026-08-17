@@ -131,7 +131,7 @@ export default function Billing() {
       toaster.create({ title: t("billing.debtSettled"), type: "success" });
     },
     onError: (err: any) => {
-      toaster.create({ title: err?.response?.data?.detail || t("billing.settlementFailed"), type: "error" });
+      toaster.create({ title: typeof err?.response?.data?.detail === "string" ? err.response.data.detail : t("billing.settlementFailed"), type: "error" });
     },
   });
 
@@ -145,7 +145,7 @@ export default function Billing() {
       toaster.create({ title: t("billing.capacityToppedUp"), type: "success" });
     },
     onError: (err: any) => {
-      toaster.create({ title: err?.response?.data?.detail || t("billing.topupFailed"), type: "error" });
+      toaster.create({ title: typeof err?.response?.data?.detail === "string" ? err.response.data.detail : t("billing.topupFailed"), type: "error" });
     },
   });
 
@@ -158,7 +158,7 @@ export default function Billing() {
       toaster.create({ title: t("billing.pricingUpdated"), type: "success" });
     },
     onError: (err: any) => {
-      toaster.create({ title: err?.response?.data?.detail || t("billing.pricingFailed"), type: "error" });
+      toaster.create({ title: typeof err?.response?.data?.detail === "string" ? err.response.data.detail : t("billing.pricingFailed"), type: "error" });
     },
   });
 

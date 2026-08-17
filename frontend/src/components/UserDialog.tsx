@@ -197,7 +197,7 @@ export default function UserDialog() {
     },
     onError: (err: any) => {
       toaster.create({
-        title: err?.response?.data?.detail || t("userDialog.createFailed"),
+        title: typeof err?.response?.data?.detail === "string" ? err.response.data.detail : t("userDialog.createFailed"),
         type: "error",
       });
     },
@@ -232,7 +232,7 @@ export default function UserDialog() {
     },
     onError: (err: any) => {
       toaster.create({
-        title: err?.response?.data?.detail || t("userDialog.updateFailed"),
+        title: typeof err?.response?.data?.detail === "string" ? err.response.data.detail : t("userDialog.updateFailed"),
         type: "error",
       });
     },

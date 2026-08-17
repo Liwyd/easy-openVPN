@@ -94,7 +94,7 @@ export function UserProvider({
     },
     onError: (err: any) => {
       toaster.create({
-        title: err?.response?.data?.detail || "Failed to delete user",
+        title: typeof err?.response?.data?.detail === "string" ? err.response.data.detail : "Failed to delete user",
         type: "error",
       });
     },
@@ -108,7 +108,7 @@ export function UserProvider({
     },
     onError: (err: any) => {
       toaster.create({
-        title: err?.response?.data?.detail || "Failed to enable user",
+        title: typeof err?.response?.data?.detail === "string" ? err.response.data.detail : "Failed to enable user",
         type: "error",
       });
     },
@@ -123,7 +123,7 @@ export function UserProvider({
     },
     onError: (err: any) => {
       toaster.create({
-        title: err?.response?.data?.detail || "Failed to disable user",
+        title: typeof err?.response?.data?.detail === "string" ? err.response.data.detail : "Failed to disable user",
         type: "error",
       });
     },
@@ -138,7 +138,7 @@ export function UserProvider({
     },
     onError: (err: any) => {
       toaster.create({
-        title: err?.response?.data?.detail || "Failed to reset usage",
+        title: typeof err?.response?.data?.detail === "string" ? err.response.data.detail : "Failed to reset usage",
         type: "error",
       });
     },
@@ -158,7 +158,7 @@ export function UserProvider({
     },
     onError: (err: any) => {
       toaster.create({
-        title: err?.response?.data?.detail || "Failed to regenerate link",
+        title: typeof err?.response?.data?.detail === "string" ? err.response.data.detail : "Failed to regenerate link",
         type: "error",
       });
     },
@@ -192,7 +192,7 @@ export function UserProvider({
       window.URL.revokeObjectURL(url);
     } catch (err: any) {
       toaster.create({
-        title: err?.response?.data?.detail || "Failed to download config",
+        title: typeof err?.response?.data?.detail === "string" ? err.response.data.detail : "Failed to download config",
         type: "error",
       });
     }
