@@ -271,27 +271,16 @@ def cmd_install(args) -> None:
             success, output = run_essl(domain, email, ESSL_CERT_DIR)
             if success:
                 ok("TLS certificates generated.")
-                # Point nginx at the certs
-                from installer.utils import NGINX_CONF
-                if NGINX_CONF.exists():
-                    import re
-                    content = NGINX_CONF.read_text()
-                    content = re.sub(r"ssl_certificate .*;\n", "", content)
-                    content = re.sub(r"ssl_certificate_key .*;\n", "", content)
-                    ssl_block = f"""
-    listen 443 ssl;
-    ssl_certificate {ESSL_CERT_DIR / 'fullchain.pem'};
-    ssl_certificate_key {ESSL_CERT_DIR / 'privkey.pem'};
-    ssl_protocols TLSv1.2 TLSv1.3;
-"""
-                    content = content.replace("listen 80;", "listen 80;\n" + ssl_block, 1)
-                    NGINX_CONF.write_text(content)
-                    ok("Nginx configured for TLS.")
+                # The frontend entrypoint.sh detects certs at /etc/nginx/ssl/
+                # and configures nginx for HTTPS automatically via the
+                # docker-compose volume mount.  No manual nginx patching needed.
             else:
                 warn("ESSL failed. Continuing without TLS.")
                 print(dim(output))
+                setup_tls = False
         except Exception as e:
             warn(f"TLS setup failed: {e}. Continuing without TLS.")
+            setup_tls = False
 
     # 6. Pull and start containers
     info("Pulling and starting containers...")
@@ -315,8 +304,11 @@ def cmd_install(args) -> None:
     # ── Done ───────────────────────────────────────────────────────────
     heading("Installation complete!")
     ip = public_ip or detect_public_ip() or "<your-server-ip>"
-    panel_port = panel_port if panel_port != "80" else ""
-    panel_url = f"http://{ip}:{panel_port}" if panel_port else f"http://{ip}"
+    if setup_tls:
+        panel_url = f"https://{domain or ip}"
+    else:
+        port_suffix = f":{panel_port}" if panel_port and panel_port != "80" else ""
+        panel_url = f"http://{ip}{port_suffix}"
     if panel_path:
         panel_url = f"{panel_url}/{panel_path}"
     print(f"""
