@@ -37,6 +37,15 @@ export function Language() {
           size="sm"
           aria-label={t("header.language")}
           title={t("header.language")}
+          width="32px"
+          height="32px"
+          minWidth="32px"
+          minHeight="32px"
+          p={0}
+          display="inline-flex"
+          alignItems="center"
+          justifyContent="center"
+          borderRadius="md"
         >
           <LanguageIcon size={16} />
         </Button>

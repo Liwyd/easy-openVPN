@@ -52,6 +52,8 @@ class UserResponse(BaseModel):
     note: str | None
     revoked: bool
     common_name: str | None = None
+    last_connected_since: str | None = None
+    is_online: bool = False
 
     model_config = {"from_attributes": True}
 

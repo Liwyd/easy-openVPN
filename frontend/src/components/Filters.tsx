@@ -30,12 +30,12 @@ export default function Filters({
       top="0"
       zIndex="docked"
       bg="bg"
-      py={4}
-      gap={4}
+      py={3}
+      gap={3}
       align="center"
       wrap="wrap"
     >
-      <Flex position="relative" flex="1" minW="220px" align="center">
+      <Flex position="relative" flex="1" minW="200px" maxW="360px" align="center">
         <Box
           position="absolute"
           left="10px"
@@ -44,14 +44,17 @@ export default function Filters({
           color="fg.muted"
           zIndex="2"
         >
-          <Icon as={FiSearch} />
+          <Icon as={FiSearch} boxSize={4} />
         </Box>
         <Input
           placeholder={searchPlaceholder ?? t("users.search")}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          pl="36px"
-          pr={search ? "30px" : "10px"}
+          pl="34px"
+          pr={search ? "28px" : "10px"}
+          h="36px"
+          fontSize="sm"
+          borderRadius="md"
           data-testid={testId}
         />
         {search && (
@@ -82,12 +85,29 @@ export default function Filters({
           disabled={isRefreshing}
           title={t("users.refresh")}
           size="sm"
+          width="36px"
+          height="36px"
+          minWidth="36px"
+          minHeight="36px"
+          p={0}
+          display="inline-flex"
+          alignItems="center"
+          justifyContent="center"
         >
           <FiRefreshCw className={isRefreshing ? "animate-spin" : undefined} />
         </IconButton>
 
         {onCreate && (
-          <Button colorPalette="accent" onClick={onCreate} size="sm" px={5}>
+          <Button
+            colorPalette="accent"
+            onClick={onCreate}
+            size="sm"
+            h="36px"
+            px={4}
+            fontSize="sm"
+            fontWeight="medium"
+            borderRadius="md"
+          >
             {createLabel ?? t("users.create")}
           </Button>
         )}

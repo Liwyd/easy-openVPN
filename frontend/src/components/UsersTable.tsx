@@ -20,12 +20,41 @@ import UsageSlider from "./UsageSlider";
 import { useUserContext } from "../contexts/UserContext";
 import { useTranslation } from "react-i18next";
 
-const statusDotColor: Record<string, string> = {
-  active: "green.400",
-  limited: "red.400",
-  expired: "orange.400",
-  disabled: "gray.400",
-};
+function OnlineDot({ user }: { user: User }) {
+  if (user.is_online) {
+    return (
+      <Box
+        w="8px"
+        h="8px"
+        borderRadius="full"
+        flexShrink={0}
+        bg="green.400"
+      />
+    );
+  }
+  if (user.last_connected_since) {
+    return (
+      <Box
+        w="8px"
+        h="8px"
+        borderRadius="full"
+        flexShrink={0}
+        bg="gray.400"
+      />
+    );
+  }
+  return (
+    <Box
+      w="8px"
+      h="8px"
+      borderRadius="full"
+      flexShrink={0}
+      border="1.5px solid"
+      borderColor="gray.400"
+      bg="transparent"
+    />
+  );
+}
 
 export default function UsersTable({
   users,
@@ -82,14 +111,7 @@ export default function UsersTable({
                 >
                   <Table.Cell minW="140px">
                     <HStack align="center" gap={2.5}>
-                      <Box
-                        w="10px"
-                        h="10px"
-                        borderRadius="full"
-                        flexShrink={0}
-                        bg={statusDotColor[user.status]}
-                        boxShadow="0 0 1px 1px rgba(0, 0, 0, 0.1)"
-                      />
+                      <OnlineDot user={user} />
                       <Text fontWeight="semibold">{user.username}</Text>
                     </HStack>
                   </Table.Cell>

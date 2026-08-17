@@ -15,6 +15,8 @@ export interface User {
   note: string | null;
   revoked: boolean;
   common_name: string | null;
+  last_connected_since: string | null;
+  is_online: boolean;
 }
 
 export interface UsersQueryResult {

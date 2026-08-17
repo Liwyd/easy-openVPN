@@ -63,6 +63,7 @@ from app.services.vpn_bridge import (
 from app.services.vpn_bridge import (
     revoke_client_cert as _revoke_client_cert,
 )
+from app.services.vpn_bridge import get_live_status as _get_live_status
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -259,7 +260,23 @@ def list_users(
     total = q.count()
     response.headers["X-Total-Count"] = str(total)
 
-    return q.order_by(User.id).offset(offset).limit(limit).all()
+    users = q.order_by(User.id).offset(offset).limit(limit).all()
+
+    online_cns: set[str] = set()
+    try:
+        for client in _get_live_status(management_socket=OPENVPN_MANAGEMENT_SOCKET):
+            online_cns.add(client["common_name"])
+    except Exception:
+        pass
+
+    result = []
+    for u in users:
+        resp = UserResponse.model_validate(u)
+        if u.common_name and u.common_name in online_cns:
+            resp.is_online = True
+        result.append(resp)
+
+    return result
 
 
 # ---------------------------------------------------------------------------
