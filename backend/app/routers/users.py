@@ -55,6 +55,9 @@ from app.services.vpn_bridge import (
     generate_ovpn_file as _generate_ovpn_file,
 )
 from app.services.vpn_bridge import (
+    get_live_status as _get_live_status,
+)
+from app.services.vpn_bridge import (
     kill_client_session as _kill_client_session,
 )
 from app.services.vpn_bridge import (
@@ -62,9 +65,6 @@ from app.services.vpn_bridge import (
 )
 from app.services.vpn_bridge import (
     revoke_client_cert as _revoke_client_cert,
-)
-from app.services.vpn_bridge import (
-    get_live_status as _get_live_status,
 )
 
 router = APIRouter(prefix="/api/users", tags=["users"])
