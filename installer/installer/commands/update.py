@@ -27,8 +27,15 @@ def cmd_update(args) -> None:
     step(1, 4, "Pulling latest code...")
     rc, out = run_cmd(["git", "-C", str(REPO_ROOT), "pull", "--ff-only"], stream=True)
     if rc != 0:
-        fail("Git pull failed. Resolve conflicts manually.")
-        sys.exit(1)
+        # Branches diverged — hard-reset to remote (safe: local data lives in
+        # untracked dirs like backups/, vpn/, .venv-installer/ which are
+        # untouched by git reset).
+        warn("Fast-forward failed (diverged branches), force-syncing to remote...")
+        run_cmd(["git", "-C", str(REPO_ROOT), "fetch", "origin"], stream=True)
+        rc, out = run_cmd(["git", "-C", str(REPO_ROOT), "reset", "--hard", "origin/main"], stream=True)
+        if rc != 0:
+            fail("Git sync failed. Check the repo at " + str(REPO_ROOT))
+            sys.exit(1)
     ok("Code updated.")
 
     # Step 2: Reinstall CLI if needed

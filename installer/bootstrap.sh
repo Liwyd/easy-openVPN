@@ -83,7 +83,11 @@ clone_repo() {
     if [[ -d "${REPO_DIR}/.git" ]]; then
         info "Repository already exists at ${REPO_DIR}. Updating..."
         cd "${REPO_DIR}"
-        git pull --ff-only || warn "Could not pull latest. Using existing version."
+        if ! git pull --ff-only 2>/dev/null; then
+            warn "Fast-forward failed, force-syncing to remote..."
+            git fetch origin
+            git reset --hard origin/main
+        fi
     else
         info "Cloning repository..."
         git clone "${REPO_URL}" "${REPO_DIR}"
