@@ -112,9 +112,10 @@ if [ -n "$BASE_PATH" ]; then
         try_files \$uri \$uri/ /index.html;
     }
 
-    # The bare base path (no trailing slash) serves the shell itself
+    # The bare base path (no trailing slash) — redirect to the trailing-slash
+    # variant so the SPA shell loads correctly with sub_filter applied.
     location = $BASE_PATH {
-        try_files index.html =404;
+        return 301 $BASE_PATH/;
     }
 
     # Static assets (loaded by the SPA shell)
