@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 
 def _render_ovpn_for_user(user: User, db: Session, protocol_override: str | None = None) -> str | None:
     """Render the .ovpn file content for a user. Returns None on error.
-    
+
     When protocol_override is provided, uses that protocol instead of the
     server's configured protocol (for dual-protocol exports).
     """

@@ -320,7 +320,7 @@ def get_user_config(
     current_admin: Admin = Depends(get_current_admin),
 ):
     """Return the .ovpn file for download.  Auth + ownership required.
-    
+
     Optional ?protocol=tcp|udp parameter for dual-protocol export.
     """
     user = _get_validated_user(username, current_admin, db)

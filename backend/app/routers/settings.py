@@ -70,7 +70,11 @@ _FIELD_MAP = {
 CLIENT_ONLY_FIELDS = {"tunnel_host", "subscription_url_prefix", "backup_host", "backup_port"}
 
 # Fields that require all clients to redownload their .ovpn
-REDISTRIBUTION_FIELDS = {"protocol", "port", "cipher", "tls_mode", "tunnel_host", "backup_host", "backup_port", "reneg_sec", "connect_retry", "mute_replay_warnings"}
+REDISTRIBUTION_FIELDS = {
+    "protocol", "port", "cipher", "tls_mode", "tunnel_host",
+    "backup_host", "backup_port", "reneg_sec", "connect_retry",
+    "mute_replay_warnings",
+}
 
 
 def _tls_mode_to_booleans(tls_mode: str) -> tuple[bool, bool]:
