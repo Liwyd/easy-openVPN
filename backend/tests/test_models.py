@@ -338,7 +338,7 @@ class TestSeed:
         assert config is not None
         assert config.protocol == Protocol.UDP
         assert config.port == 1194
-        assert config.cipher == Cipher.AES_256_GCM
+        assert config.cipher == Cipher.AES_128_CBC
         assert config.dns_preset == DNSPreset.CLOUDFLARE
 
     def test_seed_server_config_idempotent(self, db_session):
