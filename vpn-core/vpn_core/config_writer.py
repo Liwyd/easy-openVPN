@@ -42,7 +42,7 @@ class ServerConfigRow:
     protocol: str = "udp"
     port: int = 1194
     interface: str = "eth0"
-    cipher: str = "AES-256-GCM"
+    cipher: str = "AES-128-CBC"
     auth: str = "SHA256"
     dns_servers: Optional[list[str]] = None
     mtu: int | None = None
@@ -51,8 +51,8 @@ class ServerConfigRow:
     topology: str = "subnet"
     vpn_subnet: str = "10.8.0.0"
     vpn_mask: str = "255.255.255.0"
-    keepalive_interval: int = 10
-    keepalive_timeout: int = 120
+    keepalive_interval: int = 15
+    keepalive_timeout: int = 45
     max_clients: int | None = None
     user: str = "nobody"
     group: str = "nogroup"
@@ -62,8 +62,13 @@ class ServerConfigRow:
     management_socket: str = "/run/openvpn/management.sock"
     ccd_dir: str = "/opt/eovpanel/vpn/ccd"
     hooks_dir: str = "/opt/eovpanel/vpn/hooks"
-    tls_crypt: bool = True
+    tls_crypt: bool = False
     tls_auth: bool = False
+    backup_host: str = ""
+    backup_port: int = 0
+    reneg_sec: int = 3600
+    connect_retry: int = 1
+    mute_replay_warnings: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -132,11 +137,29 @@ def render_server_conf(cfg: ServerConfigRow) -> str:
     # --- Verbosity ---
     _w(f"verb {cfg.verbosity}")
 
+    # --- TLS client mode ---
+    _w("tls-client")
+
+    # --- Mute replay warnings ---
+    if cfg.mute_replay_warnings:
+        _w("mute-replay-warnings")
+
+    # --- Renegotiate every N seconds ---
+    _w(f"reneg-sec {cfg.reneg_sec}")
+
+    # --- Connect retry ---
+    _w(f"connect-retry {cfg.connect_retry}")
+
     # --- Management interface ---
     _w(f"management {cfg.management_socket} unix")
 
     # --- Allow external scripts (hooks, CCD) ---
     _w("script-security 2")
+
+    # --- Auth-user-pass verification ---
+    auth_verify = os.path.join(cfg.hooks_dir, "auth-user-pass-verify.py")
+    if os.path.isfile(auth_verify):
+        _w(f"auth-user-pass-verify '{auth_verify}'")
 
     # --- Client-config-dir ---
     _w(f"client-config-dir {cfg.ccd_dir}")
@@ -202,6 +225,10 @@ def _render_client_common(cfg: ServerConfigRow, server_dir: Path) -> None:
         "remote-cert-tls server",
         f"cipher {cfg.cipher}",
         f"auth {cfg.auth}",
+        "tls-client",
+        "mute-replay-warnings",
+        f"reneg-sec {cfg.reneg_sec}",
+        f"connect-retry {cfg.connect_retry}",
     ]
     if tls_line:
         lines.append(tls_line)

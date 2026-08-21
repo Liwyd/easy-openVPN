@@ -26,18 +26,22 @@ router = APIRouter(tags=["subscription"])
 log = logging.getLogger(__name__)
 
 
-def _render_ovpn_for_user(user: User, db: Session) -> str | None:
-    """Render the .ovpn file content for a user. Returns None on error."""
+def _render_ovpn_for_user(user: User, db: Session, protocol_override: str | None = None) -> str | None:
+    """Render the .ovpn file content for a user. Returns None on error.
+    
+    When protocol_override is provided, uses that protocol instead of the
+    server's configured protocol (for dual-protocol exports).
+    """
     try:
         cfg = db.query(ServerConfig).first()
         public_ip = resolve_client_host(
             cfg.public_host if cfg else "", cfg.tunnel_host if cfg else ""
         )
-        protocol = cfg.protocol.value if cfg else "udp"
+        protocol = protocol_override or (cfg.protocol.value if cfg else "udp")
         port = cfg.port if cfg else 1194
-        cipher = cfg.cipher.value if cfg else "AES-256-GCM"
+        cipher = cfg.cipher.value if cfg else "AES-128-CBC"
         auth = cfg.auth_digest.value if cfg else "SHA256"
-        tls_mode = cfg.tls_mode.value if cfg else "tls-crypt"
+        tls_mode = cfg.tls_mode.value if cfg else "none"
 
         return generate_ovpn_file(
             common_name=user.common_name or user.username,
@@ -48,6 +52,12 @@ def _render_ovpn_for_user(user: User, db: Session) -> str | None:
             cipher=cipher,
             auth=auth,
             tls_mode=tls_mode,
+            backup_host=cfg.backup_host if cfg else "",
+            backup_port=cfg.backup_port if cfg else 0,
+            reneg_sec=cfg.reneg_sec if cfg else 3600,
+            connect_retry=cfg.connect_retry if cfg else 1,
+            mute_replay_warnings=cfg.mute_replay_warnings if cfg else True,
+            ovpn_password=user.ovpn_password or "",
         )
     except Exception:
         log.exception("Failed to generate ovpn for user %s", user.username)
@@ -412,6 +422,52 @@ def download_subscription_config(
         media_type="application/x-openvpn-profile",
         headers={
             "Content-Disposition": f'attachment; filename="{user.username}.ovpn"',
+        },
+    )
+
+
+@router.get("/sub/{token}/download/{protocol}")
+def download_subscription_config_by_protocol(
+    token: str,
+    protocol: str,
+    request: Request,
+    db: Session = Depends(get_db),
+) -> Response:
+    """Return the .ovpn file for a specific protocol (tcp or udp)."""
+    client_ip = request.client.host if request.client else "unknown"
+    if subscription_rate_limiter.is_rate_limited(client_ip):
+        retry_after = subscription_rate_limiter.retry_after(client_ip)
+        return Response(
+            content="Rate limit exceeded. Try again later.",
+            status_code=429,
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    if protocol not in ("tcp", "udp"):
+        return Response(status_code=404)
+
+    user = db.query(User).filter(User.subscription_token == token).first()
+
+    if user is None or user.revoked or user.status == UserStatus.DISABLED:
+        return Response(status_code=404)
+
+    ovpn_content = _render_ovpn_for_user(user, db, protocol_override=protocol)
+    if not ovpn_content:
+        return Response(
+            content="Failed to generate VPN config. Admin must regenerate this user's certificate.",
+            status_code=500,
+        )
+
+    # Track download time
+    import datetime as _dt
+    user.subscription_updated_at = _dt.datetime.now(_dt.UTC)
+    db.commit()
+
+    return Response(
+        content=ovpn_content,
+        media_type="application/x-openvpn-profile",
+        headers={
+            "Content-Disposition": f'attachment; filename="{user.username}_{protocol}.ovpn"',
         },
     )
 

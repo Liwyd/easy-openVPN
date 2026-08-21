@@ -88,6 +88,10 @@ class User(Base):
     common_name: Mapped[str | None] = mapped_column(String(128), nullable=True, default=None)
     revoked: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
+    # Per-user OpenVPN password for auth-user-pass verification.
+    # When set, clients must provide this password alongside their cert.
+    ovpn_password: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+
     # Subscription link — random unguessable token for the public
     # /sub/{token} endpoint. Generated on creation via secrets.token_urlsafe(32).
     subscription_token: Mapped[str] = mapped_column(
@@ -129,3 +133,8 @@ class User(Base):
         if "subscription_token" not in kwargs or not kwargs["subscription_token"]:
             kwargs["subscription_token"] = secrets.token_urlsafe(32)
         super().__init__(**kwargs)
+
+    @property
+    def has_ovpn_password(self) -> bool:
+        """Whether this user has an OpenVPN password set."""
+        return bool(self.ovpn_password)

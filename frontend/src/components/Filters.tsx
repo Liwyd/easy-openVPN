@@ -38,7 +38,7 @@ export default function Filters({
       <Flex position="relative" flex="1" minW="200px" maxW="360px" align="center">
         <Box
           position="absolute"
-          left="12px"
+          insetStart="12px"
           top="50%"
           transform="translateY(-50%)"
           color="fg.muted"
@@ -50,8 +50,8 @@ export default function Filters({
           placeholder={searchPlaceholder ?? t("users.search")}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          pl="38px"
-          pr={search ? "32px" : "12px"}
+          ps="38px"
+          pe={search ? "32px" : "12px"}
           h="40px"
           fontSize="sm"
           borderRadius="6px"
@@ -60,7 +60,7 @@ export default function Filters({
         {search && (
           <Box
             position="absolute"
-            right="8px"
+            insetEnd="8px"
             top="50%"
             transform="translateY(-50%)"
             zIndex="2"

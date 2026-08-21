@@ -109,9 +109,15 @@ def _generate_ovpn(
     public_ip: str,
     protocol: str,
     port: int,
-    cipher: str = "AES-256-GCM",
+    cipher: str = "AES-128-CBC",
     auth: str = "SHA256",
-    tls_mode: str = "tls-crypt",
+    tls_mode: str = "none",
+    backup_host: str = "",
+    backup_port: int = 0,
+    reneg_sec: int = 3600,
+    connect_retry: int = 1,
+    mute_replay_warnings: bool = True,
+    ovpn_password: str = "",
 ) -> str:
     """Build a complete .ovpn profile file with inline certificates.
 
@@ -129,6 +135,10 @@ def _generate_ovpn(
         "dev tun",
         f"proto {protocol}",
         f"remote {public_ip} {port}",
+    ]
+    if backup_host and backup_port:
+        lines.append(f"remote {backup_host} {backup_port}")
+    lines.extend([
         "resolv-retry infinite",
         "nobind",
         "persist-key",
@@ -136,11 +146,17 @@ def _generate_ovpn(
         "remote-cert-tls server",
         f"cipher {cipher}",
         f"auth {auth}",
-    ]
+        "tls-client",
+        "mute-replay-warnings",
+        f"reneg-sec {reneg_sec}",
+        f"connect-retry {connect_retry}",
+    ])
     if tls_mode == "tls-crypt":
         lines.append("tls-crypt")
     elif tls_mode == "tls-auth":
         lines.append("tls-auth")
+    if ovpn_password:
+        lines.append("auth-user-pass")
     lines.append("ignore-unknown-option block-outside-dns")
     lines.append("verb 3")
 
@@ -204,9 +220,15 @@ def create_client(
     public_ip: str = "",
     protocol: str = "udp",
     port: int = 1194,
-    cipher: str = "AES-256-GCM",
+    cipher: str = "AES-128-CBC",
     auth: str = "SHA256",
-    tls_mode: str = "tls-crypt",
+    tls_mode: str = "none",
+    backup_host: str = "",
+    backup_port: int = 0,
+    reneg_sec: int = 3600,
+    connect_retry: int = 1,
+    mute_replay_warnings: bool = True,
+    ovpn_password: str = "",
 ) -> str:
     """
     Generate a client key/cert via easy-rsa and return the .ovpn file content.
@@ -246,6 +268,12 @@ def create_client(
         cipher=cipher,
         auth=auth,
         tls_mode=tls_mode,
+        backup_host=backup_host,
+        backup_port=backup_port,
+        reneg_sec=reneg_sec,
+        connect_retry=connect_retry,
+        mute_replay_warnings=mute_replay_warnings,
+        ovpn_password=ovpn_password,
     )
 
     return ovpn_content

@@ -1,16 +1,14 @@
 import { Box, VStack } from "@chakra-ui/react";
 import { Outlet } from "react-router-dom";
 import Header from "./Header";
-import Footer from "./Footer";
 
 export default function Layout() {
   return (
-    <VStack justifyContent="space-between" minH="100vh" p={{ base: 4, md: 6 }} rowGap={0} align="stretch">
+    <VStack justifyContent="flex-start" minH="100vh" p={{ base: 4, md: 6 }} rowGap={0} align="stretch">
       <Box w="full" flex="1">
         <Header />
         <Outlet />
       </Box>
-      <Footer />
     </VStack>
   );
 }

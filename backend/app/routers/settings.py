@@ -57,15 +57,20 @@ _FIELD_MAP = {
     "redirect_gateway": "redirect_gateway",
     "public_host": "public_ip",
     "tunnel_host": None,  # client-facing only — never touches server.conf
+    "backup_host": None,  # client-facing only
+    "backup_port": None,  # client-facing only
+    "reneg_sec": "reneg_sec",
+    "connect_retry": "connect_retry",
+    "mute_replay_warnings": "mute_replay_warnings",
     "subscription_url_prefix": None,
 }
 
 # Fields that only affect client configs, not the running OpenVPN server.
 # Changing these must NOT restart OpenVPN — no vpn-core apply is needed.
-CLIENT_ONLY_FIELDS = {"tunnel_host", "subscription_url_prefix"}
+CLIENT_ONLY_FIELDS = {"tunnel_host", "subscription_url_prefix", "backup_host", "backup_port"}
 
 # Fields that require all clients to redownload their .ovpn
-REDISTRIBUTION_FIELDS = {"protocol", "port", "cipher", "tls_mode", "tunnel_host"}
+REDISTRIBUTION_FIELDS = {"protocol", "port", "cipher", "tls_mode", "tunnel_host", "backup_host", "backup_port", "reneg_sec", "connect_retry", "mute_replay_warnings"}
 
 
 def _tls_mode_to_booleans(tls_mode: str) -> tuple[bool, bool]:
@@ -158,6 +163,9 @@ def update_server_config(
                 public_ip=cfg.public_host,
                 tls_crypt=tls_crypt,
                 tls_auth=tls_auth,
+                reneg_sec=cfg.reneg_sec,
+                connect_retry=cfg.connect_retry,
+                mute_replay_warnings=cfg.mute_replay_warnings,
             )
         except Exception as exc:
             logger.error("vpn-core apply_server_config failed: %s", exc)

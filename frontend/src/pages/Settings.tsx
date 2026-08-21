@@ -45,6 +45,11 @@ interface ServerConfig {
   redirect_gateway: boolean;
   public_host: string;
   tunnel_host: string;
+  backup_host: string;
+  backup_port: number;
+  reneg_sec: number;
+  connect_retry: number;
+  mute_replay_warnings: boolean;
   subscription_url_prefix: string;
   updated_at: string;
 }
@@ -100,6 +105,7 @@ const protocolCollection = createListCollection({
 
 const cipherCollection = createListCollection({
   items: [
+    { label: "AES-128-CBC", value: "AES-128-CBC" },
     { label: "AES-256-GCM", value: "AES-256-GCM" },
     { label: "AES-128-GCM", value: "AES-128-GCM" },
     { label: "CHACHA20-POLY1305", value: "CHACHA20-POLY1305" },
@@ -625,6 +631,7 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
   const [dnsPreset, setDnsPreset] = useState(config.dns_preset);
   const [clientToClient, setClientToClient] = useState(config.client_to_client);
   const [redirectGateway, setRedirectGateway] = useState(config.redirect_gateway);
+  const [muteReplayWarnings, setMuteReplayWarnings] = useState(config.mute_replay_warnings);
 
   // Import state
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
@@ -759,9 +766,20 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
     values.keepalive_timeout = Number(formData.get("keepalive_timeout"));
     values.client_to_client = clientToClient;
     values.redirect_gateway = redirectGateway;
+    values.mute_replay_warnings = muteReplayWarnings;
 
     const mtuVal = formData.get("mtu") as string;
     values.mtu = mtuVal ? Number(mtuVal) : null;
+
+    const backupPortVal = formData.get("backup_port") as string;
+    values.backup_port = backupPortVal ? Number(backupPortVal) : 0;
+    values.backup_host = formData.get("backup_host") as string || "";
+
+    const renegSecVal = formData.get("reneg_sec") as string;
+    values.reneg_sec = renegSecVal ? Number(renegSecVal) : 3600;
+
+    const connectRetryVal = formData.get("connect_retry") as string;
+    values.connect_retry = connectRetryVal ? Number(connectRetryVal) : 1;
 
     if (dnsPreset === "custom") {
       values.dns_servers = localDns.filter((d) => d.trim());
@@ -1005,7 +1023,41 @@ function ServerConfigForm({ config }: { config: ServerConfig }) {
                 </Switch.Control>
                 <Switch.Label>{t("settings.redirectAllTraffic")}</Switch.Label>
               </Switch.Root>
+
+              <Switch.Root
+                checked={muteReplayWarnings}
+                onCheckedChange={(e) => setMuteReplayWarnings(e.checked)}
+              >
+                <Switch.HiddenInput />
+                <Switch.Control>
+                  <Switch.Thumb />
+                </Switch.Control>
+                <Switch.Label>{t("settings.muteReplayWarnings", "Mute Replay Warnings")}</Switch.Label>
+              </Switch.Root>
             </HStack>
+
+            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+              <Field.Root>
+                <Field.Label>{t("settings.backupHost", "Backup Host")}</Field.Label>
+                <Input name="backup_host" defaultValue={config.backup_host} placeholder={t("settings.backupHostPlaceholder", "Optional failover host")} />
+                <Field.HelperText>{t("settings.backupHostHelp", "Optional backup server for automatic failover")}</Field.HelperText>
+              </Field.Root>
+
+              <Field.Root>
+                <Field.Label>{t("settings.backupPort", "Backup Port")}</Field.Label>
+                <Input name="backup_port" type="number" defaultValue={config.backup_port || ""} placeholder={t("settings.backupPortPlaceholder", "e.g. 443")} />
+              </Field.Root>
+
+              <Field.Root>
+                <Field.Label>{t("settings.renegSec", "Renegotiate Every (sec)")}</Field.Label>
+                <Input name="reneg_sec" type="number" defaultValue={config.reneg_sec} />
+              </Field.Root>
+
+              <Field.Root>
+                <Field.Label>{t("settings.connectRetry", "Connect Retry (sec)")}</Field.Label>
+                <Input name="connect_retry" type="number" defaultValue={config.connect_retry} />
+              </Field.Root>
+            </SimpleGrid>
 
             <Field.Root>
               <Field.Label>{t("settings.subscriptionUrlPrefix")}</Field.Label>

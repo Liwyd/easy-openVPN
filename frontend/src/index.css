@@ -14,6 +14,32 @@
   }
 }
 
+/* Reset focus outlines that create white dot artifacts */
+*:focus {
+  outline: none;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--chakra-colors-accent-400, #e36c6c);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Reset default checkbox/radio appearance */
+input[type="checkbox"],
+input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* Strip list markers */
+ul, ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Status dot classes — Marzban pattern */
 .circle {
   min-width: 10px;
   min-height: 10px;
@@ -54,4 +80,14 @@
   align-items: center;
   justify-content: start;
   gap: 0.7rem;
+}
+
+/* Responsive mobile row — collapse by default, hidden detail */
+@media (max-width: 767px) {
+  .user-row-expanded {
+    background: var(--chakra-colors-bg-subtle, #F9FAFB);
+  }
+  .chakra-ui-dark .user-row-expanded {
+    background: var(--chakra-colors-gray-750, #222C3B);
+  }
 }

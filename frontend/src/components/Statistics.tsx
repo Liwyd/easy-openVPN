@@ -38,7 +38,7 @@ function StatisticCard({
       p={6}
       borderWidth="1px"
       borderColor="border"
-      bg="#F9FAFB"
+      bg="bg.subtle"
       _dark={{ borderColor: "gray.600", bg: "gray.750" }}
       borderStyle="solid"
       boxShadow="none"

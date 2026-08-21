@@ -49,6 +49,7 @@ interface FormState {
   timeWindowEnd: string;
   note: string;
   status: string;
+  ovpnPassword: string;
 }
 
 function emptyForm(): FormState {
@@ -60,10 +61,11 @@ function emptyForm(): FormState {
     timeWindowEnd: "",
     note: "",
     status: "active",
+    ovpnPassword: "",
   };
 }
 
-function userToForm(user: User): FormState {
+function userToForm(user: User & { has_ovpn_password?: boolean }): FormState {
   let limitVal = "";
   if (user.data_limit) {
     limitVal = String((user.data_limit / 1024 ** 3).toFixed(2));
@@ -82,6 +84,7 @@ function userToForm(user: User): FormState {
       : "",
     note: user.note ?? "",
     status: user.status,
+    ovpnPassword: "",
   };
 }
 
@@ -188,6 +191,7 @@ export default function UserDialog() {
       if (f.timeWindowEnd) body.time_window_end = f.timeWindowEnd;
       if (f.note.trim()) body.note = f.note.trim();
       body.status = f.status;
+      if (f.ovpnPassword) body.ovpn_password = f.ovpnPassword;
       return api.post("/users", body);
     },
     onSuccess: () => {
@@ -223,6 +227,7 @@ export default function UserDialog() {
       else body.time_window_end = null;
       body.note = f.note.trim() || null;
       body.status = f.status;
+      if (f.ovpnPassword) body.ovpn_password = f.ovpnPassword;
       return api.put(`/users/${username}`, body);
     },
     onSuccess: () => {
@@ -516,6 +521,21 @@ export default function UserDialog() {
                           onChange={(e) => set({ note: e.target.value })}
                           placeholder="..."
                         />
+                      </Field.Root>
+
+                      <Field.Root mb="10px">
+                        <Field.Label>{t("userDialog.ovpnPassword", "VPN Password")}</Field.Label>
+                        <Input
+                          size="sm"
+                          borderRadius="6px"
+                          type="password"
+                          value={form.ovpnPassword}
+                          onChange={(e) => set({ ovpnPassword: e.target.value })}
+                          placeholder={isCreate ? t("userDialog.ovpnPasswordPlaceholder", "Optional — leave empty for cert-only") : (editUser?.has_ovpn_password ? t("userDialog.ovpnPasswordEdit", "Set new password or leave empty to keep current") : t("userDialog.ovpnPasswordPlaceholder", "Optional — leave empty for cert-only"))}
+                        />
+                        <Field.HelperText>
+                          {t("userDialog.ovpnPasswordHelp", "When set, clients must provide this password alongside their certificate.")}
+                        </Field.HelperText>
                       </Field.Root>
                     </VStack>
                   </VStack>

@@ -17,6 +17,7 @@ export interface User {
   common_name: string | null;
   last_connected_since: string | null;
   is_online: boolean;
+  has_ovpn_password: boolean;
 }
 
 export interface UsersQueryResult {

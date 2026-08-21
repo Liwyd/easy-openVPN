@@ -41,7 +41,7 @@ interface UserContextValue {
   openCreate: () => void;
   closeCreate: () => void;
   copyLink: (user: User) => Promise<void>;
-  downloadConfig: (user: User) => Promise<void>;
+  downloadConfig: (user: User, protocol?: string) => Promise<void>;
   deleteMutation: UserMutation;
   enableMutation: UserMutation;
   disableMutation: UserMutation;
@@ -174,22 +174,27 @@ export function UserProvider({
     }
   }, []);
 
-  const downloadConfig = useCallback(async (user: User) => {
+  const downloadConfig = useCallback(async (user: User, protocol?: string) => {
     try {
-      const { data } = await api.get(`/users/${user.username}/config`, {
+      const url = protocol
+        ? `/users/${user.username}/config?protocol=${protocol}`
+        : `/users/${user.username}/config`;
+      const { data } = await api.get(url, {
         responseType: "blob",
       });
       const blob = new Blob([data], {
         type: "application/x-openvpn-profile",
       });
-      const url = window.URL.createObjectURL(blob);
+      const blobUrl = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url;
-      a.download = `${user.username}.ovpn`;
+      a.href = blobUrl;
+      a.download = protocol
+        ? `${user.username}_${protocol}.ovpn`
+        : `${user.username}.ovpn`;
       document.body.appendChild(a);
       a.click();
       a.remove();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(blobUrl);
     } catch (err: any) {
       toaster.create({
         title: typeof err?.response?.data?.detail === "string" ? err.response.data.detail : "Failed to download config",

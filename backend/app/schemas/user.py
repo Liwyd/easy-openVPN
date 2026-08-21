@@ -18,6 +18,7 @@ class UserCreate(BaseModel):
     time_window_end: dt.time | None = None
     note: str | None = None
     status: UserStatus = UserStatus.ACTIVE
+    ovpn_password: str | None = None  # Per-user OpenVPN password for auth-user-pass
 
     @field_validator("username")
     @classmethod
@@ -33,6 +34,7 @@ class UserUpdate(BaseModel):
     time_window_end: dt.time | None = None
     note: str | None = None
     status: UserStatus | None = None
+    ovpn_password: str | None = None
 
 
 class UserResponse(BaseModel):
@@ -54,6 +56,7 @@ class UserResponse(BaseModel):
     common_name: str | None = None
     last_connected_since: str | None = None
     is_online: bool = False
+    has_ovpn_password: bool = False  # Whether user has an OpenVPN password set (never expose actual password)
 
     model_config = {"from_attributes": True}
 

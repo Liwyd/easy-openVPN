@@ -29,9 +29,15 @@ def create_client_cert(
     public_ip: str = "",
     protocol: str = "udp",
     port: int = 1194,
-    cipher: str = "AES-256-GCM",
+    cipher: str = "AES-128-CBC",
     auth: str = "SHA256",
-    tls_mode: str = "tls-crypt",
+    tls_mode: str = "none",
+    backup_host: str = "",
+    backup_port: int = 0,
+    reneg_sec: int = 3600,
+    connect_retry: int = 1,
+    mute_replay_warnings: bool = True,
+    ovpn_password: str = "",
 ) -> str:
     """Create a client certificate and return the .ovpn content.
 
@@ -50,6 +56,12 @@ def create_client_cert(
         cipher=cipher,
         auth=auth,
         tls_mode=tls_mode,
+        backup_host=backup_host,
+        backup_port=backup_port,
+        reneg_sec=reneg_sec,
+        connect_retry=connect_retry,
+        mute_replay_warnings=mute_replay_warnings,
+        ovpn_password=ovpn_password,
     )
 
 
@@ -133,9 +145,15 @@ def generate_ovpn_file(
     public_ip: str = "",
     protocol: str = "udp",
     port: int = 1194,
-    cipher: str = "AES-256-GCM",
+    cipher: str = "AES-128-CBC",
     auth: str = "SHA256",
-    tls_mode: str = "tls-crypt",
+    tls_mode: str = "none",
+    backup_host: str = "",
+    backup_port: int = 0,
+    reneg_sec: int = 3600,
+    connect_retry: int = 1,
+    mute_replay_warnings: bool = True,
+    ovpn_password: str = "",
 ) -> str:
     """Render the .ovpn file for an existing client without re-creating the cert.
 
@@ -153,6 +171,12 @@ def generate_ovpn_file(
         cipher=cipher,
         auth=auth,
         tls_mode=tls_mode,
+        backup_host=backup_host,
+        backup_port=backup_port,
+        reneg_sec=reneg_sec,
+        connect_retry=connect_retry,
+        mute_replay_warnings=mute_replay_warnings,
+        ovpn_password=ovpn_password,
     )
 
 
@@ -160,20 +184,23 @@ def apply_server_config(
     protocol: str = "udp",
     port: int = 1194,
     interface: str = "tun0",
-    cipher: str = "AES-256-GCM",
+    cipher: str = "AES-128-CBC",
     auth: str = "SHA256",
     dns_servers: list[str] | None = None,
     mtu: int | None = None,
-    keepalive_interval: int = 10,
-    keepalive_timeout: int = 120,
+    keepalive_interval: int = 15,
+    keepalive_timeout: int = 45,
     client_to_client: bool = False,
     redirect_gateway: bool = True,
     public_ip: str = "",
-    tls_crypt: bool = True,
+    tls_crypt: bool = False,
     tls_auth: bool = False,
     management_socket: str = "/run/openvpn/management.sock",
     ccd_dir: str = "/opt/eovpanel/vpn/ccd",
     hooks_dir: str = "/opt/eovpanel/vpn/hooks",
+    reneg_sec: int = 3600,
+    connect_retry: int = 1,
+    mute_replay_warnings: bool = True,
 ) -> bool:
     """Apply server configuration via vpn-core.  Returns True on success."""
     from vpn_core.config_writer import ServerConfigRow
@@ -197,5 +224,8 @@ def apply_server_config(
         management_socket=management_socket,
         ccd_dir=ccd_dir,
         hooks_dir=hooks_dir,
+        reneg_sec=reneg_sec,
+        connect_retry=connect_retry,
+        mute_replay_warnings=mute_replay_warnings,
     )
     return _apply(cfg)

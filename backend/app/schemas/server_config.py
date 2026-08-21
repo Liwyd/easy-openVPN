@@ -25,6 +25,11 @@ class ServerConfigUpdate(BaseModel):
     redirect_gateway: bool | None = None
     public_host: str | None = None
     tunnel_host: str | None = None
+    backup_host: str | None = None
+    backup_port: int | None = Field(default=None, ge=0, le=65535)
+    reneg_sec: int | None = Field(default=None, ge=0)
+    connect_retry: int | None = Field(default=None, ge=0, le=10)
+    mute_replay_warnings: bool | None = None
     subscription_url_prefix: str | None = None
 
 
@@ -45,6 +50,11 @@ class ServerConfigResponse(BaseModel):
     redirect_gateway: bool
     public_host: str
     tunnel_host: str
+    backup_host: str
+    backup_port: int
+    reneg_sec: int
+    connect_retry: int
+    mute_replay_warnings: bool
     subscription_url_prefix: str
     updated_at: dt.datetime
 

@@ -28,6 +28,7 @@ class Protocol(str, enum.Enum):
 
 
 class Cipher(str, enum.Enum):
+    AES_128_CBC = "AES-128-CBC"
     AES_256_GCM = "AES-256-GCM"
     AES_128_GCM = "AES-128-GCM"
     CHACHA20_POLY1305 = "CHACHA20-POLY1305"
@@ -65,13 +66,13 @@ class ServerConfig(Base):
 
     # Cryptography
     cipher: Mapped[Cipher] = mapped_column(
-        Enum(Cipher, native_enum=False), default=Cipher.AES_256_GCM, nullable=False
+        Enum(Cipher, native_enum=False), default=Cipher.AES_128_CBC, nullable=False
     )
     auth_digest: Mapped[AuthDigest] = mapped_column(
         Enum(AuthDigest, native_enum=False), default=AuthDigest.SHA256, nullable=False
     )
     tls_mode: Mapped[TLSSettings] = mapped_column(
-        Enum(TLSSettings, native_enum=False), default=TLSSettings.TLS_CRYPT, nullable=False
+        Enum(TLSSettings, native_enum=False), default=TLSSettings.NONE, nullable=False
     )
 
     # DNS
@@ -82,8 +83,8 @@ class ServerConfig(Base):
 
     # Connection tuning
     mtu: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
-    keepalive_interval: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
-    keepalive_timeout: Mapped[int] = mapped_column(Integer, default=120, nullable=False)
+    keepalive_interval: Mapped[int] = mapped_column(Integer, default=15, nullable=False)
+    keepalive_timeout: Mapped[int] = mapped_column(Integer, default=45, nullable=False)
 
     # Client behavior
     client_to_client: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -98,6 +99,16 @@ class ServerConfig(Base):
     # `remote` endpoint instead of public_host. No setup is required on the
     # tunnel itself; it simply forwards the OpenVPN port here.
     tunnel_host: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+
+    # Backup remote — optional failover endpoint for generated .ovpn files.
+    # When set, a second `remote` line is added for automatic failover.
+    backup_host: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    backup_port: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+    # OpenVPN advanced directives
+    reneg_sec: Mapped[int] = mapped_column(Integer, default=3600, nullable=False)
+    connect_retry: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    mute_replay_warnings: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     # Subscription URL prefix — used to build the full /sub/{token} URL.
     # e.g. "https://panel.example.com"

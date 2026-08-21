@@ -104,18 +104,24 @@ def _get_server_settings(db: Session) -> ServerConfig:
     return cfg
 
 
-def _render_ovpn_for_user(user: User, db: Session) -> str:
+def _render_ovpn_for_user(user: User, db: Session, protocol_override: str | None = None) -> str:
     """Render the .ovpn file content for a user."""
     cfg = _get_server_settings(db)
     return _generate_ovpn_file(
         common_name=user.common_name or user.username,
         server_dir="/opt/eovpanel/vpn",
         public_ip=_resolve_client_host(cfg.public_host, cfg.tunnel_host),
-        protocol=cfg.protocol.value,
+        protocol=protocol_override or cfg.protocol.value,
         port=cfg.port,
         cipher=cfg.cipher.value,
         auth=cfg.auth_digest.value,
         tls_mode=cfg.tls_mode.value,
+        backup_host=cfg.backup_host,
+        backup_port=cfg.backup_port,
+        reneg_sec=cfg.reneg_sec,
+        connect_retry=cfg.connect_retry,
+        mute_replay_warnings=cfg.mute_replay_warnings,
+        ovpn_password=user.ovpn_password or "",
     )
 
 
@@ -161,6 +167,12 @@ def create_user(
             cipher=cfg.cipher.value,
             auth=cfg.auth_digest.value,
             tls_mode=cfg.tls_mode.value,
+            backup_host=cfg.backup_host,
+            backup_port=cfg.backup_port,
+            reneg_sec=cfg.reneg_sec,
+            connect_retry=cfg.connect_retry,
+            mute_replay_warnings=cfg.mute_replay_warnings,
+            ovpn_password=body.ovpn_password or "",
         )
     except FileExistsError as exc:
         raise HTTPException(
@@ -186,6 +198,7 @@ def create_user(
         common_name=body.username,
         status=body.status,
         revoked=False,
+        ovpn_password=body.ovpn_password or "",
     )
 
     # If the user is created disabled, mirror that at the vpn-core level
@@ -302,20 +315,28 @@ def get_user(
 @router.get("/{username}/config")
 def get_user_config(
     username: str,
+    protocol: str | None = None,
     db: Session = Depends(get_db),
     current_admin: Admin = Depends(get_current_admin),
 ):
-    """Return the .ovpn file for download.  Auth + ownership required."""
+    """Return the .ovpn file for download.  Auth + ownership required.
+    
+    Optional ?protocol=tcp|udp parameter for dual-protocol export.
+    """
     user = _get_validated_user(username, current_admin, db)
     if user.revoked:
         raise HTTPException(status_code=status.HTTP_410_GONE, detail="User certificate has been revoked")
 
-    ovpn_content = _render_ovpn_for_user(user, db)
+    if protocol and protocol not in ("tcp", "udp"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid protocol")
+
+    ovpn_content = _render_ovpn_for_user(user, db, protocol_override=protocol)
+    suffix = f"_{protocol}" if protocol else ""
     return Response(
         content=ovpn_content,
         media_type="application/x-openvpn-profile",
         headers={
-            "Content-Disposition": f'attachment; filename="{user.username}.ovpn"',
+            "Content-Disposition": f'attachment; filename="{user.username}{suffix}.ovpn"',
         },
     )
 
@@ -372,6 +393,9 @@ def update_user(
                 )
             elif body.status == UserStatus.ACTIVE:
                 _enable_client(user.common_name)
+
+    if body.ovpn_password is not None:
+        user.ovpn_password = body.ovpn_password
 
     write_admin_log(
         db,

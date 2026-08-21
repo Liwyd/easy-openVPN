@@ -71,8 +71,8 @@ def seed_sudo_admin(db: Session) -> None:
 def seed_default_server_config(db: Session) -> None:
     """Create a default ServerConfig row with sane OpenVPN defaults.
 
-    Defaults: UDP/1194, AES-256-GCM, SHA256, tls-crypt, Cloudflare DNS,
-    MTU 1500, keepalive 10/120, client-to-client off, redirect gateway on.
+    Defaults: UDP/1194, AES-128-CBC, SHA256, no TLS, Cloudflare DNS,
+    MTU 1500, keepalive 15/45, reneg-sec 3600, connect-retry 1.
     """
     existing = db.query(ServerConfig).first()
     if existing is not None:
@@ -80,6 +80,16 @@ def seed_default_server_config(db: Session) -> None:
         if not existing.public_host:
             existing.public_host = _detect_public_ip()
             logger.info("Backfilled empty public_host with detected IP.")
+        # Backfill new fields with defaults if they were added after initial seed
+        if not hasattr(existing, "backup_host") or existing.backup_host is None:
+            existing.backup_host = ""
+            existing.backup_port = 0
+        if not hasattr(existing, "reneg_sec") or existing.reneg_sec is None:
+            existing.reneg_sec = 3600
+        if not hasattr(existing, "connect_retry") or existing.connect_retry is None:
+            existing.connect_retry = 1
+        if not hasattr(existing, "mute_replay_warnings") or existing.mute_replay_warnings is None:
+            existing.mute_replay_warnings = True
         logger.debug("ServerConfig table is not empty, skipping seed.")
         return
 
@@ -92,18 +102,23 @@ def seed_default_server_config(db: Session) -> None:
         protocol=Protocol.UDP,
         port=1194,
         interface="tun0",
-        cipher=Cipher.AES_256_GCM,
+        cipher=Cipher.AES_128_CBC,
         auth_digest=AuthDigest.SHA256,
-        tls_mode=TLSSettings.TLS_CRYPT,
+        tls_mode=TLSSettings.NONE,
         dns_preset=DNSPreset.CLOUDFLARE,
         dns_servers=None,  # Cloudflare preset is resolved at render time
         mtu=1500,
-        keepalive_interval=10,
-        keepalive_timeout=120,
+        keepalive_interval=15,
+        keepalive_timeout=45,
         client_to_client=False,
         redirect_gateway=True,
         public_host=public_host,
         subscription_url_prefix="",
+        backup_host="",
+        backup_port=0,
+        reneg_sec=3600,
+        connect_retry=1,
+        mute_replay_warnings=True,
     )
     db.add(config)
 
