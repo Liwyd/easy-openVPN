@@ -570,10 +570,11 @@ async def edit_user_expire_step(update: Update, context: ContextTypes.DEFAULT_TY
         if re.match(r"^[0-9]{1,3}([MmDd])$", text):
             number = int(re.findall(r"^[0-9]{1,3}", text)[0])
             symbol = re.findall(r"[MmDd]$", text)[0].upper()
-            if symbol == "M":
-                expire_date = today + relativedelta(months=number)
-            else:
-                expire_date = today + relativedelta(days=number)
+            expire_date = (
+                today + relativedelta(months=number)
+                if symbol == "M"
+                else today + relativedelta(days=number)
+            )
         elif text == "0":
             expire_date = None
         else:
@@ -706,10 +707,10 @@ async def edit_note_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 <b>New Note :</b> <code>{note}</code>
 ➖➖➖➖➖➖➖➖➖
 <b>By :</b> <a href="tg://user?id={chat_id}">{update.effective_user.full_name}</a>"""
-        try:
-            await context.bot.send_message(chat_id=logger_ch, text=text, parse_mode="HTML")
-        except Exception:
-            pass
+        with contextlib.suppress(Exception):
+            await context.bot.send_message(
+                chat_id=logger_ch, text=text, parse_mode="HTML"
+            )
 
     return ConversationHandler.END
 
@@ -861,10 +862,10 @@ async def genqr_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 reply_markup=BotKeyboard.subscription_page(sub_url),
             )
 
-    try:
-        await context.bot.delete_message(query.message.chat.id, query.message.message_id)
-    except Exception:
-        pass
+    with contextlib.suppress(Exception):
+        await context.bot.delete_message(
+            query.message.chat.id, query.message.message_id
+        )
 
 
 # ── Charge user ─────────────────────────────────────────────────────
@@ -889,17 +890,18 @@ async def charge_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def add_user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Callback: 'add_user' or 'add_bulk_user' — start create user flow."""
     query = update.callback_query
-    try:
-        await context.bot.delete_message(query.message.chat.id, query.message.message_id)
-    except Exception:
-        pass
+    with contextlib.suppress(Exception):
+        await context.bot.delete_message(
+            query.message.chat.id, query.message.message_id
+        )
 
     is_bulk = query.data == "add_bulk_user"
     mem_store.set(f"{query.message.chat.id}:is_bulk", is_bulk)
 
     msg = await context.bot.send_message(
         query.message.chat.id,
-        "👤 Enter username:\n⚠️Username only can be 3 to 32 characters and contain a-z, A-Z 0-9, and underscores in between.",
+        "👤 Enter username:\n⚠️Username only can be 3 to 32 characters and "
+        "contain a-z, A-Z 0-9, and underscores in between.",
         reply_markup=BotKeyboard.random_username(),
     )
     _schedule_delete_message(context, query.message.chat.id, msg.id)
@@ -1051,9 +1053,16 @@ async def add_user_status_step(update: Update, context: ContextTypes.DEFAULT_TYP
     await context.bot.delete_message(chat_id, query.message.message_id)
 
     if user_status == "onhold":
-        expiry_message = "⬆️ Enter Expire Days\nYou Can Use Regex Symbol: ^[0-9]{1,3}(M|D) :"
+        expiry_message = (
+            "⬆️ Enter Expire Days\n"
+            "You Can Use Regex Symbol: ^[0-9]{1,3}(M|D) :"
+        )
     else:
-        expiry_message = "⬆️ Enter Expire Date (YYYY-MM-DD)\nOr You Can Use Regex Symbol: ^[0-9]{1,3}(M|D) :\n⚠️ Send 0 for never expire."
+        expiry_message = (
+            "⬆️ Enter Expire Date (YYYY-MM-DD)\n"
+            "Or You Can Use Regex Symbol: ^[0-9]{1,3}(M|D) :\n"
+            "⚠️ Send 0 for never expire."
+        )
 
     msg = await context.bot.send_message(
         chat_id,
@@ -1083,7 +1092,11 @@ async def expire_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
             if user_status == "onhold":
                 expire_date = number * 30 if symbol == "M" else number
             else:
-                expire_date = today + relativedelta(months=number) if symbol == "M" else today + relativedelta(days=number)
+                expire_date = (
+                    today + relativedelta(months=number)
+                    if symbol == "M"
+                    else today + relativedelta(days=number)
+                )
         elif text == "0":
             if user_status == "onhold":
                 raise ValueError("Expire days is required for an on hold user.")
@@ -1106,10 +1119,15 @@ async def expire_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
 
     # Show confirm keyboard
     data_limit_str = fmt_bytes(data_limit) if data_limit else "Unlimited"
-    expire_str = expire_date.strftime("%Y-%m-%d") if isinstance(expire_date, datetime) else str(expire_date) if expire_date else "Never"
+    if isinstance(expire_date, datetime):
+        expire_str = expire_date.strftime("%Y-%m-%d")
+    else:
+        expire_str = str(expire_date) if expire_date else "Never"
 
     await update.message.reply_text(
-        f"📝 Creating user: <code>{username}</code>\nData Limit: {data_limit_str}\nStatus: {user_status}\nExpiry: {expire_str}",
+        f"📝 Creating user: <code>{username}</code>\n"
+        f"Data Limit: {data_limit_str}\n"
+        f"Status: {user_status}\nExpiry: {expire_str}",
         parse_mode="html",
         reply_markup=BotKeyboard.confirm_action("add_user"),
     )
@@ -1304,10 +1322,10 @@ async def confirm_user_command(update: Update, context: ContextTypes.DEFAULT_TYP
     elif data == "edit_user":
         username = mem_store.get(f"{query.message.chat.id}:username")
         if username is None:
-            try:
-                await context.bot.delete_message(query.message.chat.id, query.message.message_id)
-            except Exception:
-                pass
+            with contextlib.suppress(Exception):
+                await context.bot.delete_message(
+                    query.message.chat.id, query.message.message_id
+                )
             await context.bot.send_message(
                 query.message.chat.id,
                 "❌ Bot reload detected. Please start over.",
@@ -1345,10 +1363,10 @@ async def confirm_user_command(update: Update, context: ContextTypes.DEFAULT_TYP
     elif data == "add_user":
         username = mem_store.get(f"{query.message.chat.id}:username")
         if username is None:
-            try:
-                await context.bot.delete_message(query.message.chat.id, query.message.message_id)
-            except Exception:
-                pass
+            with contextlib.suppress(Exception):
+                await context.bot.delete_message(
+                    query.message.chat.id, query.message.message_id
+                )
             await context.bot.send_message(
                 query.message.chat.id,
                 "❌ Bot reload detected. Please start over.",
@@ -1416,7 +1434,11 @@ async def confirm_user_command(update: Update, context: ContextTypes.DEFAULT_TYP
 <b>Username :</b> <code>{user['username']}</code>
 <b>Status :</b> <code>{user_status.title()}</code>
 <b>Traffic Limit :</b> <code>{fmt_bytes(data_limit) if data_limit else "Unlimited"}</code>
-<b>Expire Date :</b> <code>{expire_date.strftime('%H:%M:%S %Y-%m-%d') if isinstance(expire_date, datetime) else "Never"}</code>
+<b>Expire Date :</b> <code>{
+    expire_date.strftime('%H:%M:%S %Y-%m-%d')
+    if isinstance(expire_date, datetime)
+    else "Never"
+}</code>
 ➖➖➖➖➖➖➖➖➖
 <b>By :</b> <a href="tg://user?id={chat_id}">{full_name}</a>""",
             )
@@ -1467,7 +1489,10 @@ async def confirm_user_command(update: Update, context: ContextTypes.DEFAULT_TYP
 
             await context.bot.send_message(
                 chat_id,
-                f"✅ <b>{counter}/{len(users)} Users</b> Data Limit according to <code>{'+' if data_limit_val > 0 else '-'}{fmt_bytes(abs(data_limit_val))}</code>",
+                f"✅ <b>{counter}/{len(users)} Users</b> Data Limit "
+                f"according to <code>"
+                f"{'+' if data_limit_val > 0 else '-'}"
+                f"{fmt_bytes(abs(data_limit_val))}</code>",
                 "HTML",
                 reply_markup=BotKeyboard.main_menu(),
             )

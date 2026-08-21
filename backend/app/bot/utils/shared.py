@@ -7,7 +7,7 @@ adapted for eovpanel's User model (OpenVPN, no proxies/inbounds).
 from __future__ import annotations
 
 import re
-from datetime import UTC, timezone
+from datetime import UTC
 from datetime import datetime as dt
 
 # Status emoji mapping — matches Marzban exactly
