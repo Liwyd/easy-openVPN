@@ -1,6 +1,6 @@
 """add_openvpn_advanced_fields
 
-Revision ID: a1b2c3d4e5f6
+Revision ID: a8b9c0d1e2f3
 Revises: f2a3b4c5d6e7
 Create Date: 2026-08-21 00:00:00.000000
 
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "a1b2c3d4e5f6"
+revision: str = "a8b9c0d1e2f3"
 down_revision: str | Sequence[str] | None = "f2a3b4c5d6e7"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
