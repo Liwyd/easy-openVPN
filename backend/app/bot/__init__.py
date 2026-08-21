@@ -107,12 +107,12 @@ def _register_handlers(app) -> None:
             CallbackQueryHandler(
                 admin_module.add_user_command,
                 pattern=r"^(add_user|add_bulk_user)$",
-                filters=is_admin,
+                filter=is_admin,
             ),
             CallbackQueryHandler(
                 admin_module.random_username_callback,
                 pattern=r"^random",
-                filters=is_admin,
+                filter=is_admin,
             ),
         ],
         states={
@@ -129,7 +129,7 @@ def _register_handlers(app) -> None:
                 CallbackQueryHandler(
                     admin_module.add_user_status_step,
                     pattern=r"^status:",
-                    filters=is_admin,
+                    filter=is_admin,
                 ),
             ],
             admin_module.STATE_EXPIRE: [
@@ -137,7 +137,7 @@ def _register_handlers(app) -> None:
             ],
         },
         fallbacks=[
-            CallbackQueryHandler(admin_module.cancel_command, pattern=r"^cancel$", filters=is_admin),
+            CallbackQueryHandler(admin_module.cancel_command, pattern=r"^cancel$", filter=is_admin),
         ],
         per_message=False,
         per_chat=True,
@@ -149,7 +149,7 @@ def _register_handlers(app) -> None:
             CallbackQueryHandler(
                 admin_module.edit_user_command,
                 pattern=r"^edit_user:.*:data$",
-                filters=is_admin,
+                filter=is_admin,
             ),
         ],
         states={
@@ -158,7 +158,7 @@ def _register_handlers(app) -> None:
             ],
         },
         fallbacks=[
-            CallbackQueryHandler(admin_module.cancel_command, pattern=r"^cancel$", filters=is_admin),
+            CallbackQueryHandler(admin_module.cancel_command, pattern=r"^cancel$", filter=is_admin),
         ],
         per_message=False,
         per_chat=True,
@@ -170,7 +170,7 @@ def _register_handlers(app) -> None:
             CallbackQueryHandler(
                 admin_module.edit_user_command,
                 pattern=r"^edit_user:.*:expire$",
-                filters=is_admin,
+                filter=is_admin,
             ),
         ],
         states={
@@ -179,7 +179,7 @@ def _register_handlers(app) -> None:
             ],
         },
         fallbacks=[
-            CallbackQueryHandler(admin_module.cancel_command, pattern=r"^cancel$", filters=is_admin),
+            CallbackQueryHandler(admin_module.cancel_command, pattern=r"^cancel$", filter=is_admin),
         ],
         per_message=False,
         per_chat=True,
@@ -191,7 +191,7 @@ def _register_handlers(app) -> None:
             CallbackQueryHandler(
                 admin_module.edit_note_command,
                 pattern=r"^edit_note:",
-                filters=is_admin,
+                filter=is_admin,
             ),
         ],
         states={
@@ -200,7 +200,7 @@ def _register_handlers(app) -> None:
             ],
         },
         fallbacks=[
-            CallbackQueryHandler(admin_module.cancel_command, pattern=r"^cancel$", filters=is_admin),
+            CallbackQueryHandler(admin_module.cancel_command, pattern=r"^cancel$", filter=is_admin),
         ],
         per_message=False,
         per_chat=True,
@@ -212,7 +212,7 @@ def _register_handlers(app) -> None:
             CallbackQueryHandler(
                 admin_module.add_data_command,
                 pattern=r"^add_data$",
-                filters=is_admin,
+                filter=is_admin,
             ),
         ],
         states={
@@ -221,7 +221,7 @@ def _register_handlers(app) -> None:
             ],
         },
         fallbacks=[
-            CallbackQueryHandler(admin_module.cancel_command, pattern=r"^cancel$", filters=is_admin),
+            CallbackQueryHandler(admin_module.cancel_command, pattern=r"^cancel$", filter=is_admin),
         ],
         per_message=False,
         per_chat=True,
@@ -233,7 +233,7 @@ def _register_handlers(app) -> None:
             CallbackQueryHandler(
                 admin_module.add_time_command,
                 pattern=r"^add_time$",
-                filters=is_admin,
+                filter=is_admin,
             ),
         ],
         states={
@@ -242,7 +242,7 @@ def _register_handlers(app) -> None:
             ],
         },
         fallbacks=[
-            CallbackQueryHandler(admin_module.cancel_command, pattern=r"^cancel$", filters=is_admin),
+            CallbackQueryHandler(admin_module.cancel_command, pattern=r"^cancel$", filter=is_admin),
         ],
         per_message=False,
         per_chat=True,
@@ -258,63 +258,63 @@ def _register_handlers(app) -> None:
     _add(conv_add_time)
 
     # ── Commands ──────────────────────────────────────────────────────
-    _add(CommandHandler("start", admin_module.help_command, filters=is_admin))
-    _add(CommandHandler("help", admin_module.help_command, filters=is_admin))
+    _add(CommandHandler("start", admin_module.help_command, filter=is_admin))
+    _add(CommandHandler("help", admin_module.help_command, filter=is_admin))
     _add(CommandHandler("usage", user_module.usage_command))
-    _add(CommandHandler("user", admin_module.search_user, filters=is_admin))
+    _add(CommandHandler("user", admin_module.search_user, filter=is_admin))
 
     # ── Callback queries (admin only) ─────────────────────────────────
     # System / restart
-    _add(CallbackQueryHandler(admin_module.system_command, pattern="^system$", filters=is_admin))
-    _add(CallbackQueryHandler(admin_module.restart_command, pattern="^restart$", filters=is_admin))
-    _add(CallbackQueryHandler(admin_module.cancel_command, pattern="^cancel$", filters=is_admin))
-    _add(CallbackQueryHandler(admin_module.help_edit_command, pattern="^help_edit$", filters=is_admin))
+    _add(CallbackQueryHandler(admin_module.system_command, pattern="^system$", filter=is_admin))
+    _add(CallbackQueryHandler(admin_module.restart_command, pattern="^restart$", filter=is_admin))
+    _add(CallbackQueryHandler(admin_module.cancel_command, pattern="^cancel$", filter=is_admin))
+    _add(CallbackQueryHandler(admin_module.help_edit_command, pattern="^help_edit$", filter=is_admin))
 
     # User list / pagination
-    _add(CallbackQueryHandler(admin_module.users_command, pattern=r"^users:", filters=is_admin))
-    _add(CallbackQueryHandler(admin_module.user_command, pattern=r"^user:", filters=is_admin))
+    _add(CallbackQueryHandler(admin_module.users_command, pattern=r"^users:", filter=is_admin))
+    _add(CallbackQueryHandler(admin_module.user_command, pattern=r"^user:", filter=is_admin))
 
     # User actions
     _add(CallbackQueryHandler(
-        admin_module.delete_user_command, pattern=r"^delete:", filters=is_admin))
+        admin_module.delete_user_command, pattern=r"^delete:", filter=is_admin))
     _add(CallbackQueryHandler(
-        admin_module.suspend_user_command, pattern=r"^suspend:", filters=is_admin))
+        admin_module.suspend_user_command, pattern=r"^suspend:", filter=is_admin))
     _add(CallbackQueryHandler(
-        admin_module.activate_user_command, pattern=r"^activate:", filters=is_admin))
+        admin_module.activate_user_command, pattern=r"^activate:", filter=is_admin))
     _add(CallbackQueryHandler(
-        admin_module.reset_usage_user_command, pattern=r"^reset_usage:", filters=is_admin))
+        admin_module.reset_usage_user_command, pattern=r"^reset_usage:", filter=is_admin))
     _add(CallbackQueryHandler(
-        admin_module.revoke_sub_command, pattern=r"^revoke_sub:", filters=is_admin))
+        admin_module.revoke_sub_command, pattern=r"^revoke_sub:", filter=is_admin))
 
     # User management
-    _add(CallbackQueryHandler(admin_module.edit_command, pattern=r"^edit:", filters=is_admin))
-    _add(CallbackQueryHandler(admin_module.links_command, pattern=r"^links:", filters=is_admin))
-    _add(CallbackQueryHandler(admin_module.genqr_command, pattern=r"^genqr:", filters=is_admin))
-    _add(CallbackQueryHandler(admin_module.charge_command, pattern=r"^charge:", filters=is_admin))
+    _add(CallbackQueryHandler(admin_module.edit_command, pattern=r"^edit:", filter=is_admin))
+    _add(CallbackQueryHandler(admin_module.links_command, pattern=r"^links:", filter=is_admin))
+    _add(CallbackQueryHandler(admin_module.genqr_command, pattern=r"^genqr:", filter=is_admin))
+    _add(CallbackQueryHandler(admin_module.charge_command, pattern=r"^charge:", filter=is_admin))
 
     # Edit all users
     _add(CallbackQueryHandler(
-        admin_module.edit_all_command, pattern="^edit_all$", filters=is_admin))
+        admin_module.edit_all_command, pattern="^edit_all$", filter=is_admin))
     _add(CallbackQueryHandler(
-        admin_module.delete_expired_command, pattern="^delete_expired$", filters=is_admin))
+        admin_module.delete_expired_command, pattern="^delete_expired$", filter=is_admin))
     _add(CallbackQueryHandler(
-        admin_module.delete_limited_command, pattern="^delete_limited$", filters=is_admin))
+        admin_module.delete_limited_command, pattern="^delete_limited$", filter=is_admin))
 
     # Node bulk operations (eovpanel equivalent of inbound_add/inbound_remove)
-    _add(CallbackQueryHandler(admin_module.node_bulk_command, pattern=r"^node_", filters=is_admin))
+    _add(CallbackQueryHandler(admin_module.node_bulk_command, pattern=r"^node_", filter=is_admin))
 
     # Confirmation handler (must be registered LAST for confirm: patterns)
-    _add(CallbackQueryHandler(admin_module.confirm_user_command, pattern=r"^confirm:", filters=is_admin))
+    _add(CallbackQueryHandler(admin_module.confirm_user_command, pattern=r"^confirm:", filter=is_admin))
 
     # Backup submenu
     _add(CallbackQueryHandler(
-        admin_module.backup_menu_command, pattern="^backup$", filters=is_admin))
+        admin_module.backup_menu_command, pattern="^backup$", filter=is_admin))
     _add(CallbackQueryHandler(
-        admin_module.backup_send_command, pattern="^backup_send$", filters=is_admin))
+        admin_module.backup_send_command, pattern="^backup_send$", filter=is_admin))
     _add(CallbackQueryHandler(
-        admin_module.backup_list_command, pattern="^backup_list$", filters=is_admin))
+        admin_module.backup_list_command, pattern="^backup_list$", filter=is_admin))
     _add(CallbackQueryHandler(
-        admin_module.backup_toggle_command, pattern="^backup_toggle$", filters=is_admin))
+        admin_module.backup_toggle_command, pattern="^backup_toggle$", filter=is_admin))
 
     logger.info("Telegram bot handlers registered")
 
