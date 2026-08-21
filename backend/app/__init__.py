@@ -107,6 +107,10 @@ def create_app() -> FastAPI:
         scheduler.start()
         application.state.scheduler = scheduler
 
+        # Start the interactive Telegram bot (long-polling in daemon thread)
+        from app.bot import start_bot
+        start_bot()
+
     @application.on_event("shutdown")
     def _stop_scheduler():
         import logging

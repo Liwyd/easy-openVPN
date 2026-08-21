@@ -84,3 +84,10 @@ TELEGRAM_ADMIN_CHAT_IDS: list[str] = config(
     default="",
     cast=lambda v: [s.strip() for s in v.split(",") if s.strip()],
 )
+TELEGRAM_LOGGER_CHANNEL_ID: int = config("TELEGRAM_LOGGER_CHANNEL_ID", default=0, cast=int)
+
+# Bot API credentials — the bot authenticates to the FastAPI panel as an admin
+# to perform CRUD operations via the HTTP API.
+TELEGRAM_BOT_API_BASE_URL: str = config("TELEGRAM_BOT_API_BASE_URL", default="http://localhost:8000")
+TELEGRAM_BOT_ADMIN_USERNAME: str = config("TELEGRAM_BOT_ADMIN_USERNAME", default="")
+TELEGRAM_BOT_ADMIN_PASSWORD: str = config("TELEGRAM_BOT_ADMIN_PASSWORD", default="")

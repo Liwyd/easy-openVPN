@@ -34,9 +34,14 @@ class TestBotDisabled:
         )
 
     def _with_config(self, enabled, bot_token, chat_ids):
-        old = dict(get_config())
+        old = get_config()
+        old_snapshot = {
+            "enabled": old["enabled"],
+            "bot_token": old["bot_token"],
+            "admin_chat_ids": list(old["admin_chat_ids"]),
+        }
         set_config(enabled=enabled, bot_token=bot_token, admin_chat_ids=chat_ids)
-        return old
+        return old_snapshot
 
     def test_is_configured_false_when_no_token(self):
         old = self._with_config(True, "", ["123"])

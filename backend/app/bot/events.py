@@ -7,7 +7,11 @@ category tag:
 * ``ENFORCEMENT`` — quota / expiry driven status changes  → send
 * ``ADMIN_ACTION`` — explicit admin CRUD operations        → send
 * ``SYSTEM``       — server config changes                 → send
-* ``SYNC``         — periodic usage‑sync ticks             → SILENCED
+* ``SYNC``         — periodic usage-sync ticks             → SILENCED
+
+When the interactive bot is running, notifications are sent through
+the bot instance (which has richer formatting and inline keyboards).
+When the bot is not running, falls back to raw httpx sends.
 """
 
 from __future__ import annotations
@@ -55,8 +59,6 @@ def emit(
         logger.debug("SYNC event %s — suppressed from Telegram", action)
         return
 
-    from app.bot.client import send_message_plain
-
     text = format_event(
         action=action,
         username=username,
@@ -72,6 +74,19 @@ def emit(
     if text is None:
         return
 
+    # Try to send through the interactive bot first (richer formatting),
+    # fall back to raw httpx if the bot is not running.
+    try:
+        from app.bot import get_application
+        app = get_application()
+        if app is not None:
+            from app.bot import send_notification
+            send_notification(text)
+            return
+    except Exception:
+        pass
+
+    from app.bot.client import send_message_plain
     try:
         send_message_plain(text)
     except Exception:
