@@ -15,18 +15,6 @@ import { HOME_PATH } from "../lib/base";
 import { Language } from "./Language";
 import { useTranslation } from "react-i18next";
 
-const iconBtnStyle = {
-  width: "32px",
-  height: "32px",
-  minWidth: "32px",
-  minHeight: "32px",
-  p: 0,
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  borderRadius: "md",
-};
-
 export default function Header() {
   const { colorMode, toggleColorMode } = useColorMode();
   const { admin, logout } = useAuth();
@@ -63,26 +51,26 @@ export default function Header() {
         {title}
       </Text>
 
-      <Box dir="rtl">
-        <Flex align="center" gap={1.5}>
+      <Box css={{ direction: "rtl" }}>
+        <Flex align="center" gap={2}>
           <Menu.Root>
             <Menu.Trigger asChild>
               <Button
                 variant="outline"
                 size="sm"
                 aria-label={t("header.menu")}
-                css={iconBtnStyle}
               >
-                <Icon as={FiMenu} boxSize="4" />
+                <Icon as={FiMenu} boxSize={4} />
               </Button>
             </Menu.Trigger>
             <Portal>
               <Menu.Positioner>
                 <Menu.Content
-                  minW="200px"
-                  bg="#1A202C"
-                  borderColor="#4A5568"
-                  borderRadius="lg"
+                  minW="180px"
+                  maxW="200px"
+                  bg="gray.750"
+                  borderColor="gray.600"
+                  borderRadius="md"
                   boxShadow="lg"
                   p={1.5}
                   color="white"
@@ -94,29 +82,29 @@ export default function Header() {
                       value={item.path}
                       fontWeight={location.pathname === item.path ? "bold" : "normal"}
                       fontSize="sm"
-                      py={2}
+                      py={1.5}
                       px={3}
                       borderRadius="md"
                       color="white"
                       _hover={{ bg: "whiteAlpha.100" }}
                       onClick={() => navigate(item.path)}
                     >
-                      <Icon as={item.icon} mr={3} boxSize="4" />
+                      <Icon as={item.icon} mr={3} boxSize={4} />
                       {item.label}
                     </Menu.Item>
                   ))}
                   <Box mx={3} my={1} borderTopWidth="1px" borderColor="whiteAlpha.200" />
-                  <Menu.Item value="nodes-settings" disabled fontSize="sm" py={2} px={3} borderRadius="md" color="whiteAlpha.400">
-                    <Icon as={FiServer} mr={3} boxSize="4" />
+                  <Menu.Item value="nodes-settings" disabled fontSize="sm" py={1.5} px={3} borderRadius="md" color="whiteAlpha.400">
+                    <Icon as={FiServer} mr={3} boxSize={4} />
                     {t("header.nodeSettings")}
                   </Menu.Item>
-                  <Menu.Item value="nodes-usage" disabled fontSize="sm" py={2} px={3} borderRadius="md" color="whiteAlpha.400">
-                    <Icon as={FiBarChart2} mr={3} boxSize="4" />
+                  <Menu.Item value="nodes-usage" disabled fontSize="sm" py={1.5} px={3} borderRadius="md" color="whiteAlpha.400">
+                    <Icon as={FiBarChart2} mr={3} boxSize={4} />
                     {t("header.nodesUsage")}
                   </Menu.Item>
                   <Box mx={3} my={1} borderTopWidth="1px" borderColor="whiteAlpha.200" />
-                  <Menu.Item value="logout" onClick={logout} fontSize="sm" py={2} px={3} borderRadius="md" color="white" _hover={{ bg: "whiteAlpha.100" }}>
-                    <Icon as={FiLogOut} mr={3} boxSize="4" />
+                  <Menu.Item value="logout" onClick={logout} fontSize="sm" py={1.5} px={3} borderRadius="md" color="white" _hover={{ bg: "whiteAlpha.100" }}>
+                    <Icon as={FiLogOut} mr={3} boxSize={4} />
                     {t("header.logout")}
                   </Menu.Item>
                 </Menu.Content>
@@ -130,9 +118,8 @@ export default function Header() {
             aria-label={t("header.settings")}
             title={t("header.settings")}
             onClick={() => navigate("/settings")}
-            css={iconBtnStyle}
           >
-            <Icon as={FiSettings} boxSize="4" />
+            <Icon as={FiSettings} boxSize={4} />
           </Button>
 
           <Language />
@@ -142,9 +129,8 @@ export default function Header() {
             variant="outline"
             size="sm"
             aria-label={t("header.switchTheme")}
-            css={iconBtnStyle}
           >
-            <Icon as={colorMode === "light" ? FiMoon : FiSun} boxSize="4" />
+            <Icon as={colorMode === "light" ? FiMoon : FiSun} boxSize={4} />
           </Button>
         </Flex>
       </Box>

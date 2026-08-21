@@ -17,6 +17,7 @@ import { tableRoot } from "../theme-components";
 import type { User } from "../types/User";
 import StatusBadge from "./StatusBadge";
 import UsageSlider from "./UsageSlider";
+import { OnlineStatus } from "./OnlineStatus";
 import { useUserContext } from "../contexts/UserContext";
 import { useTranslation } from "react-i18next";
 
@@ -24,33 +25,28 @@ function OnlineDot({ user }: { user: User }) {
   if (user.is_online) {
     return (
       <Box
-        w="8px"
-        h="8px"
-        borderRadius="full"
+        className="circle pulse green"
         flexShrink={0}
-        bg="green.400"
       />
     );
   }
   if (user.last_connected_since) {
     return (
       <Box
-        w="8px"
-        h="8px"
-        borderRadius="full"
+        className="circle"
         flexShrink={0}
         bg="gray.400"
+        _dark={{ bg: "gray.600" }}
       />
     );
   }
   return (
     <Box
-      w="8px"
-      h="8px"
-      borderRadius="full"
+      className="circle"
       flexShrink={0}
-      border="1.5px solid"
+      border="1px solid"
       borderColor="gray.400"
+      _dark={{ borderColor: "gray.600" }}
       bg="transparent"
     />
   );
@@ -112,7 +108,8 @@ export default function UsersTable({
                   <Table.Cell minW="140px">
                     <HStack align="center" gap={2.5}>
                       <OnlineDot user={user} />
-                      <Text fontWeight="semibold">{user.username}</Text>
+                      <Text fontWeight="semibold" isTruncated>{user.username}</Text>
+                      <OnlineStatus lastConnectedSince={user.last_connected_since} />
                     </HStack>
                   </Table.Cell>
                   <Table.Cell width="400px" minW="150px">

@@ -30,15 +30,15 @@ export default function Filters({
       top="0"
       zIndex="docked"
       bg="bg"
-      py={3}
-      gap={3}
+      py={4}
+      gap={4}
       align="center"
       wrap="wrap"
     >
       <Flex position="relative" flex="1" minW="200px" maxW="360px" align="center">
         <Box
           position="absolute"
-          left="10px"
+          left="12px"
           top="50%"
           transform="translateY(-50%)"
           color="fg.muted"
@@ -50,17 +50,17 @@ export default function Filters({
           placeholder={searchPlaceholder ?? t("users.search")}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
-          pl="34px"
-          pr={search ? "28px" : "10px"}
-          h="36px"
+          pl="38px"
+          pr={search ? "32px" : "12px"}
+          h="40px"
           fontSize="sm"
-          borderRadius="md"
+          borderRadius="6px"
           data-testid={testId}
         />
         {search && (
           <Box
             position="absolute"
-            right="6px"
+            right="8px"
             top="50%"
             transform="translateY(-50%)"
             zIndex="2"
@@ -85,14 +85,6 @@ export default function Filters({
           disabled={isRefreshing}
           title={t("users.refresh")}
           size="sm"
-          width="36px"
-          height="36px"
-          minWidth="36px"
-          minHeight="36px"
-          p={0}
-          display="inline-flex"
-          alignItems="center"
-          justifyContent="center"
         >
           <FiRefreshCw className={isRefreshing ? "animate-spin" : undefined} />
         </IconButton>
@@ -102,11 +94,11 @@ export default function Filters({
             colorPalette="accent"
             onClick={onCreate}
             size="sm"
-            h="36px"
-            px={4}
+            h="40px"
+            px={5}
             fontSize="sm"
             fontWeight="medium"
-            borderRadius="md"
+            borderRadius="6px"
           >
             {createLabel ?? t("users.create")}
           </Button>
