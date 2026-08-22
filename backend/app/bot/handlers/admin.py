@@ -1486,7 +1486,7 @@ async def confirm_user_command(update: Update, context: ContextTypes.DEFAULT_TYP
 
     elif data == "add_data":
         data_limit_val = float(query.data.split(":")[2]) * 1024 * 1024 * 1024
-        await context.bot.send_message(chat_id, "⏳ <b>In Progress...</b>", "HTML")
+        await context.bot.send_message(chat_id, "⏳ <b>In Progress...</b>", parse_mode="HTML")
         try:
             users = client.list_users(limit=200)
             counter = 0
@@ -1518,7 +1518,7 @@ async def confirm_user_command(update: Update, context: ContextTypes.DEFAULT_TYP
 
     elif data == "add_time":
         days = int(query.data.split(":")[2])
-        await context.bot.send_message(chat_id, "⏳ <b>In Progress...</b>", "HTML")
+        await context.bot.send_message(chat_id, "⏳ <b>In Progress...</b>", parse_mode="HTML")
         try:
             users = client.list_users(limit=200)
             counter = 0
