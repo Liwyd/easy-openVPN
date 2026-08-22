@@ -66,15 +66,24 @@ def start_bot() -> None:
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-        logger.info("Starting Telegram bot long-polling...")
-        _application.run_polling(
-            drop_pending_updates=True,
-            allowed_updates=[
-                "message",
-                "callback_query",
-                "inline_query",
-            ],
-        )
+
+        async def _run():
+            await _application.initialize()
+            await _application.start()
+            await _application.updater.start_polling(
+                drop_pending_updates=True,
+                allowed_updates=[
+                    "message",
+                    "callback_query",
+                    "inline_query",
+                ],
+            )
+            logger.info("Telegram bot long-polling started")
+
+            # Block until the thread is stopped (daemon thread)
+            await asyncio.Event().wait()
+
+        loop.run_until_complete(_run())
 
     thread = Thread(target=_run_polling, daemon=True, name="telegram-bot")
     thread.start()

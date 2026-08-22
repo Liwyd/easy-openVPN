@@ -95,21 +95,23 @@ if [ -n "$BASE_PATH" ]; then
     # Tell the SPA its base path at runtime
     sub_filter '</head>' '</head><script>window.__APP_BASE_PATH__="$BASE_PATH";</script>';
     sub_filter_once on;
-    sub_filter_types text/html;
 
     # Hide everything outside the base path
     location / {
         return 404;
     }
 
-    # The SPA shell itself — internal target for the fallback below
-    location = /index.html {
-        try_files index.html =404;
-    }
-
     # SPA shell + routes (fall back to index.html, sub_filter injects path)
     location $BASE_PATH/ {
-        try_files \$uri \$uri/ /index.html;
+        try_files \$uri \$uri/ @spa;
+    }
+
+    # Named location for SPA fallback — rewrite to index.html within this
+    # location context (avoids re-matching locations which would hit the
+    # catch-all "return 404" above).
+    location @spa {
+        root /usr/share/nginx/html;
+        rewrite ^ /index.html break;
     }
 
     # The bare base path (no trailing slash) — redirect to the trailing-slash
