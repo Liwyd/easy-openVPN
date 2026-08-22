@@ -42,6 +42,19 @@ from app.utils.store import MemoryStorage
 
 mem_store = MemoryStorage()
 
+
+def _reset_conversations(context: ContextTypes.DEFAULT_TYPE, chat_id: int) -> None:
+    """Clear all ConversationHandler state for this chat.
+
+    PTB v22 removed ``Application.drop_handler_by_name``.  We access the
+    internal ``_conversations`` dict directly — the standard workaround.
+    """
+    for group in context.application.handlers.values():
+        for handler in group:
+            if isinstance(handler, ConversationHandler):
+                handler._conversations.pop((chat_id,), None)
+
+
 # Conversation states
 (
     STATE_USERNAME,
@@ -174,7 +187,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     """Handle /start and /help — show welcome message with main menu."""
     chat_id = update.effective_chat.id
     await _cleanup_messages(context, chat_id)
-    context.application.drop_handler_by_name(str(chat_id))
+    _reset_conversations(context, chat_id)
 
     user = update.effective_user
     user_link = f'<a href="tg://user?id={user.id}">{user.full_name}</a>'
@@ -431,7 +444,7 @@ async def node_bulk_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 async def edit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Callback: 'edit:{username}' — open user edit panel."""
     query = update.callback_query
-    context.application.drop_handler_by_name(str(query.message.chat.id))
+    _reset_conversations(context, query.message.chat.id)
     username = query.data.split(":")[1]
     client = get_client()
     try:
@@ -478,7 +491,7 @@ async def help_edit_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 async def cancel_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Callback: 'cancel' — return to main menu."""
     query = update.callback_query
-    context.application.drop_handler_by_name(str(query.message.chat.id))
+    _reset_conversations(context, query.message.chat.id)
     await query.edit_message_text(
         _get_system_info(),
         parse_mode="MarkdownV2",
@@ -721,7 +734,7 @@ async def edit_note_step(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 async def user_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Callback: 'user:{username}' or 'user:{username}:{page}' — show user info."""
     query = update.callback_query
-    context.application.drop_handler_by_name(str(query.message.chat.id))
+    _reset_conversations(context, query.message.chat.id)
     parts = query.data.split(":")
     username = parts[1]
     page = int(parts[2]) if len(parts) > 2 else 1
